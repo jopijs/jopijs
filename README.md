@@ -16,52 +16,6 @@ The goal of Jopi is simplicity: to be able to create an application without drow
 * Creating an SSL certificate (for https) is trivial: Jopi **generates development certificates** (local machine) and also handles **Let's Encrypt**: with automatic renewal and no connection loss.
 * Simple but powerful **module system** to organize your application and reuse module between your apps.
 
-## Application organization
-
-### Application structure
-
-A typical application looks like this in terms of folders.
-
-**Example Jopi project**
-```
-|- node_modules/
-|- package.json
-|- tsconfig.json                       < If you use node.js / typescript
-|- src/
-   |- mod_moduleA                      < Code is always divided into modules
-   |- mod_moduleB
-      |- @alias                        < Allows sharing between modules
-      |- @routes/admin                 < Define items bound to urls
-         |- page.tsx                   < Bound to http://mysite/admin
-         |- onPOST.ts                  < Catch all POST call to this url
-         |- config.ts                  < If you want to configure some options
-         |- pageNeedRole_admin.cond    < You can also use special file names
-         |- postNeedRole_write.cond    < to avoid using config.ts
-```
-
-As noted in the comments, there are two particularities: code is always divided into modules, while folders beginning with an '@' sign are used by code generation mechanisms. Notably the `@alias` folder which allows sharing elements between modules.
-
-### The power of a modular application
-
-The module organization allows clear separations between different aspects of your code, and above all it allows reusing/sharing code blocks between multiple applications, while facilitating division of work in a team. For example, one module manages the site structure, another handles authentication, and a third adds pages for the products sold.
-
-Modules can share dependencies with other modules thanks to powerful alias mechanisms. For example a module defines a component MyComp, which becomes accessible to all modules by importing `import MyComp from @/uiComponents/MyComp`.
-
-Jopi's module system has the major advantage of being compatible with code pruning performed by JavasScript Bundlers, avoid common pitfalls with low-coupled code.
-
-The module system is based on a set of mechanisms:
-* **Events / listeners** — This mechanism lets modules communicate via a flexible "notify when this happens" system.
-* **Composites** — This mechanism allows React components to have content enriched by modules. For example, so that a module can add content to a toolbar.
-* **Sharing React.js components** — Modules can share React components, which are automatically registered in the global namespace. Also, a module can replace a shared component with its own version.
-
-### Server-only code, browser-only code?
-
-To be fast, Jopi does not include code analysis and server-side code removal. However, a very useful mechanism compensates for this: whenever the token **jopiBundler_ifServer** is encountered, it is replaced by the token **jopiBundler_ifBrowser**. Thus `import * as myLib from "./jopiBundler_ifServer.ts"` becomes `import * as myLib from "./jopiBundler_ifBrowser.ts"` when Jopi creates the JavaScript for the browser.
-
-Besides being performant, this mechanism is easier to use while offering interesting possibilities.
-
-Internally, Jopi uses a library called **Jopi Toolkit**. This library gathers a set of tools not specific to Jopi and usable in independent projects. This library also uses the translation mechanism (jopiBundler_ifServer to jopiBundler_ifBrowser) so that all server code is automatically removed or replaced by a browser-specific part.
-
 ## Cookbook
 
 The documentation is organized as a cookbook: you want to do this, here is how.
