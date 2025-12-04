@@ -73,12 +73,14 @@ function getDevModeType(): DevModType {
     return DevModType.NONE;
 }
 
+const gNeedUseShell = process.platform === 'win32';
+
 export async function jopiLauncherTool(jsEngine: string) {
     function execTask(taskName: string): Promise<void> {
         return new Promise((resolve, reject) => {
             let cwd = path.dirname(config.packageJsonFilePath!);
             let cmd = isNodeJs ? "npm" : "bun";
-            const child = spawn(cmd, ["run", taskName], {stdio: "inherit", cwd, env});
+            const child = spawn(cmd, ["run", taskName], {stdio: "inherit", cwd, env, shell: gNeedUseShell});
 
             child.on('exit', (code) => {
                 if (code === 0) { resolve() }
@@ -86,6 +88,9 @@ export async function jopiLauncherTool(jsEngine: string) {
             });
 
             child.on('error', (err) => {
+                console.log(`Error executing npm script ${taskName}, command line: ${[cmd, "run", taskName].join(" ")}`);
+                console.log("CWD:", cwd);
+                console.log("Error:", err.message);
                 reject(err);
             });
         });
