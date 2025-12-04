@@ -8,6 +8,7 @@ export type InstallFunction<T> = (registry: T) => void;
 export async function loadServerInstall(webSite: JopiEasyWebSite, onWebSiteCreate: (h: (webSite: WebSite) => void|Promise<void>) => void) {
     let installFilePath = getServerInstallScript();
     if (!await jk_fs.isFile(installFilePath)) return;
+    installFilePath = jk_fs.pathToFileURL(installFilePath).href;
 
     try {
         let v = await import(installFilePath);
@@ -28,6 +29,7 @@ export async function getBrowserInstallFunction<T>(): Promise<InstallFunction<T>
     let installFilePath = getBrowserInstallScript();
     if (!await jk_fs.isFile(installFilePath)) return gVoidFunction;
 
+    installFilePath = jk_fs.pathToFileURL(installFilePath).href;
     let v = await import(installFilePath);
     if (!v.default) return gVoidFunction;
 

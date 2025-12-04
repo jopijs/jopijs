@@ -30,7 +30,6 @@
     "jopin": "bin/jopin.js"
   },
   "scripts": {
-    "clean": "rm -rf ./dist .turbo tsconfig.tsbuildinfo",
     "build:priority:2": "npx tsc",
     "bun-publish": "bun publish",
     "untrack": "git rm -r --cached -- ./dist/**;"

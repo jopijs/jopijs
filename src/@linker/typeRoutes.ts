@@ -38,6 +38,7 @@ export default class TypeRoutes extends ArobaseType {
             for (let route of Object.keys(this.routeConfig)) {
                 let routeAttributes = this.routeConfig[route];
                 let relPath = jk_fs.getRelativePath(writer.dir.output_dir, routeAttributes.configFile!);
+                relPath = jk_fs.win32ToLinuxPath(relPath);
 
                 let roles: string[] = [];
 
@@ -82,6 +83,7 @@ export default class TypeRoutes extends ArobaseType {
 
         filePath = jk_app.getCompiledFilePathFor(filePath);
         let distFilePath = jk_fs.getRelativePath(this.outputDir, filePath);
+        distFilePath = jk_fs.win32ToLinuxPath(distFilePath);
 
         let routeBindingParams = {route, attributes, filePath: srcFilePath};
 

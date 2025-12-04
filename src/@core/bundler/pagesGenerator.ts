@@ -37,12 +37,17 @@ jk_events.addListener("@jopi.bundler.beforeCreateBundleForPage", rebuildPages);
 
 async function rebuildPages(p: CreateBundleParams) {
     async function buildPage(sourceFilePath: string, route: string, pageKey: string) {
+        function convertPath(filePath: string): string {
+            let relPath = jk_fs.getRelativePath(p.genDir, filePath);
+            return jk_fs.win32ToLinuxPath(relPath);
+        }
+
         // Here we save the name without extension.
         gRouteToPageKey[route] = pageKey;
 
         let txt = REACT_TEMPLATE;
-        txt = txt.replace("__PATH__", sourceFilePath);
-        txt = txt.replace("__INSTALL__", installScript);
+        txt = txt.replace("__PATH__", convertPath(sourceFilePath));
+        txt = txt.replace("__INSTALL__",convertPath(installScript));
         txt = txt.replace("__ROUTE__", JSON.stringify(route));
         txt = txt.replace("__OPTIONS__", JSON.stringify({removeTrailingSlashes: p.webSite.mustRemoveTrailingSlashes}));
 
