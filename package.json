@@ -1,7 +1,7 @@
 {
   "name": "jopijs",
-  "version": "3.0.25",
-  "publishedDate": "12/4/2025",
+  "version": "3.0.2",
+  "publishedDate": "12/5/2025",
   "publicPublishedDate": "11/19/2025",
   "license": "MIT",
   "homepage": "https://github.com/johanpiquet/jopijs",
@@ -32,7 +32,8 @@
   "scripts": {
     "build:priority:2": "npx tsc",
     "bun-publish": "bun publish",
-    "untrack": "git rm -r --cached -- ./dist/**;"
+    "untrack": "git rm -r --cached -- ./dist/**;",
+    "jopiLink": "npx jopi-mono link-add"
   },
   "devDependencies": {
     "@types/bun": "latest",
