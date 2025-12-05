@@ -154,8 +154,6 @@ function Render(p) {
 }
 
 function start() {
-    const container = document.body;
-    const root = ReactDOM.createRoot(container);
     const params = useParams();
     
     let searchParams;
@@ -171,13 +169,22 @@ function start() {
     
     const controller = new PageController_ExposePrivate();
     
-    root.render(
+    const app = (
         <React.StrictMode>
             <PageContext.Provider value={controller}>
                 <Render controller={controller} params={params} searchParams={searchParams} />
             </PageContext.Provider>
         </React.StrictMode>
     );
+    
+    const container = document.body;
+    
+    if (import.meta.hot) {
+        const root = (import.meta.hot.data.root ??= ReactDOM.createRoot(container));
+        root.render(app);
+    } else {
+        ReactDOM.createRoot(container).render(app);
+    }
 }
 
 __SSE_EVENTS__
