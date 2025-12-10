@@ -82,50 +82,101 @@ export const resolveNodeJsAlias: ResolveHook = async (specifier, context, nextRe
 
     //endregion
 
+    //region Processed import where the name is incomplete
+
     let mustProcess = specifier.includes("/");
 
     if (mustProcess) {
-        if ((specifier[0] === '@') && specifier[1]!=='/') {
+        if (specifier.endsWith(".js") ||
+            specifier.endsWith(".ts") ||
+            specifier.endsWith(".tsx") ||
+            specifier.endsWith(".jsx") ||
+            specifier.endsWith(".cjs") ||
+            specifier.endsWith(".mjs")
+        )
+        {
             mustProcess = false;
-        } else if (specifier.indexOf(":")!==-1) {
+        }
+
+        // An organization package? Ex: import "@jopijs/myPackage".
+        else if ((specifier[0] === '@') && specifier[1]!=='/') {
             mustProcess = false;
-        } else if (specifier.endsWith(".js") || specifier.endsWith(".mjs")) {
+        }
+
+        // A namespace? Ex: import "node:fs".
+        else if (specifier.indexOf(":")!==-1) {
             mustProcess = false;
         }
     }
 
     // If we are here, it means we have possibly something like:
     //      import "module/internalPath"
+    //      import "./test" (for ./test.js)
     //
-    // The matter is that the extension is missing, and Node.js doesn't handle this case
-    // despite UI lib used by Vite.js or WebPack.
+    // The matter is that the extension is missing,
+    // and Node.js doesn't handle this case unlike
+    // UI lib used by Vite.js or WebPack.
     //
     if (mustProcess) {
-        if (!gRequire) {
-            gRequire = nodeModule.createRequire(context.parentURL!);
-        }
+        if (specifier.startsWith("./") || specifier.startsWith("../")) {
+            let parentFile = context.parentURL!;
 
-        try {
-            // Testing nextResolve and catching exception don't work.
-            // It's why we use require.resolve to localize the package..
-            //
-            let found = gRequire.resolve(specifier);
+            let idx = parentFile.lastIndexOf("/");
+            let parentDir = parentFile.substring(0, idx + 1);
 
-            if (found) {
-                const pkgPath = nodeModule.findPackageJSON(pathToFileURL(found));
+            let targetFile = parentDir + specifier;
 
-                if (pkgPath) {
-                    let pkgJson = await fs.readFile(pkgPath, "utf-8");
-                    const json = JSON.parse(pkgJson);
+            /*if (specifier.startsWith("./")) {
+                targetFile = parentDir + specifier.substring(2);
+            } else {
+                while (specifier.startsWith("../")) {
+                    specifier = specifier.substring(3);
+                    idx = parentDir.lastIndexOf("/");
+                    parentDir = parentDir.substring(0, idx + 1);
+                }
+            }*/
 
-                    if (json.module) {
-                        const oldName = specifier;
-                        specifier = path.resolve(path.dirname(pkgPath), json.module);
-                        if (LOG) console.log("Resolving", oldName, "to", specifier);
-                    }
+            targetFile = jk_fs.fileURLToPath(targetFile);
+
+            let toTest = targetFile + ".js";
+
+            if (await jk_fs.isFile(toTest)) {
+                specifier = jk_fs.pathToFileURL(toTest).href;
+            } else {
+                toTest = targetFile + "/index.js";
+
+                if (await jk_fs.isFile(toTest)) {
+                    specifier = jk_fs.pathToFileURL(toTest).href;
                 }
             }
-        } catch {
+
+        } else {
+            if (!gRequire) {
+                gRequire = nodeModule.createRequire(context.parentURL!);
+            }
+
+            try {
+                // Testing nextResolve and catching exception don't work.
+                // It's why we use require.resolve to localize the package.
+                //
+                let found = gRequire.resolve(specifier);
+
+                if (found) {
+                    const pkgPath = nodeModule.findPackageJSON(pathToFileURL(found));
+
+                    if (pkgPath) {
+                        let pkgJson = await fs.readFile(pkgPath, "utf-8");
+                        const json = JSON.parse(pkgJson);
+
+                        if (json.module) {
+                            const oldName = specifier;
+                            specifier = path.resolve(path.dirname(pkgPath), json.module);
+                            if (LOG) console.log("Resolving", oldName, "to", specifier);
+                        }
+                    }
+                }
+            } catch {
+            }
         }
     }
 
