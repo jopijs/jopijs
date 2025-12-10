@@ -27,6 +27,13 @@ export type JHeaderRenderer = (row: HeaderContext<any, any>) => React.ReactNode;
 export type JValueRenderer = (value: React.ReactNode) => React.ReactNode;
 
 export interface JTableLayoutItems {
+    /**
+     * Is set to true if data are loading.
+     */
+    isLoadingData: boolean;
+
+    variants: JTableVariants;
+
     table: React.ReactElement;
     filter?: false | React.ReactNode;
     pageSelector?: false | React.ReactNode;
@@ -70,15 +77,18 @@ export interface JColumnHeaderRendererParams {
 export interface JCellRendererParams extends JColumnHeaderRendererParams {}
 
 export interface JColumnSelectorRendererParams {
-    table: Table<any>
+    table: Table<any>;
+    isLoadingData?: boolean;
 }
 
 export interface JPageSelectorRendererParams {
-    table: Table<any>
+    table: Table<any>;
+    isLoadingData?: boolean;
 }
 
 export interface JStatisticsRendererParams {
-    table: Table<any>
+    table: Table<any>;
+    isLoadingData?: boolean;
 }
 
 export interface JTableRenderParams {
@@ -90,6 +100,7 @@ export interface JFilterRendererParams {
     table: Table<any>;
     filterField?: string;
     placeholder?: string
+    isLoadingData?: boolean;
 }
 
 //endregion
@@ -194,7 +205,9 @@ export interface JTableVariants {
     pageSelectorRenderer: (params: JPageSelectorRendererParams) => React.ReactNode;
     columnsSelectorRenderer: (params: JColumnSelectorRendererParams) => React.ReactNode;
     filterRenderer: (params: JFilterRendererParams) => React.ReactNode;
-    loadingScreenRenderer: () => React.ReactNode;
+
+    loadingScreenRenderer: (p: {text: React.ReactNode}) => React.ReactNode;
+    loadingScreenText: React.ReactNode;
 
     [renderer: string]: any;
 }

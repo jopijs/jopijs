@@ -214,8 +214,6 @@ export function JTable(p: JTableParams) {
         onRowSelectionChange: setRowSelection
     });
 
-    const LoadingScreen = p.variants.loadingScreenRenderer;
-
     useEffect(() => {
         if (manualPagination) {
             async function loadData(provider: JDataProvider) {
@@ -230,7 +228,7 @@ export function JTable(p: JTableParams) {
                 //
                 if (allRows.length < maxOffset) {
                     // Force showing the loading screen.
-                    setVisibleRows([]);
+                    //setVisibleRows([]);
 
                     // Load what we need, without gaps.
                     //
@@ -263,19 +261,21 @@ export function JTable(p: JTableParams) {
         }
     }, [p.data, pagination]);
 
-    const children = isLoadingData ? <LoadingScreen /> : p.children;
-
     return p.variants.layoutRenderer({
-        table: p.variants.tableRenderer({table: tTable, ifNoContent: children}),
+        isLoadingData,
+        variants: p.variants,
+
+        table: p.variants.tableRenderer({table: tTable, ifNoContent: p.children}),
 
         filter: (p.showFilter!==false) && p.variants.filterRenderer({
             table: tTable,
+            isLoadingData,
             filterField: p.filterField,
             placeholder: p.filterPlaceholder
         }),
 
-        columnsSelector: (p.showColumnsSelector!==false) && p.variants.columnsSelectorRenderer({table: tTable}),
-        statistics: p.variants.statisticsRenderer({table: tTable}),
-        pageSelector: p.variants.pageSelectorRenderer({table: tTable})
+        columnsSelector: (p.showColumnsSelector!==false) && p.variants.columnsSelectorRenderer({table: tTable, isLoadingData}),
+        statistics: p.variants.statisticsRenderer({table: tTable, isLoadingData}),
+        pageSelector: p.variants.pageSelectorRenderer({table: tTable, isLoadingData})
     });
 }
