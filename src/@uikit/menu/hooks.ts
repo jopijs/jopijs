@@ -20,7 +20,6 @@ export function useMenu(name: string): ReactMenuItem[] {
     const [_, setCount] = useState(0);
 
     useEvent(["app.menu.invalided", "app.menu.activeItemChanged"], () => {
-        console.log("useMenu - Refreshing menu", name);
         setCount(count => count + 1)
     });
 
