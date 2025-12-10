@@ -123,30 +123,37 @@ export const resolveNodeJsAlias: ResolveHook = async (specifier, context, nextRe
 
             let idx = parentFile.lastIndexOf("/");
             let parentDir = parentFile.substring(0, idx + 1);
-
             let targetFile = parentDir + specifier;
-
-            /*if (specifier.startsWith("./")) {
-                targetFile = parentDir + specifier.substring(2);
-            } else {
-                while (specifier.startsWith("../")) {
-                    specifier = specifier.substring(3);
-                    idx = parentDir.lastIndexOf("/");
-                    parentDir = parentDir.substring(0, idx + 1);
-                }
-            }*/
 
             targetFile = jk_fs.fileURLToPath(targetFile);
 
             let toTest = targetFile + ".js";
+            let isFound = false;
 
             if (await jk_fs.isFile(toTest)) {
-                specifier = jk_fs.pathToFileURL(toTest).href;
-            } else {
+                // > Assert the found file isn't compilation garbage.
+                //   A file kept in the dist/ dir but deleted from src/
+
+                let src = jk_app.getSourcesCodePathFor(toTest);
+
+                if (src && await jk_fs.isFile(src)) {
+                    specifier = jk_fs.pathToFileURL(toTest).href;
+                    isFound = true;
+                }
+            }
+
+            if (!isFound) {
                 toTest = targetFile + "/index.js";
 
                 if (await jk_fs.isFile(toTest)) {
-                    specifier = jk_fs.pathToFileURL(toTest).href;
+                    // > Assert the found file isn't compilation garbage.
+                    //   A file kept in the dist/ dir but deleted from src/
+
+                    let src = jk_app.getSourcesCodePathFor(toTest);
+
+                    if (src && await jk_fs.isFile(src)) {
+                        specifier = jk_fs.pathToFileURL(toTest).href;
+                    }
                 }
             }
 
