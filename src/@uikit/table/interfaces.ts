@@ -2,6 +2,7 @@ import {type Table, type CellContext, type HeaderContext} from "@tanstack/react-
 
 import * as React from "react";
 import * as jk_schema from "jopi-toolkit/jk_schema";
+import type {JDataRowSource} from "jopi-toolkit/jk_data";
 
 //region Rendering
 
@@ -101,33 +102,21 @@ export interface JFilterRendererParams {
     filterField?: string;
     placeholder?: string
     isLoadingData?: boolean;
+
+    filter: string;
+    setFilter: (filter: string) => void;
 }
-
-//endregion
-
-//region Loading data
-
-export interface JDataProviderResponse {
-    rows: any[];
-    total?: number;
-    offset?: number;
-}
-
-export interface JDataProviderParams {
-    offset: number;
-    count: number;
-}
-
-export type JDataProvider = (params: JDataProviderParams) => Promise<JDataProviderResponse>;
 
 //endregion
 
 //region JTable
 
 export interface JTableParams {
+    data?: any[];
+    dataSource?: JDataRowSource;
+    schema?: jk_schema.Schema;
+
     variants: JTableVariants;
-    data: any[] | JDataProvider;
-    schema: jk_schema.Schema;
     children?: React.ReactNode;
     showColumnsSelector?: boolean;
 
