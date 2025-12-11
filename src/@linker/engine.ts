@@ -69,8 +69,8 @@ export async function writeTextToFileIfMismatch(filePath: string, content: strin
 //region Registry
 
 export interface RegistryItem {
+    type: AliasType;
     itemPath: string;
-    arobaseType: ArobaseType;
     priority?: PriorityLevel;
 }
 
@@ -102,30 +102,30 @@ async function generateAll() {
         return template;
     }
 
-    for (let arobaseType of Object.values(gArobaseHandler)) {
-        await arobaseType.beginGeneratingCode(gCodeGenWriter);
+    for (let type of Object.values(gTypesHandlers)) {
+        await type.beginGeneratingCode(gCodeGenWriter);
 
         let items: RegistryItem[] = [];
 
         for (let key in gRegistry) {
             const item = gRegistry[key];
 
-            if (item.arobaseType === arobaseType) {
+            if (item.type === type) {
                 const eventData = {
                     codeWrite: gCodeGenWriter, key,
                     item, items, mustSkip: false
                 };
 
                 items.push(item);
-                await jk_events.sendAsyncEvent("@jopi.linker.generateCode." + arobaseType.typeName, eventData);
+                await jk_events.sendAsyncEvent("@jopi.linker.generateCode." + type.typeName, eventData);
 
                 if (!eventData.mustSkip) {
-                    await item.arobaseType.generateCodeForItem(gCodeGenWriter, key, item);
+                    await item.type.generateCodeForItem(gCodeGenWriter, key, item);
                 }
             }
         }
 
-        await arobaseType.endGeneratingCode(gCodeGenWriter, items);
+        await type.endGeneratingCode(gCodeGenWriter, items);
     }
 
     for (let p of gModuleDirProcessors) {
@@ -269,33 +269,33 @@ async function processModules() {
 
 async function processModule(moduleDir: string) {
     let dirItems = await jk_fs.listDir(moduleDir);
-    let arobaseDir: jk_fs.DirItem|undefined;
+    let aliasRootDir: jk_fs.DirItem|undefined;
 
     for (let dirItem of dirItems) {
         if (!dirItem.isDirectory) continue;
         if (dirItem.name[0] !== "@") continue;
-        if (dirItem.name == "@alias") { arobaseDir = dirItem; continue; }
+        if (dirItem.name == "@alias") { aliasRootDir = dirItem; continue; }
 
         let name = dirItem.name.substring(1);
-        let arobaseType = gArobaseHandler[name];
-        if (!arobaseType) throw declareLinkerError("Unknown arobase type: " + name, dirItem.fullPath);
+        let type = gTypesHandlers[name];
+        if (!type) throw declareLinkerError("Unknown alias type: " + name, dirItem.fullPath);
 
-        if (arobaseType.position !== "root") continue;
-        await arobaseType.processDir({moduleDir, arobaseDir: dirItem.fullPath, genDir: gDir_outputSrc});
+        if (type.position !== "root") continue;
+        await type.processDir({moduleDir, typeDir: dirItem.fullPath, genDir: gDir_outputSrc});
     }
 
-    if (arobaseDir) {
-        dirItems = await jk_fs.listDir(arobaseDir.fullPath);
+    if (aliasRootDir) {
+        dirItems = await jk_fs.listDir(aliasRootDir.fullPath);
 
         for (let dirItem of dirItems) {
             if (!dirItem.isDirectory) continue;
 
             let name = dirItem.name;
-            let arobaseType = gArobaseHandler[name];
-            if (!arobaseType) throw declareLinkerError("Unknown arobase type: " + name, dirItem.fullPath);
+            let type = gTypesHandlers[name];
+            if (!type) throw declareLinkerError("Unknown alias type: " + name, dirItem.fullPath);
 
-            if (arobaseType.position === "root") continue;
-            await arobaseType.processDir({moduleDir, arobaseDir: dirItem.fullPath, genDir: gDir_outputSrc});
+            if (type.position === "root") continue;
+            await type.processDir({moduleDir, typeDir: dirItem.fullPath, genDir: gDir_outputSrc});
         }
     }
 }
@@ -304,7 +304,7 @@ async function processModule(moduleDir: string) {
 
 //region Extensions
 
-export abstract class ArobaseType {
+export abstract class AliasType {
     constructor(public readonly typeName: string, public readonly position?: "root"|undefined) {
         this.initialize();
     }
@@ -312,7 +312,7 @@ export abstract class ArobaseType {
     protected initialize() {
     }
 
-    abstract processDir(p: { moduleDir: string; arobaseDir: string; genDir: string; }): Promise<void>;
+    abstract processDir(p: { moduleDir: string; typeDir: string; genDir: string; }): Promise<void>;
 
     declareError(message: string, filePath?: string): Error {
         return declareLinkerError(message, filePath);
@@ -428,7 +428,6 @@ export abstract class ArobaseType {
 
         const myUid = result.myUid;
         const refTarget = result.refTarget;
-        const conditions = result.conditionsFound;
         let priority = result.priority!;
 
         if (!priority) {
@@ -452,12 +451,17 @@ export abstract class ArobaseType {
             itemName: thisName, uid: thisNameAsUID, refTarget,
             itemPath: thisFullPath, isFile: thisIsFile, resolved, priority,
             parentDirName: p.rootDirName,
-            conditions
+
+            conditions: result.conditionsFound,
+            conditionsContext: result.conditionsContext,
+
+            features: result.features,
+            featuresContext: result.featuresContext
         });
     }
 
     /**
-     * Analyse the content of a dir, extract information and check rules.
+     * Analyze the content of a dir, extract information, and check rules.
      * @param dirPath
      * @param rules
      * @param useThisUid
@@ -467,7 +471,8 @@ export abstract class ArobaseType {
             let featureName = dirItem.name.toLowerCase();
             featureName = featureName.slice(0, -ext.length);
 
-            let canonicalName = this.normalizeFeatureName(featureName, rules.featureCheckingContext);
+            if (!result.featuresContext) result.featuresContext = {};
+            let canonicalName = this.normalizeFeatureName(featureName, result.featuresContext);
 
             if (!canonicalName) {
                 throw declareLinkerError("Unknown feature name: " + featureName, dirItem.fullPath);
@@ -481,13 +486,15 @@ export abstract class ArobaseType {
 
         const decodeCond = async (dirItem: jk_fs.DirItem): Promise<string> => {
             let condName = dirItem.name.toLowerCase();
+
             // Remove .cond
             condName = condName.slice(0, -5);
 
-            let canonicalName = this.normalizeConditionName(condName, rules.conditionCheckingContext);
+            if (!result.conditionsContext) result.conditionsContext = {};
+            let canonicalName = this.normalizeConditionName(condName, dirItem.fullPath, result.conditionsContext);
 
             if (!canonicalName) {
-                throw declareLinkerError("Unknown condition name: " + condName, dirItem.fullPath);
+                throw declareLinkerError("Unknown condition: " + condName, dirItem.fullPath);
             }
 
             dirItem.name = canonicalName + ".cond";
@@ -638,7 +645,7 @@ export abstract class ArobaseType {
         return result;
     }
 
-    protected normalizeConditionName(condName: string, ctx: any|undefined): string|undefined {
+    protected normalizeConditionName(condName: string, filePath: string, ctx: any|undefined): string|undefined {
         return undefined;
     }
 
@@ -667,16 +674,16 @@ export abstract class ArobaseType {
         }
     }
 
-    registry_getItem<T extends RegistryItem>(key: string, requireType?: ArobaseType): T|undefined {
+    registry_getItem<T extends RegistryItem>(key: string, requireType?: AliasType): T|undefined {
         const entry = gRegistry[key];
-        if (requireType && entry && (entry.arobaseType !== requireType)) throw declareLinkerError("The item " + key + " is not of the expected type @" + requireType.typeName);
+        if (requireType && entry && (entry.type !== requireType)) throw declareLinkerError("The item " + key + " is not of the expected type @" + requireType.typeName);
         return entry as T;
     }
 
-    registry_requireItem<T extends RegistryItem>(key: string, requireType?: ArobaseType): T {
+    registry_requireItem<T extends RegistryItem>(key: string, requireType?: AliasType): T {
         const entry = gRegistry[key];
         if (!entry) throw declareLinkerError("The item " + key + " is required but not defined");
-        if (requireType && (entry.arobaseType !== requireType)) throw declareLinkerError("The item " + key + " is not of the expected type @" + requireType.typeName);
+        if (requireType && (entry.type !== requireType)) throw declareLinkerError("The item " + key + " is not of the expected type @" + requireType.typeName);
         return entry as T;
     }
 
@@ -688,8 +695,6 @@ export interface DirAnalyzingRules {
     allowConditions?: boolean;
     requirePriority?: boolean;
     allowFeatures?: boolean;
-    conditionCheckingContext?: any;
-    featureCheckingContext?: any;
 }
 
 export interface ScanDirItemsParams {
@@ -719,7 +724,12 @@ export interface TransformItemParams {
 
     uid?: string;
     refTarget?: string;
+
     conditions?: Set<string>;
+    conditionsContext?: Record<string, any>;
+
+    features?: Record<string, boolean>;
+    featuresContext?: Record<string, any>;
 
     parentDirName: string;
     priority: PriorityLevel;
@@ -733,8 +743,12 @@ export interface ExtractDirectoryInfosResult {
     myUid?: string;
     priority?: PriorityLevel;
     refTarget?: string;
+
     conditionsFound?: Set<string>;
+    conditionsContext?: Record<string, any>;
+
     features?: Record<string, boolean>;
+    featuresContext?: Record<string, any>;
 }
 
 export class ModuleDirProcessor {
@@ -751,7 +765,7 @@ export class ModuleDirProcessor {
     }
 }
 
-let gArobaseHandler: Record<string, ArobaseType> = {};
+let gTypesHandlers: Record<string, AliasType> = {};
 let gModuleDirProcessors: ModuleDirProcessor[] = [];
 
 //endregion
@@ -846,10 +860,10 @@ export async function compile(importMeta: any, config: LinkerConfig, isRefresh =
     gServerInstallFileTemplate = config.templateForServer;
     gBrowserInstallFileTemplate = config.templateForBrowser;
 
-    gArobaseHandler = {};
+    gTypesHandlers = {};
 
-    for (let aType of config.arobaseTypes) {
-        gArobaseHandler[aType.typeName] = aType;
+    for (let aType of config.aliasTypes) {
+        gTypesHandlers[aType.typeName] = aType;
     }
 
     gModuleDirProcessors = [];
@@ -860,7 +874,7 @@ export async function compile(importMeta: any, config: LinkerConfig, isRefresh =
 
     // Avoid deleting the directory if it's a refresh.
     // Why? Because resource can be requested while the
-    // refresh is occuring.
+    // refresh is occurring.
     //
     if (!isRefresh) {
         // Note: here we don't destroy the dist dir.
@@ -874,7 +888,7 @@ export interface LinkerConfig {
     projectRootDir: string;
     templateForBrowser: string;
     templateForServer: string;
-    arobaseTypes: ArobaseType[];
+    aliasTypes: AliasType[];
     modulesProcess: ModuleDirProcessor[];
 }
 

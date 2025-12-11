@@ -1,10 +1,11 @@
-import type {LinkerConfig, AI_INSTRUCTIONS} from "./engine.ts";
+import type {LinkerConfig} from "./engine.ts";
 import * as jk_app from "jopi-toolkit/jk_app";
-import {Type_ArobaseChunk} from "./arobaseTypes.ts";
+import {TypeChunk} from "./coreAliasTypes.ts";
 import TypeEvents from "./typeEvents.ts";
 import TypeUiComposite from "./typeUiComposite.ts";
 import ModInstaller from "./modInstaller.ts";
 import TypeRoutes from "./typeRoutes.ts";
+import TypeDataSource from "./typeDataSource.ts";
 
 // Here it's ASYNC.
 let gServerInstallFileTemplate = `__AI_INSTRUCTIONS
@@ -30,12 +31,14 @@ export function getDefaultLinkerConfig(): LinkerConfig {
         templateForServer: gServerInstallFileTemplate,
         templateForBrowser: gBrowserInstallFileTemplate,
 
-        arobaseTypes: [
-            new Type_ArobaseChunk("uiComponents"),
-            new Type_ArobaseChunk("schemes"),
+        aliasTypes: [
+            new TypeChunk("uiComponents"),
+            new TypeChunk("schemes"),
+            //
             new TypeUiComposite("uiComposites"),
             new TypeEvents("events"),
-            new TypeRoutes("routes", "root")
+            new TypeRoutes("routes", "root"),
+            new TypeDataSource("ds")
         ],
 
         modulesProcess: [

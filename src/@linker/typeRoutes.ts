@@ -1,5 +1,5 @@
 import {
-    ArobaseType,
+    AliasType,
     CodeGenWriter,
     FilePart,
     getWriter,
@@ -10,8 +10,9 @@ import {
 import * as jk_fs from "jopi-toolkit/jk_fs";
 import * as jk_app from "jopi-toolkit/jk_app";
 import type {RouteAttributes} from "jopijs/generated";
+import {normalizeNeedRoleConditionName} from "./common.ts";
 
-export default class TypeRoutes extends ArobaseType {
+export default class TypeRoutes extends AliasType {
     private sourceCode_header = `import {routeBindPage, routeBindVerb} from "jopijs/generated";`;
     private sourceCode_body = "";
     private outputDir: string = "";
@@ -65,16 +66,16 @@ export default class TypeRoutes extends ArobaseType {
         writer.genAddToInstallFile(InstallFileType.server, FilePart.footer, "\n    onWebSiteCreated((webSite) => declareRoutes(webSite));");
     }
 
-    async processDir(p: { moduleDir: string; arobaseDir: string; genDir: string; }) {
+    async processDir(p: { moduleDir: string; typeDir: string; genDir: string; }) {
         this.outputDir = getWriter().dir.output_dir;
 
-        let dirAttributes = await this.scanAttributes(p.arobaseDir);
+        let dirAttributes = await this.scanAttributes(p.typeDir);
         //
         if (dirAttributes.configFile) {
             this.routeConfig["/"] = dirAttributes;
         }
 
-        await this.scanDir(p.arobaseDir, "/", dirAttributes);
+        await this.scanDir(p.typeDir, "/", dirAttributes);
     }
 
     private bindPage(writer: CodeGenWriter, route: string, filePath: string, attributes: RouteAttributes) {
@@ -116,37 +117,26 @@ export default class TypeRoutes extends ArobaseType {
         return undefined;
     }
 
-    protected normalizeConditionName(condName: string, ctx: any|undefined): string|undefined {
-        let needRoleIdx = condName.toLowerCase().indexOf("needrole");
-        if (needRoleIdx===-1) return undefined;
-
-        let target = condName.substring(0, needRoleIdx).toUpperCase();
-        let role = condName.substring(needRoleIdx + 8).toLowerCase();
-        if ((role[0]==='_')||(role[0]==='-')) role = role.substring(1);
-
-        if (!ctx[target]) ctx[target] = [role];
-        else ctx[target].push(role);
-
-        target = target.toLowerCase();
-        return target + "NeedRole_" + role;
+    protected normalizeConditionName(condName: string, filePath: string, ctx: any|undefined): string|undefined {
+        return normalizeNeedRoleConditionName(condName, filePath, ctx,
+            ["PAGE", "GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS", "ALL", "PATH"]);
     }
 
     private async scanAttributes(dirPath: string): Promise<RouteAttributes> {
-        const res: RouteAttributes = {needRoles: {}};
-
         const infos = await this.dir_extractInfos(dirPath, {
             allowConditions: true,
             requirePriority: true,
-            requireRefFile: false,
-            conditionCheckingContext: res.needRoles
+            requireRefFile: false
         });
 
-        res.configFile = await resolveFile(dirPath, ["config.tsx", "config.ts"]);
-        res.disableCache = (infos.features?.["cache"] === true) ? true : undefined;
-        res.priority = infos.priority;
+        const res: RouteAttributes = {
+            configFile: await resolveFile(dirPath, ["config.tsx", "config.ts"]),
+            disableCache: (infos.features?.["cache"] === true) ? true : undefined,
+            priority: infos.priority
+        };
 
-        if (!Object.values(res.needRoles!).length) {
-            res.needRoles = undefined;
+        if (infos.conditionsContext && Object.values(infos.conditionsContext!).length) {
+            res.needRoles =  infos.conditionsContext;
         }
 
         return res;

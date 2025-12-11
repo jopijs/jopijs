@@ -1,7 +1,7 @@
-import {type ArobaseList, Type_ArobaseList} from "./arobaseTypes.ts";
+import {type TypeList_Group, TypeList} from "./coreAliasTypes.ts";
 import {CodeGenWriter, FilePart, InstallFileType, type RegistryItem} from "./engine.ts";
 
-export default class TypeEvents extends Type_ArobaseList {
+export default class TypeEvents extends TypeList {
     async endGeneratingCode(writer: CodeGenWriter, items: RegistryItem[]): Promise<void> {
         let count = 0;
 
@@ -11,7 +11,7 @@ export default class TypeEvents extends Type_ArobaseList {
         for (let item of items) {
             count++;
 
-            let list = item as ArobaseList;
+            let list = item as TypeList_Group;
 
             // Note: inside installServer.js : use the global event handler.
             //       inside installBrowser.js: use the event handler local to the request.

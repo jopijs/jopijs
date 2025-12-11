@@ -1,6 +1,5 @@
 import * as jk_fs from "jopi-toolkit/jk_fs";
 import * as jk_tools from "jopi-toolkit/jk_tools";
-import * as jk_events from "jopi-toolkit/jk_events";
 
 import {
     type ProcessDirItemParams,
@@ -8,40 +7,40 @@ import {
     type TransformItemParams,
     PriorityLevel,
     type RegistryItem,
-    ArobaseType,
+    AliasType,
     CodeGenWriter
 } from "./engine.ts";
 
-// region ArobaseList
+//region TypeList
 
-export interface ArobaseList extends RegistryItem {
+export interface TypeList_Group extends RegistryItem {
     listName: string;
     allDirPath: string[];
-    items: ArobaseListItem[];
+    items: TypeList_GroupItem[];
     itemsType: string;
     conditions?: Set<string>;
 }
 
-export interface ArobaseListItem {
+export interface TypeList_GroupItem {
     ref?: string;
     entryPoint?: string;
     priority: PriorityLevel;
     sortKey: string;
 }
 
-export class Type_ArobaseList extends ArobaseType {
-    protected async onListItem(item: ArobaseListItem, list: ArobaseListItem[], _dirPath: string): Promise<void> {
+export class TypeList extends AliasType {
+    protected async onListItem(item: TypeList_GroupItem, list: TypeList_GroupItem[], _dirPath: string): Promise<void> {
         list.push(item);
     }
 
-    protected mergeIntoList(list: ArobaseList, items: ArobaseListItem[]) {
+    protected mergeIntoList(list: TypeList_Group, items: TypeList_GroupItem[]) {
         let currentItems = list.items;
         currentItems.push(...items);
         currentItems.sort((a, b) => a.sortKey.localeCompare(b.sortKey));
     }
 
-    processDir(p: { moduleDir: string; arobaseDir: string; genDir: string; }) {
-        return this.processList(p.arobaseDir);
+    processDir(p: { moduleDir: string; typeDir: string; genDir: string; }) {
+        return this.processList(p.typeDir);
     }
 
     protected async processList(listDirPath: string): Promise<void> {
@@ -67,7 +66,7 @@ export class Type_ArobaseList extends ArobaseType {
         // > Extract the list items.
 
         const dirItems = await getSortedDirItem(p.itemPath);
-        let listItems: ArobaseListItem[] = [];
+        let listItems: TypeList_GroupItem[] = [];
 
         const params: ProcessDirItemParams = {
             rootDirName: p.parentDirName,
@@ -81,16 +80,14 @@ export class Type_ArobaseList extends ArobaseType {
             },
 
             transform: async (item) => {
-                const listItem: ArobaseListItem = {
+                const listItem: TypeList_GroupItem = {
                     priority: item.priority,
                     sortKey: item.itemName,
                     ref: item.refTarget,
                     entryPoint: item.resolved.entryPoint
                 };
 
-                const eventData = {itemPath: item.itemPath, item: listItem, list: listItems, mustSkip: false};
-                await jk_events.sendAsyncEvent("@jopi.linker.onNewListItem." + this.typeName, eventData);
-                if (!eventData.mustSkip) await this.onListItem(listItem, listItems, item.itemPath);
+                await this.onListItem(listItem, listItems, item.itemPath);
             }
         };
 
@@ -113,12 +110,12 @@ export class Type_ArobaseList extends ArobaseType {
 
         // > Add the list.
 
-        let current = this.registry_getItem<ArobaseList>(listId, this);
+        let current = this.registry_getItem<TypeList_Group>(listId, this);
 
         if (!current) {
-            const newItem: ArobaseList = {
+            const newItem: TypeList_Group = {
                 listName, conditions: p.conditions,
-                arobaseType: this, itemPath: p.itemPath,
+                type: this, itemPath: p.itemPath,
                 items: listItems, itemsType: p.parentDirName, allDirPath: [p.itemPath]
             };
 
@@ -136,15 +133,15 @@ export class Type_ArobaseList extends ArobaseType {
         }
     }
 
-    protected getGenOutputDir(_list: ArobaseList) {
+    protected getGenOutputDir(_list: TypeList_Group) {
         return this.typeName;
     }
 
-    protected resolveEntryPointFor(list: ArobaseList, item: ArobaseListItem): string {
+    protected resolveEntryPointFor(list: TypeList_Group, item: TypeList_GroupItem): string {
         let entryPoint = item.entryPoint!;
 
         if (!entryPoint) {
-            let d = this.registry_requireItem<ArobaseChunk>(item.ref!);
+            let d = this.registry_requireItem<TypeChunk_Item>(item.ref!);
             if (d.itemType!==list.itemsType) {
                 throw this.declareError(`Type mismatch. Expect ${list.itemsType}`, d.itemPath)
             }
@@ -160,7 +157,7 @@ export class Type_ArobaseList extends ArobaseType {
     }
 
     async generateCodeForItem(writer: CodeGenWriter, key: string, rItem: RegistryItem) {
-        function sortByPriority(items: ArobaseListItem[]): ArobaseListItem[] {
+        function sortByPriority(items: TypeList_GroupItem[]): TypeList_GroupItem[] {
             function addPriority(priority: PriorityLevel) {
                 let e = byPriority[priority];
                 if (e) items.push(...e);
@@ -184,13 +181,13 @@ export class Type_ArobaseList extends ArobaseType {
             return items;
         }
 
-        const list = rItem as ArobaseList;
+        const list = rItem as TypeList_Group;
         list.items = sortByPriority(list.items);
 
         await this.generateCodeForList(writer, key, list);
     }
 
-    protected async generateCodeForList(writer: CodeGenWriter, key: string, list: ArobaseList): Promise<void> {
+    protected async generateCodeForList(writer: CodeGenWriter, key: string, list: TypeList_Group): Promise<void> {
         let count = 1;
         let outDir_innerPath = this.getGenOutputDir(list);
         let outDir_fullPath = jk_fs.join(writer.dir.output_src, outDir_innerPath);
@@ -246,31 +243,37 @@ export class Type_ArobaseList extends ArobaseType {
 
 //endregion
 
-//region ArobaseChunk
+//region TypeChunk
 
-export interface ArobaseChunk extends RegistryItem {
+export interface TypeChunk_Item extends RegistryItem {
     entryPoint: string;
     itemType: string;
+
+    conditions?: Set<string>;
+    conditionsContext?: Record<string, any>;
+
+    features?: Record<string, boolean>;
+    featuresContext?: Record<string, any>;
 }
 
-export class Type_ArobaseChunk extends ArobaseType {
-    async onChunk(chunk: ArobaseChunk, key: string, _dirPath: string) {
+export class TypeChunk extends AliasType {
+    async onChunk(chunk: TypeChunk_Item, key: string, _dirPath: string) {
         this.registry_addItem(key, chunk);
     }
 
-    async processDir(p: { moduleDir: string; arobaseDir: string; genDir: string; }) {
+    async processDir(p: { moduleDir: string; typeDir: string; genDir: string; }) {
         await this.dir_recurseOnDir({
-            dirToScan: p.arobaseDir,
+            dirToScan: p.typeDir,
             expectFsType: "dir",
 
             rules: {
-                rootDirName: jk_fs.basename(p.arobaseDir),
+                rootDirName: jk_fs.basename(p.typeDir),
                 nameConstraint: "canBeUid",
                 requireRefFile: false,
                 requirePriority: true,
 
                 filesToResolve: {
-                    "info": ["info.json"],
+                    //"info": ["info.json"],
                     "entryPoint": ["index.tsx", "index.ts"]
                 },
 
@@ -279,28 +282,32 @@ export class Type_ArobaseChunk extends ArobaseType {
                         throw this.declareError("No 'index.ts' or 'index.tsx' file found", props.itemPath);
                     }
 
-                    const chunk: ArobaseChunk = {
-                        arobaseType: this,
-                        entryPoint: props.resolved.entryPoint,
+                    const chunk: TypeChunk_Item = {
+                        type: this,
+
+                        entryPoint: props.resolved?.entryPoint,
+
+                        conditions: props.conditions,
+                        conditionsContext: props.conditionsContext,
+
+                        features: props.features,
+                        featuresContext: props.featuresContext,
+
                         itemType: props.parentDirName,
+
                         itemPath: props.itemPath,
                         priority: props.priority
                     };
 
                     const key = this.typeName + "!" + props.itemName;
-                    const eventData = {mustSkip: false, key, chunk, itemPath: props.itemPath};
-                    await jk_events.sendAsyncEvent("@jopi.linker.onNewChunk." + this.typeName, eventData);
-
-                    if (!eventData.mustSkip) {
-                        await this.onChunk(chunk, key, props.itemPath);
-                    }
+                    await this.onChunk(chunk, key, props.itemPath);
                 }
             }
         });
     }
 
     async generateCodeForItem(writer: CodeGenWriter, key: string, rItem: RegistryItem) {
-        const item = rItem as ArobaseChunk;
+        const item = rItem as TypeChunk_Item;
 
         let targetName = key.substring(key.indexOf("!") + 1);
         let outDir = jk_fs.join(writer.dir.output_src, this.getGenOutputDir(item));
@@ -317,7 +324,7 @@ export class Type_ArobaseChunk extends ArobaseType {
         });
     }
 
-    protected getGenOutputDir(_chunk: ArobaseChunk) {
+    protected getGenOutputDir(_chunk: TypeChunk_Item) {
         return this.typeName;
     }
 }

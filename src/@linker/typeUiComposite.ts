@@ -1,6 +1,6 @@
-import {Type_ArobaseList} from "./arobaseTypes.ts";
+import {TypeList} from "./coreAliasTypes.ts";
 
-export default class TypeUiComposite extends Type_ArobaseList {
+export default class TypeUiComposite extends TypeList {
     protected codeGen_generateExports(listAsArray: string) {
         let array = listAsArray.slice(1, -2).split(",");
         listAsArray = array.map(e => `        _jsx(${e}, {})`).join(", \n");
