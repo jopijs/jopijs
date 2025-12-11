@@ -134,11 +134,18 @@ export const resolveNodeJsAlias: ResolveHook = async (specifier, context, nextRe
                 // > Assert the found file isn't compilation garbage.
                 //   A file kept in the dist/ dir but deleted from src/
 
-                let src = jk_app.getSourcesCodePathFor(toTest);
+                let compiledCodeDir = jk_app.getCompiledCodeDir();
 
-                if (src && await jk_fs.isFile(src)) {
-                    specifier = jk_fs.pathToFileURL(toTest).href;
+                if (toTest.startsWith(compiledCodeDir)) {
+                    let src = jk_app.getSourcesCodePathFor(toTest);
+                    if (src && await jk_fs.isFile(src)) isFound = true;
+                } else {
+                    // Can't check if coming from a lib.
                     isFound = true;
+                }
+
+                if (isFound) {
+                    specifier = jk_fs.pathToFileURL(toTest).href;
                 }
             }
 
@@ -149,9 +156,17 @@ export const resolveNodeJsAlias: ResolveHook = async (specifier, context, nextRe
                     // > Assert the found file isn't compilation garbage.
                     //   A file kept in the dist/ dir but deleted from src/
 
-                    let src = jk_app.getSourcesCodePathFor(toTest);
+                    let compiledCodeDir = jk_app.getCompiledCodeDir();
 
-                    if (src && await jk_fs.isFile(src)) {
+                    if (toTest.startsWith(compiledCodeDir)) {
+                        let src = jk_app.getSourcesCodePathFor(toTest);
+                        if (src && await jk_fs.isFile(src)) isFound = true;
+                    } else {
+                        // Can't check if coming from a lib.
+                        isFound = true;
+                    }
+
+                    if (isFound) {
                         specifier = jk_fs.pathToFileURL(toTest).href;
                     }
                 }
