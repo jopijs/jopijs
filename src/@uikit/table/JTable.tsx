@@ -203,6 +203,8 @@ export function JTable(p: JTableParams) {
     const [pagination, setPagination] = useState<PaginationState>({pageIndex: 0, pageSize: p.pageSize || 20});
     const [filter, setFilter] = React.useState("");
 
+    const [previousQueryData, setPreviousQueryData] = useState<any>(undefined);
+
     function doSetFilter(newValue: string) {
         setFilter(newValue);
         setPagination({pageIndex: 0, pageSize: pagination.pageSize});
@@ -249,13 +251,26 @@ export function JTable(p: JTableParams) {
                 let res = await p.dataSource?.read(ctx.queryKey[2] as JTableDs_ReadParams);
                 await jk_timer.sleep(2000)
                 return res;
-            }
+            },
+
+            // The placeholder data are date returned while
+            // loading the initial data set. Here where use the previous data set.
+            // Doing that avoid screen flickering.
+            //
+            placeholderData: previousQueryData
         });
 
-        isLoadingData = query.isLoading === true;
+        // dataUpdatedAt allows knowing we are not
+        // using the local cache nor the data placeholder.
+        //
+        isLoadingData = (query.isLoading === true) || (!query.dataUpdatedAt);
+
         isRefreshingData = query.isFetching === true;
 
         queryData = query.data;
+
+        // It allows avoiding emptying when no cached data are available.
+        if (previousQueryData != queryData) setPreviousQueryData(queryData);
     }
 
     const tTable = useReactTable({
