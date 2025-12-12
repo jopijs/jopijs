@@ -1,6 +1,7 @@
 import type {JTableDs, JTableDs_ReadParams} from "jopi-toolkit/jk_data";
 import type {WebSite} from "./jopiWebSite";
 import type {JopiRequest} from "./jopiRequest";
+import {sleep} from "jopi-toolkit/jk_timer";
 
 interface RegisteredDataSource {
     name: string;
@@ -37,13 +38,21 @@ async function onDsTableCall_POST(req: JopiRequest, dsInfos: RegisteredDataSourc
 
     if (reqData.read) {
         let requiredRoles = dsInfos.permissions.READ;
-        if (requiredRoles) {
-            req.role_assertUserHasRoles(requiredRoles);
-        }
+        if (requiredRoles) req.role_assertUserHasRoles(requiredRoles);
 
+        if (gHttpProxyReadPause) await sleep(gHttpProxyReadPause);
         let res = await dsInfos.dataSource.read(reqData.read);
         return req.res_jsonResponse(res);
     }
 
     return req.res_returnError400_BadRequest();
+}
+
+/**
+ * Allow forcing a pause before returning the data.
+ */
+let gHttpProxyReadPause: number = 0;
+
+export function setHttpProxyReadPause(pauseMs: number) {
+    gHttpProxyReadPause = pauseMs;
 }

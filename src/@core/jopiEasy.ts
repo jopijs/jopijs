@@ -42,6 +42,8 @@ import {getPackageJsonConfig} from "jopijs/loader-tools";
 import {initLinker} from "./linker.ts";
 import {logServer_startApp} from "./_logs.ts";
 import type {LoggerGroupCallback} from "jopi-toolkit/jk_logs";
+import {setHttpProxyReadPause} from "./dataSources.ts";
+import {isDevelopment} from "jopi-toolkit/jk_process";
 
 class JopiApp {
     private _isStartAppSet: boolean = false;
@@ -57,6 +59,10 @@ class JopiApp {
 
         if (this._isStartAppSet) throw "App is already started";
         this._isStartAppSet = true;
+
+        if (isDevelopment) {
+            jk_term.logBgBlue("You are running in development mode. Set env var NODE_ENV to 'production' to disable this message.")
+        }
 
         jk_app.setApplicationMainFile(importMeta.filename);
         doStart().then();
@@ -569,12 +575,31 @@ export class JopiEasyWebSite {
         const parent: JopiEasyWebSite = this;
 
         const me: WebSite_ConfigureBehaviors = {
-            removeTrailingSlashes(value: boolean = true) {
-                parent.options.removeTrailingSlash = value;
+            enableTrailingSlashes(value: boolean = true) {
+                parent.options.removeTrailingSlash = !value;
                 return me;
             },
 
             DONE_configure_behaviors(): JopiEasyWebSite {
+                return parent;
+            }
+        }
+
+        return me;
+    }
+
+    configure_devBehaviors(): WebSite_ConfigureDevBehaviors {
+        const parent: JopiEasyWebSite = this;
+
+        const me: WebSite_ConfigureDevBehaviors = {
+            slowDownHttpDataSources(pauseMs: number) {
+                if (isDevelopment) {
+                    setHttpProxyReadPause(pauseMs);
+                }
+                return me;
+            },
+
+            DONE_configure_devBehaviors(): JopiEasyWebSite {
                 return parent;
             }
         }
@@ -866,8 +891,23 @@ class WebSite_CacheBuilder {
 }
 
 interface WebSite_ConfigureBehaviors {
-    removeTrailingSlashes(value: boolean|undefined): WebSite_ConfigureBehaviors;
+    /**
+     * Allows adding trailing slash at end of the urls.
+     * The default behavior is to remove them.
+     */
+    enableTrailingSlashes(value: boolean|undefined): WebSite_ConfigureBehaviors;
+
     DONE_configure_behaviors(): JopiEasyWebSite;
+}
+
+interface WebSite_ConfigureDevBehaviors {
+    /**
+     * Allows adding a pause (in ms) before returning DataSource values.
+     * This is mainly to test waiting screens.
+     */
+    slowDownHttpDataSources(pauseMs: number): WebSite_ConfigureDevBehaviors;
+
+    DONE_configure_devBehaviors(): JopiEasyWebSite;
 }
 
 //endregion
