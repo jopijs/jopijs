@@ -7,17 +7,45 @@ import type {JTableDs} from "jopi-toolkit/jk_data";
 import * as jk_tools from "jopi-toolkit/jk_tools";
 
 interface TypeTable_Item extends TypeChunk_Item {
+    /**
+     * Must automatically expose this data source to the network?
+     */
     mustExpose: boolean;
+
+    /**
+     * Must automatically build a proxy for this data source?
+     */
+    mustBuildProxy: boolean;
+
+    /**
+     * A UID allows exposing the service with an anonymous URL.
+     */
     securityUid: string;
 }
 
 export default class TypeTable extends TypeChunk {
     private toExpose: TypeTable_Item[] = [];
 
-    protected normalizeFeatureName(featureName: string, ctx: any|undefined): string|undefined {
+    protected getDefaultFeatures(): Record<string, boolean>|undefined {
+        return {
+            autoExpose: true,
+            autoProxy: true
+        };
+    }
+
+    protected onFeatureFileFound(featureName: string): string|undefined {
         featureName = featureName.toLowerCase();
-        if (featureName === "expose") return "public";
-        if (featureName === "public") return "public";
+
+        // autoExpose
+        if (featureName === "autoexpose") return "autoExpose";
+        if (featureName === "public") return "autoExpose";
+        if (featureName === "expose") return "autoExpose";
+
+        // autoProxy
+        if (featureName === "autoproxy") return "autoProxy";
+        if (featureName === "proxy") return "autoProxy";
+        if (featureName === "genproxy") return "autoProxy";
+
         return undefined;
     }
 
@@ -39,8 +67,10 @@ export default class TypeTable extends TypeChunk {
         dsItem.securityUid = securityUid;
 
         // Must expose this data source to the network?
-        dsItem.mustExpose = chunk.features?.["public"]===true;
+        dsItem.mustExpose = chunk.features?.["autoExpose"]===true;
         if (dsItem.mustExpose) this.toExpose.push(dsItem);
+
+        dsItem.mustBuildProxy = chunk.features?.["autoProxy"]===true;
 
         this.registry_addItem(key, chunk);
     }
@@ -69,70 +99,98 @@ export default class TypeTable extends TypeChunk {
         let entryPoint = jk_fs.getRelativePath(jk_fs.join(outDir, "index.ts"), dsItem.entryPoint);
         let importPath = writer.toPathForImport(entryPoint, false);
 
-        // index.ts
-        //
-        await writer.writeCodeFile({
-            fileInnerPath: jk_fs.join(this.getGenOutputDir(dsItem), targetName, "index"),
+        if (dsItem.mustBuildProxy) {
+            // > The server and browser versions will not be the same here.
+            //   The server version directly targets the datasource.
+            //   While the browser version will use a proxy to use HTTP.
 
-            srcFileContent: writer.AI_INSTRUCTIONS + `export * from "./jBundler_ifServer.ts";
+            // index.ts
+            //
+            await writer.writeCodeFile({
+                fileInnerPath: jk_fs.join(this.getGenOutputDir(dsItem), targetName, "index"),
+
+                srcFileContent: writer.AI_INSTRUCTIONS + `export * from "./jBundler_ifServer.ts";
 import DEFAULT from "./jBundler_ifServer.ts";
 export default DEFAULT;`,
 
-            distFileContent: writer.AI_INSTRUCTIONS + `export * from "./jBundler_ifServer.js";
+                distFileContent: writer.AI_INSTRUCTIONS + `export * from "./jBundler_ifServer.js";
 import DEFAULT from "./jBundler_ifServer.js";
 export default DEFAULT;`,
-        });
+            });
 
-        //region jBundler_ifServer.ts
+            //region jBundler_ifServer.ts
 
-        let srcCode = writer.AI_INSTRUCTIONS + `import C from "${importPath}";
+            let srcCode = writer.AI_INSTRUCTIONS + `import C from "${importPath}";
 export * from "${importPath}";
 export default C;`;
 
-        importPath = writer.toPathForImport(entryPoint, true);
-        let distCode = writer.AI_INSTRUCTIONS + `import C from "${importPath}";
+            importPath = writer.toPathForImport(entryPoint, true);
+            let distCode = writer.AI_INSTRUCTIONS + `import C from "${importPath}";
 export * from "${importPath}";
 export default C;`;
 
-        await writer.writeCodeFile({
-            fileInnerPath: jk_fs.join(this.getGenOutputDir(dsItem), targetName, "jBundler_ifServer"),
-            srcFileContent: srcCode,
-            distFileContent: distCode
-        });
+            await writer.writeCodeFile({
+                fileInnerPath: jk_fs.join(this.getGenOutputDir(dsItem), targetName, "jBundler_ifServer"),
+                srcFileContent: srcCode,
+                distFileContent: distCode
+            });
 
-        //endregion
+            //endregion
 
-        //region jBundler_ifBrowser.ts
+            //region jBundler_ifBrowser.ts
 
-        let dsName = jk_fs.basename(dsItem.itemPath);
+            let dsName = jk_fs.basename(dsItem.itemPath);
 
-        let dsImpl: JTableDs;
-        let toImport = dsItem.entryPoint;
-        if (!writer.isTypeScriptOnly) toImport = jk_app.getCompiledFilePathFor(toImport);
+            let dsImpl: JTableDs;
+            let toImport = dsItem.entryPoint;
+            if (!writer.isTypeScriptOnly) toImport = jk_app.getCompiledFilePathFor(toImport);
 
-        try { dsImpl = (await import(toImport)).default; }
-        catch { throw this.declareError("Is not a valide data source.", dsItem.entryPoint); }
+            try {
+                dsImpl = (await import(toImport)).default;
+            } catch {
+                throw this.declareError("Is not a valide data source.", dsItem.entryPoint);
+            }
 
-        let schema = dsImpl.schema;
-        if (!schema) throw this.declareError("Is not a valide data source. Missing schema.", dsItem.entryPoint);
+            let schema = dsImpl.schema;
+            if (!schema) throw this.declareError("Is not a valide data source. Missing schema.", dsItem.entryPoint);
 
-        let jsonSchema = schema.toJson();
+            let jsonSchema = schema.toJson();
 
-        srcCode = writer.AI_INSTRUCTIONS;
-        srcCode += `import {JTableDs_HttpProxy} from "jopi-toolkit/jk_data";`;
-        srcCode += `\nimport {schema as newSchema} from "jopi-toolkit/jk_schema";`;
-        srcCode += `\n\nexport const dataSourceName = "${dsName}";`;
+            srcCode = writer.AI_INSTRUCTIONS;
+            srcCode += `import {JTableDs_HttpProxy} from "jopi-toolkit/jk_data";`;
+            srcCode += `\nimport {schema as newSchema} from "jopi-toolkit/jk_schema";`;
+            srcCode += `\n\nexport const dataSourceName = "${dsName}";`;
 
-        srcCode += `\nexport const schema = newSchema(${JSON.stringify(jsonSchema.desc, null, 4)}, ${JSON.stringify(jsonSchema.schemaMeta, null, 4)});`;
-        srcCode += `\nexport default new JTableDs_HttpProxy(dataSourceName, "/_jopi/ds/${dsItem.securityUid}", schema)`;
-        distCode = srcCode;
+            srcCode += `\nexport const schema = newSchema(${JSON.stringify(jsonSchema.desc, null, 4)}, ${JSON.stringify(jsonSchema.schemaMeta, null, 4)});`;
+            srcCode += `\nexport default new JTableDs_HttpProxy(dataSourceName, "/_jopi/ds/${dsItem.securityUid}", schema)`;
+            distCode = srcCode;
 
-        await writer.writeCodeFile({
-            fileInnerPath: jk_fs.join(this.getGenOutputDir(dsItem), targetName, "jBundler_ifBrowser"),
-            srcFileContent: srcCode,
-            distFileContent: distCode
-        });
+            await writer.writeCodeFile({
+                fileInnerPath: jk_fs.join(this.getGenOutputDir(dsItem), targetName, "jBundler_ifBrowser"),
+                srcFileContent: srcCode,
+                distFileContent: distCode
+            });
 
-        //endregion
+            //endregion
+        } else {
+            //region index.ts
+
+            let srcCode = writer.AI_INSTRUCTIONS + `import C from "${importPath}";
+export * from "${importPath}";
+export default C;`;
+
+            importPath = writer.toPathForImport(entryPoint, true);
+            let distCode = writer.AI_INSTRUCTIONS + `import C from "${importPath}";
+export * from "${importPath}";
+export default C;`;
+
+            await writer.writeCodeFile({
+                fileInnerPath: jk_fs.join(this.getGenOutputDir(dsItem), targetName, "index"),
+                srcFileContent: srcCode,
+                distFileContent: distCode
+            });
+
+            //endregion
+        }
     }
 }

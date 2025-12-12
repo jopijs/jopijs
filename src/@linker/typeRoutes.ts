@@ -102,18 +102,15 @@ export default class TypeRoutes extends AliasType {
         this.sourceCode_body += `\n    await routeBindVerb(webSite, f_${routeId}, ${JSON.stringify(routeBindingParams)});`
     }
 
-    protected normalizeFeatureName(feature: string): string|undefined {
-        if (feature==="cache") {
-            return "cache";
-        }
+    protected getDefaultFeatures(): Record<string, boolean>|undefined {
+        return {
+            autoCache: true
+        };
+    }
 
-        feature = feature.replaceAll("-", "");
-        feature = feature.replaceAll("_", "");
-
-        if (feature==="autocache") {
-            return "cache";
-        }
-
+    protected onFeatureFileFound(feature: string): string|undefined {
+        if (feature==="autocache") return "autoCache";
+        if (feature==="cache") return "autoCache";
         return undefined;
     }
 
@@ -131,7 +128,7 @@ export default class TypeRoutes extends AliasType {
 
         const res: RouteAttributes = {
             configFile: await resolveFile(dirPath, ["config.tsx", "config.ts"]),
-            disableCache: (infos.features?.["cache"] === true) ? true : undefined,
+            disableCache: (infos.features?.["autocache"] === true) ? true : undefined,
             priority: infos.priority
         };
 

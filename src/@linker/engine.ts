@@ -460,25 +460,22 @@ export abstract class AliasType {
 
             conditions: result.conditionsFound,
             conditionsContext: result.conditionsContext,
-
-            features: result.features,
-            featuresContext: result.featuresContext
+            features: result.features
         });
     }
 
     /**
      * Analyze the content of a dir, extract information, and check rules.
-     * @param dirPath
-     * @param rules
-     * @param useThisUid
      */
     protected async dir_extractInfos(dirPath: string, rules: DirAnalyzingRules, useThisUid?: string | undefined): Promise<ExtractDirectoryInfosResult> {
         const decodeFeature = async (dirItem: jk_fs.DirItem, ext: string): Promise<string> => {
             let featureName = dirItem.name.toLowerCase();
             featureName = featureName.slice(0, -ext.length);
+            //
+            featureName = featureName.replaceAll("-", "");
+            featureName = featureName.replaceAll("_", "");
 
-            if (!result.featuresContext) result.featuresContext = {};
-            let canonicalName = this.normalizeFeatureName(featureName, result.featuresContext);
+            let canonicalName = this.onFeatureFileFound(featureName);
 
             if (!canonicalName) {
                 throw declareLinkerError("Unknown feature name: " + featureName, dirItem.fullPath);
@@ -492,9 +489,10 @@ export abstract class AliasType {
 
         const decodeCond = async (dirItem: jk_fs.DirItem): Promise<string> => {
             let condName = dirItem.name.toLowerCase();
-
-            // Remove .cond
             condName = condName.slice(0, -5);
+            //
+            condName = condName.replaceAll("-", "");
+            condName = condName.replaceAll("_", "");
 
             if (!result.conditionsContext) result.conditionsContext = {};
             let canonicalName = this.normalizeConditionName(condName, dirItem.fullPath, result.conditionsContext);
@@ -648,14 +646,34 @@ export abstract class AliasType {
             result.dirItems.push(item);
         }
 
+        let defaultFeatures = this.getDefaultFeatures();
+
+        if (defaultFeatures) {
+            if (!result.features) result.features = {};
+
+            for (let featureName in defaultFeatures) {
+                let current =  result.features[featureName];
+
+                if (current===undefined) {
+                    result.features[featureName] = current = defaultFeatures[featureName];
+                    if (current) await addNameIntoFile(jk_fs.join(dirPath, featureName + ".enable"));
+                    else await addNameIntoFile(jk_fs.join(dirPath, featureName + ".disable"));
+                }
+            }
+        }
+
         return result;
+    }
+
+    protected getDefaultFeatures(): Record<string, boolean>|undefined {
+        return undefined;
     }
 
     protected normalizeConditionName(condName: string, filePath: string, ctx: any|undefined): string|undefined {
         return undefined;
     }
 
-    protected normalizeFeatureName(featureName: string, ctx: any|undefined): string|undefined {
+    protected onFeatureFileFound(featureName: string): string|undefined {
         return undefined;
     }
 
@@ -735,7 +753,6 @@ export interface TransformItemParams {
     conditionsContext?: Record<string, any>;
 
     features?: Record<string, boolean>;
-    featuresContext?: Record<string, any>;
 
     parentDirName: string;
     priority: PriorityLevel;
@@ -752,9 +769,7 @@ export interface ExtractDirectoryInfosResult {
 
     conditionsFound?: Set<string>;
     conditionsContext?: Record<string, any>;
-
     features?: Record<string, boolean>;
-    featuresContext?: Record<string, any>;
 }
 
 export class ModuleDirProcessor {

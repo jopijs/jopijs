@@ -250,9 +250,7 @@ export interface TypeChunk_Item extends RegistryItem {
 
     conditions?: Set<string>;
     conditionsContext?: Record<string, any>;
-
     features?: Record<string, boolean>;
-    featuresContext?: Record<string, any>;
 }
 
 export class TypeChunk extends AliasType {
@@ -288,9 +286,7 @@ export class TypeChunk extends AliasType {
 
                         conditions: props.conditions,
                         conditionsContext: props.conditionsContext,
-
                         features: props.features,
-                        featuresContext: props.featuresContext,
 
                         itemType: props.parentDirName,
 

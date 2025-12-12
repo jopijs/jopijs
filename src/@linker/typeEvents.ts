@@ -39,22 +39,4 @@ export declare const list: SyncEventListener[];
 export declare const event: StaticEvent;
 export default event;`
     }
-
-    protected normalizeConditionName(condName: string): string|undefined {
-        if (condName.startsWith("if")) {
-            condName = condName.substring(2);
-        }
-
-        condName = condName.replace("-", "");
-        condName = condName.replace("_", "");
-
-        if (condName==="browser") {
-            return  "if_browser";
-        }
-        else if (condName==="server") {
-            return "if_server";
-        }
-
-        return undefined;
-    }
 }
