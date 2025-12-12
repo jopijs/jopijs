@@ -109,7 +109,7 @@ export class SimpleFileCache implements PageCache {
         const filePath = this.calcFilePath(url);
 
         try {
-            return JSON.parse(await jk_fs.readTextFromFile(filePath + " info"));
+            return JSON.parse(await jk_fs.readTextFromFile(filePath + " info", true));
         }
         catch {
             // We are here if the file doesn't exist.

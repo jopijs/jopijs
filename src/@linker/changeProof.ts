@@ -36,7 +36,7 @@ export async function calculateDirectoryProof(rootDir: string): Promise<string> 
                 chunksString += await collectProofString(fullPath);
             } else if (dirItem.isFile()) {
                 try {
-                    let md5 = jk_crypto.md5(await jk_fs.readTextFromFile(fullPath));
+                    let md5 = jk_crypto.md5(await jk_fs.readTextFromFile(fullPath, true));
                     chunksString += `FILE:${relativePath}:${md5}`;
                 }
                 catch (e) {

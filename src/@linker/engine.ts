@@ -60,7 +60,6 @@ export async function writeTextToFileIfMismatch(filePath: string, content: strin
     const currentContent = await jk_fs.readTextFromFile(filePath);
     if (currentContent===content) return;
 
-    //console.log("writeTextToFileIfMismatch - Updating file " + filePath);
     await jk_fs.writeTextToFile(filePath, content);
 }
 

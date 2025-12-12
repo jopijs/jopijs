@@ -5,7 +5,7 @@ import TypeEvents from "./typeEvents.ts";
 import TypeUiComposite from "./typeUiComposite.ts";
 import ModInstaller from "./modInstaller.ts";
 import TypeRoutes from "./typeRoutes.ts";
-import TypeDataSource from "./typeDataSource.ts";
+import TypeTable from "./typeTable.ts";
 
 // Here it's ASYNC.
 let gServerInstallFileTemplate = `__AI_INSTRUCTIONS
@@ -38,7 +38,7 @@ export function getDefaultLinkerConfig(): LinkerConfig {
             new TypeUiComposite("uiComposites"),
             new TypeEvents("events"),
             new TypeRoutes("routes", "root"),
-            new TypeDataSource("ds")
+            new TypeTable("tables")
         ],
 
         modulesProcess: [
