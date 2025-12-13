@@ -49,7 +49,11 @@ export function getBundleDirPath(webSite: WebSite) {
     return path.join(gTempDirPath, webSiteHost);
 }
 
+let gGlobalCssContent: string | undefined;
+
 export async function getGlobalCssFileContent(config: BundlerConfig): Promise<string> {
+    if (gGlobalCssContent) return gGlobalCssContent;
+
     if (config.tailwind.globalCssContent) {
         return config.tailwind.globalCssContent;
     }
@@ -62,46 +66,61 @@ export async function getGlobalCssFileContent(config: BundlerConfig): Promise<st
         return jk_fs.readTextFromFile(config.tailwind.globalCssFilePath);
     }
 
-    let found = await getTailwindTemplateFromShadCnConfig();
-    if (found) return found;
-
     let rootDir = jk_fs.dirname(jk_app.findPackageJson());
+    let dirItems = await jk_fs.listDir(jk_fs.join(rootDir, "src"));
 
-    if (await jk_fs.isFile(jk_fs.join(rootDir, "global.css"))) {
-        return jk_fs.readTextFromFile(jk_fs.join(rootDir, "global.css"));
+    let globalCss = `/* Warning: generated file */\n\n@import "tailwindcss";`;
+
+    for (let item of dirItems) {
+        if (!item.isDirectory) continue;
+        if (!item.name.startsWith("mod_")) continue;
+        let globalCssPath = jk_fs.join(item.fullPath, "global.css");
+
+        let content = await jk_fs.readTextFromFile(globalCssPath);
+
+        if (content) {
+            content = removeImportDoublon(globalCss, content);
+
+            globalCss += `\n\n/* --- Compiled from ${item.name}/global.css --- */`
+            globalCss += "\n" + content;
+        }
     }
 
-    return `@import "tailwindcss";`;
+    await jk_fs.writeTextToFile(jk_fs.join(rootDir, "global.css"), globalCss);
+
+    return gGlobalCssContent = globalCss;
 }
 
 /**
- * Get Tailwind template CSS file from the ShadCN config file (components.json).
- * See: https://ui.shadcn.com/docs/components-json
+ * Remove '@import' already found into globalCss
  */
-async function getTailwindTemplateFromShadCnConfig() {
-    const pkgJsonPath = jk_app.findPackageJson();
-    if (!pkgJsonPath) return undefined;
+function removeImportDoublon(globalCss: string, content: string): string {
+    let foundImports: Record<string, boolean> = {};
 
-    let filePath = path.join(path.dirname(pkgJsonPath), "components.json");
-    if (!await jk_fs.isFile(filePath)) return undefined;
+    for (let line of globalCss.split("\n")) {
+        let tmp = line.trim();
 
-    try {
-        let asText = jk_fs.readTextFromFileSync(filePath);
-        let asJSON = JSON.parse(asText);
-
-        let tailwindConfig = asJSON.tailwind;
-        if (!tailwindConfig) return undefined;
-
-        let tailwindCssTemplate = tailwindConfig.css;
-        if (!tailwindCssTemplate) return undefined;
-
-        let fullPath = path.resolve(path.dirname(pkgJsonPath), tailwindCssTemplate);
-        return jk_fs.readTextFromFileSync(fullPath);
+        if (tmp.startsWith("@import")) {
+            foundImports[tmp] = true;
+        }
     }
-    catch (e) {
-        console.error("Error reading Shadcn config file:", e);
-        return undefined;
+
+    let lines = [];
+
+    for (let line of content.split("\n")) {
+        let tmp = line.trim();
+
+        if (tmp.startsWith("@import")) {
+            if (foundImports[tmp]) {
+                continue;
+            }
+            foundImports[tmp] = true;
+        }
+
+        lines.push(line);
     }
+
+    return lines.join("\n");
 }
 
 // Don't use node_modules because of a bug when using workspaces.
