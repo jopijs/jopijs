@@ -45,6 +45,7 @@ export function getDefaultLinkerConfig(): LinkerConfig {
             new TypeVariants("variants"),
 
             new TypeAsIsChunk("shadUI", [".tsx"]),
+            new TypeAsIsChunk("shadComponents", [".tsx"]),
             new TypeAsIsChunk("shadLib", [".ts", ".tsx"]),
             new TypeAsIsChunk("shadHooks", [".ts", ".tsx"])
         ],
