@@ -101,7 +101,11 @@ export async function getPathAliasInfo(): Promise<PathAliasInfo> {
     }
 
     let asText = await jk_fs.readTextFromFile(tsconfigJsonPath);
-    let asJson = JSON.parse(stripJsonComments(asText));
+    asText = stripJsonComments(asText)
+    let asJson: any;
+
+    try { asJson = JSON.parse(asText); }
+    catch (e: any) { throw `Loader - Can't parse tsconfig.json at ${tsconfigJsonPath}\n|- ${e.message}`; }
 
     let compilerOptions = asJson.compilerOptions;
     let declaredAliases: Record<string, string> = {};
