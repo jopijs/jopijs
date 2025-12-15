@@ -51,7 +51,7 @@ function renderField(variantName: string|undefined, p: JFieldProps) {
     if (!field) return <div style={{color: "red"}}><strong>Form error: the field '{p.name}' doesn't exist.</strong></div>;
 
     p = {...p};
-    if (p.label===undefined) p.label = field.title;
+    if (p.title===undefined) p.title = field.title;
     if (p.description===undefined) p.description = field.description;
     if (p.placeholder===undefined) p.placeholder = field.placeholder;
 

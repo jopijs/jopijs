@@ -22,7 +22,7 @@ export interface JFieldController {
     error: boolean;
     errorMessage?: string;
 
-    label?: string;
+    title?: string;
     description?: string;
     placeholder?: string;
 
@@ -111,7 +111,7 @@ export interface JMessage {
 
 export interface JFieldProps {
     name: string;
-    label?: React.ReactNode;
+    title?: React.ReactNode;
     description?: React.ReactNode;
     placeholder?: string;
 
@@ -190,7 +190,7 @@ export interface PassThrough_TextFormField {
     textContainer: string;
     description: string;
     errorMessage: string;
-    label: string;
+    title: string;
 
     input: string;
 }
@@ -203,7 +203,7 @@ export interface PassThrough_CheckboxFormField {
     description: string;
     errorMessage: string;
 
-    label: string;
+    title: string;
     checkBox: string;
 }
 
