@@ -145,7 +145,7 @@ export class MenuManager {
                 public readonly mustRemoveTrailingSlashes: boolean,
                 private readonly forceURL?: URL)
     {
-        jk_events.addListener("user.infosUpdated", () => {
+        jk_events.addListener("app.user.infosUpdated", () => {
             this.invalidateMenus(true);
         });
 

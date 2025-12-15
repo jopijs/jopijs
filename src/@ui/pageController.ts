@@ -159,7 +159,9 @@ export class PageController<T = any> implements ModuleInitContext_Host {
     public refreshUserInfos() {
         if (!isServerSide && isUserInfoCookieUpdated()) {
             this.userInfos = decodeUserInfosFromCookie();
-            jk_events.sendEvent("user.infosUpdated")
+
+            debugger;
+            jk_events.sendEvent("app.user.infosUpdated");
         }
     }
 

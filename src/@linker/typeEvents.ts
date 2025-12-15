@@ -1,7 +1,30 @@
 import {type TypeList_Group, TypeList} from "./coreAliasTypes.ts";
 import {CodeGenWriter, FilePart, InstallFileType, type RegistryItem} from "./engine.ts";
 
+/**
+ * Allows the linker to generate an event entry.
+ * Will allow to do `import myEvent from "@/events/myEventName`
+ */
+export function addStaticEvent(eventName: string) {
+    if (!gExtraStaticEvents.includes(eventName)) {
+        gExtraStaticEvents.push(eventName);
+    }
+}
+
+const gExtraStaticEvents: string[] = [];
+
 export default class TypeEvents extends TypeList {
+    protected getShadowLists(): string[]|undefined {
+        // Will allow generating the code for some events
+        // that can be called through jk_events.sendEvent(eventName)
+        // but where we don't have added static listeners for this event.
+        //
+        // Doing this mainly allows adding React.js listeners to this event
+        // and knowing that this event exists (for very util one).
+        //
+        return gExtraStaticEvents;
+    }
+
     async endGeneratingCode(writer: CodeGenWriter, items: RegistryItem[]): Promise<void> {
         let count = 0;
 
@@ -13,7 +36,7 @@ export default class TypeEvents extends TypeList {
 
             let list = item as TypeList_Group;
 
-            // Note: inside installServer.js : use the global event handler.
+            // Note: inside installServer.js: use the global event handler.
             //       inside installBrowser.js: use the event handler local to the request.
             //
             let jsSources = `    registry.events.addProvider("${list.listName}", async () => { const R = await import("@/events/${list.listName}"); return R.list; });`;
@@ -27,8 +50,8 @@ import {useStaticEvent} from "jopijs/ui";
 `;
     }
 
-    protected codeGen_generateExports(array: string, eventName: string) {
-        return `export const list = ${array};
+    protected codeGen_generateExports(eventListeners: string, eventName: string) {
+        return `export const list = ${eventListeners};
 const event = createStaticEvent(${JSON.stringify(eventName)}, list);
 export default useStaticEvent(event);`;
     }

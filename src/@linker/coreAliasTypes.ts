@@ -39,8 +39,36 @@ export class TypeList extends AliasType {
         currentItems.sort((a, b) => a.sortKey.localeCompare(b.sortKey));
     }
 
-    processDir(p: { moduleDir: string; typeDir: string; genDir: string; }) {
-        return this.processList(p.typeDir);
+    async processDir(p: { moduleDir: string; typeDir: string; genDir: string; }) {
+        await this.processList(p.typeDir);
+
+        // >>> Add extra items to the list.
+
+        let shadowList = this.getShadowLists();
+
+        if (shadowList) {
+            for (let listId of shadowList) {
+                let current = this.registry_getItem<TypeList_Group>(listId, this);
+
+                if (!current) {
+                    const newItem: TypeList_Group = {
+                        listName: listId, type: this,
+                        itemPath: "", items: [], itemsType: "",
+                        allDirPath: []
+                    };
+
+                    this.registry_addItem(this.typeName + "!" + listId, newItem);
+                }
+            }
+        }
+    }
+
+    /**
+     * Get the list which must be created in all case
+     * even without a static declaration.
+     */
+    protected getShadowLists(): string[]|undefined {
+        return undefined;
     }
 
     protected async processList(listDirPath: string): Promise<void> {

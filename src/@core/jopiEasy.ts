@@ -40,6 +40,7 @@ import {getServer, type SseEvent} from "./jopiServer.ts";
 import {HTTP_VERBS} from "./publicTools.ts";
 import {getPackageJsonConfig} from "jopijs/loader-tools";
 import {initLinker} from "./linker.ts";
+import {addStaticEvent as linker_addStaticEvent} from "jopijs/linker";
 import {logServer_startApp} from "./_logs.ts";
 import type {LoggerGroupCallback} from "jopi-toolkit/jk_logs";
 import {setHttpProxyReadPause} from "./dataSources.ts";
@@ -434,6 +435,12 @@ export class JopiEasyWebSite {
                 });
             });
         });
+
+        // Will allow `import eventUserInfosUpdated from "@/events/app.user.infosUpdated"`
+        this.add_staticEvent("app.user.infosUpdated");
+        this.add_staticEvent("app.menu.click");
+        this.add_staticEvent("app.menu.invalided");
+        this.add_staticEvent("app.menu.activeItemChanged");
     }
 
     private async initWebSiteInstance(): Promise<void> {
@@ -497,7 +504,7 @@ export class JopiEasyWebSite {
         return new CertificateBuilder(this, this.internals);
     }
 
-    fastConfigure_fileServer(options: FileServerOptions) {
+    fastConfigure_fileServer(options: FileServerOptions): JopiEasyWebSite {
         this.fileServerOptions = options;
         return this;
     }
@@ -546,11 +553,20 @@ export class JopiEasyWebSite {
         return this;
     }
 
-    add_SseEvent(path: string|string[], handler: SseEvent) {
+    add_SseEvent(path: string|string[], handler: SseEvent): JopiEasyWebSite {
         this.internals.afterHook.push((webSite) => {
             webSite.addSseEVent(path, handler);
         });
 
+        return this;
+    }
+
+    /**
+     * Allows the linker to generate an event entry.
+     * Will allow to do `import myEvent from "@/events/myEventName`
+     */
+    add_staticEvent(name: string): JopiEasyWebSite {
+        linker_addStaticEvent(name);
         return this;
     }
 
