@@ -1,14 +1,10 @@
 import {MenuManager} from "./core.ts";
-
-export interface WithKeyAndItems<T> {
-    key: string;
-    items?: (T & WithKeyAndItems<T>)[];
-}
+import {getDefaultModuleInitContext} from "jopijs/ui";
 
 export function getDefaultMenuManager(): MenuManager {
     if (!gMenuManager) {
         let mustRemoveTrailingSlashes = (window as any)["__JOPI_OPTIONS__"].removeTrailingSlashes === true
-        gMenuManager = new MenuManager(mustRemoveTrailingSlashes);
+        gMenuManager = new MenuManager(getDefaultModuleInitContext(), mustRemoveTrailingSlashes);
     }
 
     return gMenuManager;

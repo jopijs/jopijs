@@ -39,6 +39,8 @@ export class ModuleInitContext {
     protected readonly host: ModuleInitContext_Host;
 
     constructor(host?: ModuleInitContext_Host) {
+        gDefaultModuleInitContext = this;
+
         if (!host) host = getDefaultPageController();
         this.host = host;
 
@@ -63,6 +65,8 @@ export class ModuleInitContext {
     addUiInitializer(priority: UiInitializer|jk_events.EventPriority, initializer?: UiInitializer|undefined) {
         this.events.addListener("app.init.ui", priority, initializer);
     }
+
+    //region Users & Roles
 
     getUserInfos(): UiUserInfos|undefined {
         return this.host.getUserInfos();
@@ -101,7 +105,44 @@ export class ModuleInitContext {
     ifNotUserLoggedIn(f: () => Promise<void>) {
         if (!this.getUserInfos()) f();
     }
+
+    //endregion
+
+    //region Resolving
+
+    resolveIcon(iconName: string, icon: React.FC) {
+        if (!this.iconMap) this.iconMap = {};
+        this.iconMap[iconName] = icon;
+    }
+
+    addIconResolved(f: Name2ReactFcResolver) {
+        if (this.iconResolvers === undefined) this.iconResolvers = [];
+        this.iconResolvers.push(f);
+    }
+
+    getIconFromName(iconName: string): React.FC|undefined {
+        if (this.iconMap!==undefined) {
+            let f = this.iconMap[iconName];
+            if (f) return f;
+        }
+
+        if (this.iconResolvers) {
+            for (let resolver of this.iconResolvers) {
+                let f = resolver(iconName);
+                if (f) return f;
+            }
+        }
+
+        return undefined;
+    }
+
+    private iconMap?: Record<string, React.FC> = {};
+    private iconResolvers?: Name2ReactFcResolver[];
+
+    //endregion
 }
+
+export type Name2ReactFcResolver = (iconName: string) => React.FC|undefined;
 
 export interface ExtraPageParams {
     menuEntries: MenuItemForExtraPageParams[]
@@ -119,3 +160,8 @@ export interface MenuItemForExtraPageParams {
     priority?: number
 }
 
+export function getDefaultModuleInitContext(): ModuleInitContext {
+    return gDefaultModuleInitContext;
+}
+
+let gDefaultModuleInitContext: ModuleInitContext;

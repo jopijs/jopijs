@@ -1,8 +1,8 @@
-import * as jk_events from "jopi-toolkit/jk_events";
-
 import React from "react";
 import {ucFirst} from "../helpers/index.ts";
 import type {MenuTree} from "./interfaces.ts";
+import {ModuleInitContext} from "jopijs/ui";
+import * as jk_events from "jopi-toolkit/jk_events";
 
 class MenuTreeBuilder {
     constructor(
@@ -141,7 +141,10 @@ export class MenuManager {
     private allMenus: Record<string, MenuTreeBuilder> = {};
     private readonly menuBuilders: Record<string, MenuBuilder[]> = {};
 
-    constructor(public readonly mustRemoveTrailingSlashes: boolean, private readonly forceURL?: URL) {
+    constructor(private readonly module: ModuleInitContext,
+                public readonly mustRemoveTrailingSlashes: boolean,
+                private readonly forceURL?: URL)
+    {
         jk_events.addListener("user.infosUpdated", () => {
             this.invalidateMenus(true);
         });
@@ -342,16 +345,6 @@ export class MenuManager {
         return ovr;
     }
 
-    resolveIcon(iconName: string, icon: React.FC) {
-        this.iconMap[iconName] = icon;
-    }
-
-    getIconFromName(iconName: string): React.FC|undefined {
-        return this.iconMap[iconName];
-    }
-
-    iconMap: Record<string, React.FC> = {};
-
     private readonly menuOverrides: Record<string, MenuOverride> = {};
 
     applyOverrides(entry: MenuTree, menuName: string, keys: string[]) {
@@ -360,6 +353,10 @@ export class MenuManager {
 
         let fullPath = JSON.stringify(keys);
         return menu.resolve(entry, fullPath);
+    }
+
+    getIconFromName(iconName: string): React.FC|undefined {
+        return this.module.getIconFromName(iconName);
     }
 }
 

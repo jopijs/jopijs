@@ -6,7 +6,6 @@ import {
 } from "jopijs/ui";
 import {MenuManager, MenuOverride} from "../menu/index.ts";
 import {getDefaultMenuManager} from "../menu/internal.ts";
-import React from "react";
 
 export class UiKitModule extends ModuleInitContext {
     private extraPageParams?: ExtraPageParams;
@@ -23,7 +22,7 @@ export class UiKitModule extends ModuleInitContext {
             }
 
             const mustRemoveTrailingSlashes = this.host.mustRemoveTrailingSlashes;
-            return new MenuManager(mustRemoveTrailingSlashes, this.getCurrentURL());
+            return new MenuManager(this, mustRemoveTrailingSlashes, this.getCurrentURL());
         });
     }
 
@@ -67,9 +66,5 @@ export class UiKitModule extends ModuleInitContext {
 
     getMenuOverride(menuName: string): MenuOverride {
         return this.getMenuManager().getMenuOverride(menuName)
-    }
-
-    resolveIcon(iconName: string, icon: React.FC) {
-        this.getMenuManager().resolveIcon(iconName, icon);
     }
 }
