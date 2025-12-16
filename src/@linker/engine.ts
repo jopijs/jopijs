@@ -202,7 +202,7 @@ interface WriteCodeFileParams {
      * What to write into this file.
      * Here it's: dist/_jopiLinkerGen/fileInnerPath
      */
-    distFileContent: string;
+    distFileContent?: string;
 
     /**
      * The content of the .d.ts file.
@@ -241,7 +241,7 @@ export class CodeGenWriter {
 
         await writeTextToFileIfMismatch(jk_fs.join(gDir_outputSrc, params.fileInnerPath + ".ts"), params.srcFileContent);
 
-        if (!gIsTypeScriptOnly) {
+        if (!gIsTypeScriptOnly && params.distFileContent) {
             await writeTextToFileIfMismatch(jk_fs.join(gDir_outputDst, params.fileInnerPath + ".js"), params.distFileContent);
         }
 

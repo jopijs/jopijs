@@ -23,13 +23,24 @@ export default class TypeRoutes extends AliasType {
     private routeConfig: Record<string, RouteAttributes> = {};
 
     async beginGeneratingCode(writer: CodeGenWriter): Promise<void> {
+        // For: import routes from "@/routes";
+        // Export a map url --> page component.
+        //
+        let srcRouteFiles = writer.AI_INSTRUCTIONS + `import React from "react";\n\nexport default {`;
+
         for (let item of Object.values(this.registry)) {
             if (item.verb==="PAGE") {
+                let relPath = jk_fs.getRelativePath(writer.dir.output_src, item.filePath);
+                relPath = writer.toPathForImport(relPath, false);
+
+                srcRouteFiles += `\n    "${item.route}": React.lazy(() => import(${JSON.stringify(relPath)})),`;
                 this.bindPage(writer, item.route, item.filePath, item.attributes);
             } else {
                 this.bindVerb(writer, item.verb, item.route, item.filePath, item.attributes);
             }
         }
+
+        srcRouteFiles += "\n};";
 
         if (Object.keys(this.routeConfig).length>0) {
             this.sourceCode_header += `\nimport {RouteConfig} from "jopijs";`;
@@ -64,6 +75,11 @@ export default class TypeRoutes extends AliasType {
 
         writer.genAddToInstallFile(InstallFileType.server, FilePart.imports, `\nimport declareRoutes from "./declareServerRoutes.js";`);
         writer.genAddToInstallFile(InstallFileType.server, FilePart.footer, "\n    onWebSiteCreated((webSite) => declareRoutes(webSite));");
+
+        await writer.writeCodeFile({
+            fileInnerPath: "routes",
+            srcFileContent: srcRouteFiles
+        });
     }
 
     async processDir(p: { moduleDir: string; typeDir: string; genDir: string; }) {
