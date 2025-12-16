@@ -25,7 +25,6 @@ export class TypeTranslation extends AliasType {
         }
     }
 
-
     private async processTranslationDir(trDir: jk_fs.DirItem) {
         let infos = await this.dir_extractInfos(trDir.fullPath, {
             requirePriority: true,
@@ -40,7 +39,7 @@ export class TypeTranslation extends AliasType {
             await jk_fs.writeTextToFile(jk_fs.join(trDir.fullPath, "default.priority"), "default.priority");
         }
 
-        let defaultLang = "en-us";
+        let defaultLang: string|undefined;
 
         let dirItems =  await jk_fs.listDir(trDir.fullPath);
         dirItems = dirItems.filter(item => item.isFile);
@@ -52,17 +51,44 @@ export class TypeTranslation extends AliasType {
                 defaultLang = dirItem.name.slice(0, -".default".length).toLowerCase();
             } else if (dirItem.name.endsWith(".json")) {
                 let lang = dirItem.name.slice(0, -".json".length);
-                //langFiles[lang.toLowerCase()] = await jk_fs.readJsonFromFile(dirItem.fullPath);
-
                 let json = await this.importLangFile(dirItem.fullPath);
                 if (json) langFiles[lang.toLowerCase()] = json;
             }
         }
 
+        if (!defaultLang) {
+            if (langFiles["en-us"]) {
+                defaultLang = "en-us";
+            } else {
+                defaultLang = Object.keys(langFiles)[0];
+            }
+        }
+
+        this.completWithDefault(defaultLang, langFiles);
+
         this.register({
             group: trDir.name,
             priority, defaultLang, langFiles
         });
+    }
+
+    /**
+     * Use the default lang for missing traductions.
+     */
+    private completWithDefault(defaultLang: string, langFiles: Record<string, Record<string, string>>) {
+        const trDefault = langFiles[defaultLang]!;
+        const allKeys = Object.keys(trDefault);
+
+        for (const lang in langFiles) {
+            const tr = langFiles[lang];
+            if (tr===trDefault) continue;
+
+            for (let key of allKeys) {
+                if (tr[key]===undefined) {
+                    tr[key] = trDefault[key];
+                }
+            }
+        }
     }
 
     private getTranslationFileShortName(filePath: string): string {
