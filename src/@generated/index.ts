@@ -31,6 +31,10 @@ function applyAttributes(infos: WebSiteRouteInfos, attributes: RouteAttributes, 
         let allRoles = attributes.needRoles["all"];
         if (allRoles) infos.requiredRoles = infos.requiredRoles?.concat(allRoles);
     }
+
+    if (attributes.disableCache) {
+        infos.mustEnableAutomaticCache = false;
+    }
 }
 
 interface RouteBindPageParams {

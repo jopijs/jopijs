@@ -145,7 +145,7 @@ export default class TypeRoutes extends AliasType {
 
         const res: RouteAttributes = {
             configFile: await resolveFile(dirPath, ["config.tsx", "config.ts"]),
-            disableCache: (dirInfos.features?.["autocache"] === true) ? true : undefined,
+            disableCache: (dirInfos.features?.["autoCache"] === false) ? true : undefined,
             priority: dirInfos.priority,
             dirInfos
         };
