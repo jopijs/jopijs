@@ -815,6 +815,10 @@ export class JopiRequest {
         return this.cookies[name];
     }
 
+    cookie_deleteResCookie(name: string) {
+        this.cookie_addCookieToRes(name, "", {maxAge: -1});
+    }
+
     async cookie_hookIfResHasCookie(res: Response, name: string, testCookieValue: null | undefined | TestCookieValue, ...hooks: TextModifier[]): Promise<Response> {
         const cookieValue = this.cookie_getReqCookie(name);
 

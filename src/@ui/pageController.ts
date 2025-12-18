@@ -2,7 +2,8 @@
 
 import React from "react";
 import {type ServerRequestInstance} from "./hooks.tsx";
-import {decodeJwtToken, decodeUserInfosFromCookie, isUserInfoCookieUpdated, deleteCookie, type UiUserInfos} from "./tools.ts";
+import {decodeJwtToken, decodeUserInfosFromCookie, isUserInfoCookieUpdated, type UiUserInfos} from "./user.ts";
+import {deleteCookie} from "./cookies/index.ts";
 import * as jk_events from "jopi-toolkit/jk_events";
 import type {ModuleInitContext_Host} from "./modules.ts";
 import {isServerSide} from "jopi-toolkit/jk_what";
@@ -201,3 +202,10 @@ export type PageHook = (controller: PageController_ExposePrivate<unknown>) => vo
 
 // Use undefined, otherwise the value is common for all requests when doing SSR.
 export const PageContext = React.createContext<PageController<unknown>|undefined>(undefined);
+
+export function getDefaultPageController(): PageController {
+    if (!gDefaultPageController) gDefaultPageController = new PageController();
+    return gDefaultPageController!;
+}
+
+let gDefaultPageController: PageController|undefined;

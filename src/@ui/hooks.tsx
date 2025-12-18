@@ -5,6 +5,7 @@ import {PageContext, PageController, PageController_ExposePrivate} from "./pageC
 import {CssModule, type UseCssModuleContextProps} from "./cssModules.tsx";
 import * as jk_events from "jopi-toolkit/jk_events";
 import {isBrowserSide} from "./index.ts";
+import type {CookieOptions} from "./cookies/index.ts";
 
 /**
  * Allow getting a reference to the PageController.
@@ -65,6 +66,8 @@ export interface ServerRequestInstance {
     headers: Headers;
     cookie_reqHasCookie(name: string, value?: string): boolean;
     cookie_getReqCookie(name: string): string | undefined;
+    cookie_addCookieToRes(cookieName: string, cookieValue: string, options?: CookieOptions): void;
+    cookie_deleteResCookie(name: string): void;
 }
 
 export function useServerRequest(): ServerRequestInstance {

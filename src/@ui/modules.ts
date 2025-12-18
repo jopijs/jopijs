@@ -1,11 +1,11 @@
 // noinspection JSUnusedGlobalSymbols
 
-import * as jk_events from "jopi-toolkit/jk_events";
-import {type UiUserInfos} from "./tools.ts";
 import React from "react";
+import * as jk_events from "jopi-toolkit/jk_events";
+import {type UiUserInfos} from "./user.ts";
 import {isServerSide} from "jopi-toolkit/jk_what";
 import {type IsObjectRegistry} from "./objectRegistry.ts";
-import {getDefaultPageController} from "./internal.ts";
+import {getDefaultPageController} from "./pageController.ts";
 
 export interface ModuleInitContext_Host {
     objectRegistry: IsObjectRegistry;
