@@ -733,6 +733,11 @@ export class WebSiteImpl implements WebSite {
 
             if (handler) {
                 res = await handler(req);
+                if (!res) {
+                    console.warn(`⚠️ Warning, route ${req.routeInfos.route} forget to return a response.`);
+                    res = new Response("", {status: 500});
+                }
+
                 res = req._applyPostProcess(res);
             } else {
                 res = await req.res_returnError404_NotFound();
