@@ -112,22 +112,23 @@ export * as routes from "./jBundler_ifServer.ts";
 `;
 
         srcCommon += `
+
+function renderRoute(name: string) {
+    let F = routes[name];
+    if (!F) F = () => _jsx("div", { children: \`Error 404: put a @routes\${name}/page.tsx file for personalizing it\` });
+    return _jsx(F, {});
+}
+
 export function error404() {
-    let F = routes["/error404"];
-    if (!F) return () => _jsx("div", { children: "Error 404: put a @routes/error404/page.tsx file for personalizing it" });
-    return F;
+    return renderRoute("/error404");
 }
 
 export function error500() {
-    let F = routes["/error500"];
-    if (!F) return () => _jsx("div", { children: "Error 404: put a @routes/error500/page.tsx file for personalizing it" });
-    return F;
+   return renderRoute("/error500");
 }
 
 export function error401() {
-    let F = routes["/error401"];
-    if (!F) return () => _jsx("div", { children: "Error 404: put a @routes/error401/page.tsx file for personalizing it" });
-    return F;
+    return renderRoute("/error401");
 }`;
 
         await writer.writeCodeFile({

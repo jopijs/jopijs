@@ -1111,6 +1111,10 @@ export class JopiRequest {
         return this.res_returnError404_NotFound();
     }
 
+    async file_returnRelFile(relFilePath: string, importMeta: {dirname: string}, params?: ReqReturnFileParams): Promise<Response> {
+        return this.file_returnFile(jk_fs.join(importMeta.dirname, relFilePath), params);
+    }
+
     async file_tryReturnFile(filePath: string, params?: ReqReturnFileParams): Promise<Response|undefined> {
         let cacheValidationInfos = await this.file_validateCacheHeaders(filePath);
 
