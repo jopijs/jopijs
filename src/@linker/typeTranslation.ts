@@ -313,7 +313,7 @@ export class TypeTranslation extends AliasType {
         if (count>1) return ${dataFunctionTS.nameFctPlural}(data);
         return ${dataFunctionTS.nameFctSingle}(data);
 },`
-                    distBody += `\n    ${key}_plural(count: number, data) {
+                    distBody += `\n    ${key}_plural(count, data) {
         if (count>1) return ${dataFunctionJS.nameFctPlural}(data);
         return ${dataFunctionJS.nameFctSingle}(data);
 },`
