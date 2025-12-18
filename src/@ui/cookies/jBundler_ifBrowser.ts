@@ -20,14 +20,7 @@ export function deleteCookie(name: string) {
     delete gCookies![name];
 }
 
-/**
- * Returns the value of the cookie.
- * Works browser side and server side.
- *
- * @param name
- *      The name of the cookie we want.
- */
-export function getCookieValue(name: string) {
+export function getCookieValue(name: string): string|undefined {
     let currentCookies = document.cookie;
 
     if (gCookies) {

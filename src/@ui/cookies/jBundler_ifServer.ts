@@ -6,9 +6,16 @@ function getContext(): PageController_ExposePrivate {
     return React.useContext(PageContext) as PageController_ExposePrivate
 }
 
-export function getCookieValue(name: string) {
+/**
+ * Returns the value of the cookie.
+ * Works browser side and server side.
+ *
+ * @param name
+ *      The name of the cookie we want.
+ */
+export function getCookieValue(name: string): string|undefined {
     const ctx = getContext();
-    ctx.getServerRequest().cookie_getReqCookie(name);
+    return ctx.getServerRequest().cookie_getReqCookie(name);
 }
 
 export function setCookie(name: string, value: string, options?: CookieOptions) {

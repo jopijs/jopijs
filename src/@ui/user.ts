@@ -1,5 +1,5 @@
 import {isServerSide} from "jopi-toolkit/jk_what";
-import {decodeNavigatorCookie} from "./cookies/index.ts";
+import {getCookieValue} from "./cookies/index.ts";
 
 export interface UiUserInfos {
     id: string;
@@ -30,7 +30,7 @@ export function decodeJwtToken(jwtToken: string|undefined): UiUserInfos|undefine
 }
 
 export function isUserInfoCookieUpdated(): boolean {
-    const jwtToken = decodeNavigatorCookie("authorization");
+    const jwtToken = getCookieValue("authorization");
     return jwtToken !== gAuthorizationCookiePreviousValue;
 }
 
@@ -39,10 +39,10 @@ export function decodeUserInfosFromCookie(): UiUserInfos|undefined {
         return undefined;
     }
 
-    let jwtToken = decodeNavigatorCookie("authorization");
+    let jwtToken = getCookieValue("authorization");
     gAuthorizationCookiePreviousValue = jwtToken;
 
     return decodeJwtToken(jwtToken);
 }
 
-let gAuthorizationCookiePreviousValue = "";
+let gAuthorizationCookiePreviousValue: string|undefined = undefined;
