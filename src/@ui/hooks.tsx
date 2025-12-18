@@ -8,6 +8,20 @@ import {isBrowserSide} from "./index.ts";
 import type {CookieOptions} from "./cookies/index.ts";
 
 /**
+ * useStaticEffect is the same as React.useEffect, but is executed even on the server side.
+ *
+ * !! Using it is not recommended since most of the pages are put in cache.
+ */
+export function useStaticEffect(effect: React.EffectCallback,
+                                deps?: React.DependencyList) {
+    if (isBrowserSide) {
+        useEffect(effect, deps);
+    } else {
+        effect();
+    }
+}
+
+/**
  * Allow getting a reference to the PageController.
  * **USING IT MUST BE AVOIDED** since it's a technical item.
  * It's the reason of the underscore.
