@@ -139,6 +139,10 @@ function getProjectDir_src() {
     return gProjectDir_src;
 }
 
+export function setProjectRootDir(dir: string) {
+    gProjectDir_src = jk_fs.join(dir, "src");
+}
+
 export function setModulesSourceDir(dir: string) {
     gProjectDir_src = dir;
 }
