@@ -336,14 +336,19 @@ export class TypeInDirChunk extends AliasType {
         let outDir = jk_fs.join(writer.dir.output_src, this.getGenOutputDir(item));
         let entryPoint = jk_fs.getRelativePath(outDir, item.entryPoint);
 
-        let srcCode = writer.AI_INSTRUCTIONS + `import C from "${writer.toPathForImport(entryPoint, false)}";\nexport default C;`;
-        let distCode = writer.AI_INSTRUCTIONS + `import C from "${writer.toPathForImport(entryPoint, true)}";\nexport default C;`;
+        const theImports = this.generateImport(writer, entryPoint);
 
         await writer.writeCodeFile({
             fileInnerPath: jk_fs.join(this.getGenOutputDir(item), targetName),
-            srcFileContent: srcCode,
-            distFileContent: distCode
+            srcFileContent: theImports.ts,
+            distFileContent: theImports.js
         });
+    }
+
+    protected generateImport(writer: CodeGenWriter, entryPoint: string): {ts: string, js: string} {
+        const ts = writer.AI_INSTRUCTIONS + `import C from "${writer.toPathForImport(entryPoint, false)}";\nexport default C;`;
+        const js = writer.AI_INSTRUCTIONS + `import C from "${writer.toPathForImport(entryPoint, true)}";\nexport default C;`;
+        return {ts, js};
     }
 
     protected getGenOutputDir(_chunk: TypeInDirChunk_Item) {
