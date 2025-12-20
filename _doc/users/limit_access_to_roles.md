@@ -4,7 +4,7 @@ Several features allow you to modify behaviors based on roles.
 
 **On the React.js side**
 * The `useUserHasRoles` hook returns a boolean indicating whether the user has all the roles specified in the parameter.
-* The `RequireRoles` component allows you to wrap a component that will only be displayed if the user has the specified roles.
+* The `CheckRoles` component allows you to wrap a component that will only be displayed if the user has the specified roles.
 
 **In the `uiInit.ts` file**
 * The `myModule.ifUserHasRoles` function allows you to execute a function if the user has all the specified roles.

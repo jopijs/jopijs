@@ -55,7 +55,7 @@ export function useUserInfos(): UiUserInfos|undefined {
     return page.getUserInfos();
 }
 
-export function RequireRoles({roles, children}: {
+export function CheckRoles({roles, children}: {
     roles: string[],
     children: React.ReactNode
 }) {
