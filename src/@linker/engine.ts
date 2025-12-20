@@ -6,7 +6,7 @@ import * as jk_events from "jopi-toolkit/jk_events";
 import * as jk_app from "jopi-toolkit/jk_app";
 import {PriorityLevel} from "jopi-toolkit/jk_tools";
 import {getModulesList, setModulesSourceDir} from "jopijs/modules";
-import {JopiModuleInfo} from "../@modules";
+import {JopiModuleInfo} from "../@modules/index.ts";
 export {PriorityLevel} from "jopi-toolkit/jk_tools";
 
 const LOG = false;

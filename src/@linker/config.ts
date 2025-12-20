@@ -1,14 +1,14 @@
 import type {LinkerConfig} from "./engine.ts";
 import * as jk_app from "jopi-toolkit/jk_app";
-import TypeAsIsChunk, {TypeInDirChunk} from "./coreAliasTypes.ts";
+import {TypeInDirChunk} from "./coreAliasTypes.ts";
 import TypeEvents from "./typeEvents.ts";
 import TypeUiComposite from "./typeUiComposite.ts";
 import ModInstaller from "./modInstaller.ts";
 import TypeRoutes from "./typeRoutes.ts";
 import TypeTable from "./typeTable.ts";
-import {TypeVariants} from "./typeVariants";
-import ModPackageJson from "./modPackageJson";
-import {TypeTranslation} from "./typeTranslation";
+import {TypeVariants} from "./typeVariants.ts";
+import ModPackageJson from "./modPackageJson.ts";
+import {TypeTranslation} from "./typeTranslation.ts";
 
 // Here it's ASYNC.
 let gServerInstallFileTemplate = `__AI_INSTRUCTIONS

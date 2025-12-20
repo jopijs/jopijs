@@ -5,7 +5,7 @@ import {
     ModuleDirProcessor,
     resolveFile
 } from "./engine.ts";
-import {JopiModuleInfo} from "../@modules";
+import {JopiModuleInfo} from "../@modules/index.ts";
 
 /**
  * Search the uiInstall.ts and serverInstall.ts files

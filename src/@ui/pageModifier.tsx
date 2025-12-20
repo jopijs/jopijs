@@ -1,4 +1,4 @@
-import {PageController} from "./pageController";
+import {PageController} from "./pageController.ts";
 import React from "react";
 
 export class PageModifier {

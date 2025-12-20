@@ -1,4 +1,4 @@
-import {type TypeInDirChunk_Item, TypeInDirChunk} from "./coreAliasTypes";
+import {type TypeInDirChunk_Item, TypeInDirChunk} from "./coreAliasTypes.ts";
 import * as jk_fs from "jopi-toolkit/jk_fs";
 
 export class TypeVariants extends TypeInDirChunk {
