@@ -51,9 +51,40 @@ export class JopiModuleInfo {
     }
 
     async getModDependencies(): Promise<string[]> {
-        const append = (deps: string[]) => {
+        function cleanUpDependencyName(depName: string): string|undefined {
+            if (depName.startsWith("mod_")) {
+                depName = depName.substring(4);
+
+                let idx = depName.indexOf("@");
+                if (idx!==-1) return "jopimod_" + depName;
+
+                let modOrg = depName.substring(0, idx);
+                let modName = depName.substring(idx+1);
+
+                return "@" + modOrg + "/jopimod_" + modName;
+            }
+
+            let idx = depName.indexOf("@");
+
+            if (idx===0) {
+                let idx = depName.indexOf("/");
+                let modName = depName.substring(idx+1);
+                if (!modName.startsWith("jopimod_")) return undefined;
+                return depName;
+            } else if (idx===-1) {
+                if (!depName.startsWith("jopimod_")) return undefined;
+                return depName;
+            } else {
+                let modOrg = depName.substring(0, idx);
+                let modName = depName.substring(idx+1);
+
+                return "@" + modOrg + "/jopimod_" + modName;
+            }
+        }
+
+        function append (deps: string[]) {
             for (let d of deps) {
-                let c = this.cleanUpDependencyName(d);
+                let c = cleanUpDependencyName(d);
                 if (c) allDeps.push(c);
             }
         }
@@ -76,34 +107,11 @@ export class JopiModuleInfo {
         return allDeps;
     }
 
-    private cleanUpDependencyName(depName: string): string|undefined {
-        if (depName.startsWith("mod_")) {
-            depName = depName.substring(4);
+    async removeNodeModulesDir() {
+        let dir = jk_fs.join(this.fullPath, "node_modules");
 
-            let idx = depName.indexOf("@");
-            if (idx!==-1) return "jopimod_" + depName;
-
-            let modOrg = depName.substring(0, idx);
-            let modName = depName.substring(idx+1);
-
-            return "@" + modOrg + "/jopimod_" + modName;
-        }
-
-        let idx = depName.indexOf("@");
-
-        if (idx===0) {
-            let idx = depName.indexOf("/");
-            let modName = depName.substring(idx+1);
-            if (!modName.startsWith("jopimod_")) return undefined;
-            return depName;
-        } else if (idx===-1) {
-            if (!depName.startsWith("jopimod_")) return undefined;
-            return depName;
-        } else {
-            let modOrg = depName.substring(0, idx);
-            let modName = depName.substring(idx+1);
-
-            return "@" + modOrg + "/jopimod_" + modName;
+        if (await jk_fs.isDirectory(dir)) {
+            await jk_fs.rmDir(dir);
         }
     }
 
@@ -159,7 +167,16 @@ export class JopiModuleInfo {
         }
     }
 }
- 
+
+/**
+ * Will check and update all the workspace things:
+ * - package.json of the project:
+ *      - Check that all modules are inside the workspaces.
+ *      - Check that all modules in dependencies are valid.
+ * - package.json of the modules: check his dependencies.
+ *      - Check that all modules in dependencies are valid.
+ *      - Remove extra node_modules folders.
+ */
 export async function updateWorkspaces() {
     const modules = await getModulesList();
 
@@ -240,6 +257,7 @@ export async function updateWorkspaces() {
 
     for (let module of Object.values(modules)) {
         await module.checkPackageInfo();
+        await module.removeNodeModulesDir();
     }
 
     //endregion
@@ -249,6 +267,9 @@ export async function updateWorkspaces() {
     }
 }
 
+/**
+ * Returns the list of all modules in the project.
+ */
 export async function getModulesList(): Promise<Record<string, JopiModuleInfo>> {
     if (gModulesList) return gModulesList;
 
@@ -281,8 +302,6 @@ export function onProjectDependenciesAdded() {
     }, 500);
 }
 
-let gProjectDependenciesAdded = false;
-
 function getProjectDir_src() {
     if (!gProjectDir_src) {
         gProjectDir_src = jk_fs.join(jk_app.findPackageJsonDir(), "src");
@@ -301,3 +320,4 @@ export function setModulesSourceDir(dir: string) {
 
 let gProjectDir_src: string|undefined;
 let gModulesList: Record<string, JopiModuleInfo>|undefined;
+let gProjectDependenciesAdded = false;

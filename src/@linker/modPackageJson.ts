@@ -7,13 +7,6 @@ import {JopiModuleInfo, updateWorkspaces} from "jopijs/modules";
  * Add them to the main package.json workspace.
  */
 export default class ModPackageJson extends ModuleDirProcessor {
-    private allModules = new Set<string>();
-
-    override async onBeginModuleProcessing(_writer: CodeGenWriter, module: JopiModuleInfo): Promise<void> {
-        this.allModules.add(jk_fs.basename(module.fullPath));
-        await module.checkPackageInfo();
-    }
-
     override async generateCode(): Promise<void> {
         await updateWorkspaces();
     }
