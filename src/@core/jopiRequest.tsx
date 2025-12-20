@@ -1081,8 +1081,10 @@ export class JopiRequest {
     }
 
     /**
-     * Check if the user has all these roles.
-     * Return true if ok, false otherwise.
+     * Test if the user has at least one of the required roles.
+     * @returns
+     * - true if the user has at least one of the required roles.
+     * - false if the user has none of the required roles.
      */
     public role_userHasRoles(requiredRoles: string[]): boolean {
         const userInfos = this.user_getUserInfos();
@@ -1091,13 +1093,17 @@ export class JopiRequest {
         const userRoles = userInfos.roles;
         if (!userRoles) return false;
 
-        for (let role of requiredRoles) {
-            if (!userRoles.includes(role)) return false;
+        for (let role of userRoles) {
+            if (requiredRoles.includes(role)) return true;
         }
 
-        return true;
+        return false;
     }
 
+    /**
+     * Test if the user has at least one of the required roles.
+     * If not, will directly return a 401 error.
+     */
     public role_assertUserHasRoles(requiredRoles: string[]) {
         if (!this.role_userHasRoles(requiredRoles)) {
             throw new SBPE_NotAuthorizedException();

@@ -47,7 +47,7 @@ export class UiKitModule extends ModuleInitContext {
                     menuManager.addMenuBuilder(menuName, (menu) => {
                         entries.forEach((entry) => {
                             if (entry.roles) {
-                                this.ifUserHasRoles(entry.roles, () => {
+                                this.ifUserHasOneOfThisRoles(entry.roles, () => {
                                     menu.set(entry.keys, entry)
                                 })
                             } else {

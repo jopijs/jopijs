@@ -78,7 +78,7 @@ export class ModuleInitContext {
         return userInfos.roles || [];
     }
 
-    userHasRoles(roles: string[]): boolean {
+    userHasAllRoles(roles: string[]): boolean {
         if (roles.length === 0) return true;
 
         let userInfos = this.getUserInfos();
@@ -90,8 +90,27 @@ export class ModuleInitContext {
         return !!roles.every(role => userRoles.includes(role));
     }
 
-    ifUserHasRoles(roles: string[], f: (userInfos: UiUserInfos) => void): void {
-        if (this.userHasRoles(roles)) {
+    userHasOneOfThisRoles(roles: string[]): boolean {
+        if (roles.length === 0) return true;
+
+        let userInfos = this.getUserInfos();
+        if (!userInfos) return false;
+
+        let userRoles = userInfos.roles;
+        if (!userRoles) return false;
+
+        let found = roles.find(role => userRoles.includes(role));
+        return (found !== undefined);
+    }
+
+    ifUserHasAllRoles(roles: string[], f: (userInfos: UiUserInfos) => void): void {
+        if (this.userHasAllRoles(roles)) {
+            f(this.getUserInfos()!);
+        }
+    }
+
+    ifUserHasOneOfThisRoles(roles: string[], f: (userInfos: UiUserInfos) => void): void {
+        if (this.userHasOneOfThisRoles(roles)) {
             f(this.getUserInfos()!);
         }
     }
