@@ -38,6 +38,7 @@ export default class TypeRoutes extends AliasType {
                 let relPath = jk_fs.getRelativePath(writer.dir.output_dir, routeAttributes.configFile!);
                 relPath = jk_fs.win32ToLinuxPath(relPath);
 
+                // Merge page roles + all roles.
                 let roles: string[] = [];
 
                 let pageRoles = routeAttributes.needRoles?.["PAGE"];
@@ -262,7 +263,19 @@ export function error401() {
                 }
 
                 if (dirAttributes.configFile) {
-                    this.routeConfig[newRoute] = dirAttributes;
+                    let currentItem = this.routeConfig[newRoute];
+
+                    if (currentItem) {
+                        const currentPriority = currentItem.priority || PriorityLevel.default;
+                        const newPriority = dirAttributes.priority || PriorityLevel.default;
+
+                        if (newPriority>currentPriority) {
+                            this.routeConfig[newRoute] = dirAttributes;
+                        }
+
+                    } else {
+                        this.routeConfig[newRoute] = dirAttributes;
+                    }
                 }
 
                 await this.scanDir(dirItem.fullPath, newRoute, dirAttributes);
