@@ -15,7 +15,7 @@ export class JopiModuleInfo {
     readonly modOrg?: string;
 
     constructor(name: string, public readonly fullPath: string) {
-        if (name.startsWith("mod_")) this.modName = name.substring(4);
+        if (name.startsWith("mod_")) name = name.substring(4);
 
         // Dir format for org is: mod_orgName@moduleName
         //
@@ -152,7 +152,7 @@ export async function updateWorkspaces() {
     //region Check that all modules have a valid package.json
 
     for (let module of Object.values(modules)) {
-        await module.checkPackageInfo()
+        await module.checkPackageInfo();
     }
 
     //endregion
