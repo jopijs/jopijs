@@ -34,7 +34,7 @@ A module folder contains specific elements whose names might surprise you.
 ```
 |- mod_moduleA/
 	|- @alias/                  < For sharing items though modules, allowing: 
-	   |- uiComponents/               import "@/uiComponents/myBlock"
+	   |- ui/               import "@/ui/myBlock"
 	   |- uiComposites/               import "@/uiComposites/myComp"
 	   |- events/                     import "@/events/myEvent"
 	|- @routes/                 < Define the routes

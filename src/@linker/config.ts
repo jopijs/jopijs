@@ -38,7 +38,7 @@ export function getDefaultLinkerConfig(): LinkerConfig {
         aliasTypes: [
             new TypeRoutes("routes", "root"),
 
-            new TypeInDirChunk("uiComponents"),
+            new TypeInDirChunk("ui"),
             new TypeInDirChunk("schemes"),
             new TypeInDirChunk("lib"),
             new TypeInDirChunk("hooks"),

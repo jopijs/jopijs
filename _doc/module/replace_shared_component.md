@@ -6,11 +6,11 @@ To replace a component, you just need to declare a component with the same name 
 
 ```
 |- mod_moduleA
-|  |- @alias/uiComponents/page.header
+|  |- @alias/ui/page.header
 |     |- index.tsx
 |     |- default.priority          < Automatically added if no priority
 |- mod_moduleB
-|  |- @alias/uiComponents/page.header
+|  |- @alias/ui/page.header
 |     |- index.tsx
 |     |- high.priority             < Is higher priority
 ```

@@ -1,6 +1,6 @@
 # Sharing a React component
 
-## The @alias/uiComponents folder
+## The @alias/ui folder
 
 This folder allows you to define and share React components between different modules. Everything you put in this folder will be accessible to other components via a very simple mechanism, which we will see here.
 
@@ -8,7 +8,7 @@ This folder allows you to define and share React components between different mo
 ```
 |- mod_moduleA/
    |- @alias/
-      |- uiComponents/
+      |- ui/
          |- page.header/           < The component name
             |- index.tsx           < Expose the component
             |- default.priority    < Automatically added if missing      
@@ -31,7 +31,7 @@ To access this component, from any module and any part of your code, you just ne
 
 **Using the shared component**
 ```typescript jsx
-import PageHeader from "@/uiComponents/page.header";
+import PageHeader from "@/ui/page.header";
 
 export default function() {  
     return <>

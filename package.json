@@ -77,7 +77,7 @@
       "bun": "./src/@ui/index.ts",
       "default": "./dist/@ui/index.js"
     },
-    "./uikit": {
+    "./uikit-old": {
       "bun": "./src/@uikit/index.ts",
       "default": "./dist/@uikit/index.js"
     },
