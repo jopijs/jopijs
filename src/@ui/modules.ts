@@ -58,6 +58,10 @@ export class UiApplication {
 
     }
 
+    get mustRemoveTrailingSlashes() {
+        return this.host.mustRemoveTrailingSlashes = true;
+    }
+
     getCurrentURL(): URL {
         return this.host.getCurrentURL();
     }
