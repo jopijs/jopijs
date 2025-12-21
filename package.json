@@ -115,7 +115,6 @@
       "bun": "./src/@modules/index.ts",
       "default": "./dist/@modules/index.js"
     },
-
     "./tool-jopinb": {
       "bun": "./src/@tool-jopinb/index.ts",
       "default": "./dist/@tool-jopinb/index.js"
