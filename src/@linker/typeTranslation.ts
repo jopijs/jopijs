@@ -240,7 +240,7 @@ export class TypeTranslation extends AliasType {
             map += "\n};";
 
             srcCode += `\n${map}\n\nexport default function get(lang?: string) { return lang ? (((byLang as any)[lang]) || defaultLang) :  defaultLang }`;
-            dstCode += `\n${map}\n\nexport default function get(lang) { return lang ? (((byLang as any)[lang]) || defaultLang) :  defaultLang }`;
+            dstCode += `\n${map}\n\nexport default function get(lang) { return lang ? (byLang[lang] || defaultLang) :  defaultLang }`;
 
             await writer.writeCodeFile({
                 fileInnerPath: jk_fs.join(dirName, "index"),
