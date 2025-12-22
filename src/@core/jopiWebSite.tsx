@@ -570,9 +570,9 @@ export class WebSiteImpl implements WebSite {
         this.createModuleInitInstance = builder;
     }
 
-    private createModuleInitInstance(pageController: UiApplication_Host, _extraParams: any): UiApplication {
-        // Note: this function will be replaced.
-        return new UiApplication(pageController);
+    private createModuleInitInstance(pageController: UiApplication_Host, extraParams: any): UiApplication {
+        // Note: this function can be replaced.
+        return new UiApplication(pageController, extraParams);
     }
 
     //endregion
