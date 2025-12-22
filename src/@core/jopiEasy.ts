@@ -1220,7 +1220,7 @@ class JwtTokenAuth_Builder {
                     this.loginPasswordStore!.setAuthHandler(webSite);
                 });
 
-                return this.useSimpleLoginPassword_BEGIN()
+                return this.useSimpleLoginPassword_BEGIN();
             },
 
             use_customStore<T>(store: UserAuthentificationFunction<T>) { return self.useCustomStore_BEGIN<T>(store) }

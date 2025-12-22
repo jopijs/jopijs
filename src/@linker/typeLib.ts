@@ -74,8 +74,6 @@ export class TypeLib extends TypeInDirChunk {
         //
         if (!mustMerge) return super.generateCodeForItem(writer, key, item);
 
-        console.log("Overrided:", key);
-
         // Sort overrides by priority (lowest first)
         overrides.sort((a, b) => (a.priority || 0) - (b.priority || 0));
 
