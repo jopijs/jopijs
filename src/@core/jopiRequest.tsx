@@ -1026,8 +1026,18 @@ export class JopiRequest {
 
         const token = this.user_getJwtToken();
         if (!token) return undefined;
-        return this.webSite.decodeJwtToken(token);
+
+        return this.webSite.decodeJwtToken(this, token);
     }
+
+    /**
+     * Log out the user by deleting his session cookie.
+     * Warning: do nothing if the call doesn't come from a browser.
+     */
+    public user_logOutUser() {
+        this.cookie_deleteResCookie("authorization");
+    }
+
 
     /**
      * Allow faking a state where there is no user connected.

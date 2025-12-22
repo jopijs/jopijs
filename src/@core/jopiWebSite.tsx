@@ -107,7 +107,7 @@ export interface WebSite {
      * Verify and decode the JWT token.
      * Returns the data this token contains, or undefined if the token is invalid.
      */
-    decodeJwtToken(token: string): UserInfos | undefined;
+    decodeJwtToken(req: JopiRequest, token: string): UserInfos | undefined;
 
     /**
      * Set the secret token for JWT cookies.
@@ -666,11 +666,16 @@ export class WebSiteImpl implements WebSite {
         }
     }
 
-    decodeJwtToken(token: string): UserInfos|undefined {
+    decodeJwtToken(req: JopiRequest, token: string): UserInfos|undefined {
         if (!this.JWT_SECRET) return undefined;
 
-        try { return jwt.verify(token, this.JWT_SECRET) as UserInfos; }
-        catch { return undefined; }
+        try {
+            return jwt.verify(token, this.JWT_SECRET) as UserInfos;
+        }
+        catch {
+            req.user_logOutUser();
+            return undefined;
+        }
     }
 
     setJwtSecret(secret: string) {

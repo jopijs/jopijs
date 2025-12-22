@@ -2,7 +2,7 @@
 
 import React from "react";
 import {type ServerRequestInstance} from "./hooks/index.ts";
-import {decodeJwtToken, decodeUserInfosFromCookie, isUserInfoCookieUpdated, type UiUserInfos} from "./user.ts";
+import {decodeUserInfosFromCookie, isUserInfoCookieUpdated, type UiUserInfos} from "./user.ts";
 import {deleteCookie} from "./cookies/index.ts";
 import * as jk_events from "jopi-toolkit/jk_events";
 import type {UiApplication_Host} from "./modules.ts";
@@ -62,7 +62,9 @@ export class PageController<T = any> implements UiApplication_Host {
     }
 
     public getUserInfos(): UiUserInfos|undefined {
-        if (isServerSide) return this.userInfos;
+        if (isServerSide) {
+            return this.userInfos;
+        }
 
         if (!this.userInfos) {
             this.userInfos = decodeUserInfosFromCookie();
@@ -188,7 +190,7 @@ export class PageController_ExposePrivate<T = any> extends PageController<T> {
         this.objectRegistry.registerObject("jopi.serverRequest", serverRequest);
 
         this.serverRequest = serverRequest;
-        this.userInfos = decodeJwtToken(serverRequest.user_getJwtToken());
+        this.userInfos = serverRequest.user_getUserInfos();
     }
 
     getServerRequest(): ServerRequestInstance {

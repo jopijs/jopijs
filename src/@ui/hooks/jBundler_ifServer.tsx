@@ -5,6 +5,7 @@ import {PageController_ExposePrivate} from "../pageController.ts";
 import * as jk_events from "jopi-toolkit/jk_events";
 import type {CookieOptions} from "../cookies/index.ts";
 import {_usePage, type ReactStaticEvent} from "./common.tsx";
+import type {UiUserInfos} from "../user";
 
 export function useParams(): any {
     return useServerRequest().urlParts;
@@ -43,7 +44,7 @@ export interface ServerRequestInstance {
     urlInfos: URL;
     customData: any;
 
-    user_getJwtToken(): string | undefined;
+    user_getUserInfos(): UiUserInfos | undefined;
 
     headers: Headers;
     cookie_reqHasCookie(name: string, value?: string): boolean;
