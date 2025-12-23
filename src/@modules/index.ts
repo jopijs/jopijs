@@ -167,7 +167,7 @@ export function toNpmModuleName(itemName: string): string|undefined {
         itemName = itemName.substring(4);
 
         let idx = itemName.indexOf("@");
-        if (idx!==-1) return "jopimod_" + itemName;
+        if (idx===-1) return "jopimod_" + itemName;
 
         let modOrg = itemName.substring(0, idx);
         let modName = itemName.substring(idx+1);
