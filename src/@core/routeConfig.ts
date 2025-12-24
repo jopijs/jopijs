@@ -8,7 +8,8 @@ export class RouteConfig {
                 private readonly route: string,
                 private requiredRoles: string[]) {
 
-        this.onGET = new RouteConfig_OnGET(this.webSite, this.route, "GET");
+        this.onPage = new RouteConfig_OnPage(this.webSite, this.route, "GET");
+        this.onGET = new RouteConfig_Core(this.webSite, this.route, "GET");
         this.onPOST = new RouteConfig_Core(this.webSite, this.route, "POST");
         this.onPUT = new RouteConfig_Core(this.webSite, this.route, "PUT");
         this.onDELETE = new RouteConfig_Core(this.webSite, this.route, "DELETE");
@@ -18,7 +19,8 @@ export class RouteConfig {
         this.onALL = new RouteConfig_Core(this.webSite, this.route, "*");
     }
 
-    public readonly onGET: RouteConfig_OnGET;
+    public readonly onPage: RouteConfig_OnPage;
+    public readonly onGET: RouteConfig_Core;
     public readonly onPOST: RouteConfig_Core;
     public readonly onPUT: RouteConfig_Core;
     public readonly onDELETE: RouteConfig_Core;
@@ -94,7 +96,7 @@ class RouteConfig_Core {
     }
 }
 
-class RouteConfig_OnGET extends RouteConfig_Core {
+class RouteConfig_OnPage extends RouteConfig_Core {
     cache_disableAutomaticCache() {
         let routeInfos = this.webSite.getRouteInfos("GET", this.route);
         if (!routeInfos) return;
