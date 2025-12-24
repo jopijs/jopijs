@@ -453,10 +453,10 @@ export class WebSiteImpl implements WebSite {
                         }
                     }
 
-                    if (isPage) {
-                        if ((req as JopiRequestImpl)._cache_ignoreDefaultBehaviors) {
-                            (req as JopiRequestImpl)._cache_ignoreDefaultBehaviors = false;
-                        } else {
+                    if ((req as JopiRequestImpl)._cache_ignoreDefaultBehaviors) {
+                        (req as JopiRequestImpl)._cache_ignoreDefaultBehaviors = false;
+                    } else {
+                        if (isPage) {
                             // Remove the search params and the href
                             // for security reasons to avoid cache poisoning.
                             //
@@ -464,18 +464,22 @@ export class WebSiteImpl implements WebSite {
                         }
                     }
 
-                    let res = await req.cache_getFromCache();
+                    let res: Response|undefined;
 
-                    if (res) {
-                        if (afterGetFromCache) {
-                            const r = await afterGetFromCache(req, res);
-                            //
-                            if (r) {
-                                return fPostMiddleware ? fPostMiddleware(req, r) : r;
+                    if (!(req as JopiRequestImpl)._cache_ignoreCacheRead) {
+                        res = await req.cache_getFromCache();
+
+                        if (res) {
+                            if (afterGetFromCache) {
+                                const r = await afterGetFromCache(req, res);
+                                //
+                                if (r) {
+                                    return fPostMiddleware ? fPostMiddleware(req, r) : r;
+                                }
                             }
-                        }
 
-                        return fPostMiddleware ? fPostMiddleware(req, res) : res;
+                            return fPostMiddleware ? fPostMiddleware(req, res) : res;
+                        }
                     }
 
                     logCache_notInCache.info(w => w(`${req.method} request`, {url: req.urlInfos?.href}));
@@ -484,10 +488,10 @@ export class WebSiteImpl implements WebSite {
                         ifNotInCache(req, isPage);
                     }
 
-                    if (isPage) {
-                        if ((req as JopiRequestImpl)._cache_ignoreDefaultBehaviors) {
-                            (req as JopiRequestImpl)._cache_ignoreDefaultBehaviors = false;
-                        } else {
+                    if ((req as JopiRequestImpl)._cache_ignoreDefaultBehaviors) {
+                        (req as JopiRequestImpl)._cache_ignoreDefaultBehaviors = false;
+                    } else {
+                        if (isPage) {
                             // Allows creating anonymous pages.
                             req.user_fakeNoUsers();
                         }
@@ -497,11 +501,13 @@ export class WebSiteImpl implements WebSite {
 
                     res = await baseHandler(req);
 
-                    if (beforeAddToCache) {
-                        let r = await beforeAddToCache(req, res);
-                        if (r) return await req.cache_addToCache(r)!;
-                    } else {
-                        return await req.cache_addToCache(res)!;
+                    if (!(req as JopiRequestImpl)._cache_ignoreCacheWrite) {
+                        if (beforeAddToCache) {
+                            let r = await beforeAddToCache(req, res);
+                            if (r) return await req.cache_addToCache(r)!;
+                        } else {
+                            return await req.cache_addToCache(res)!;
+                        }
                     }
 
                     return res;

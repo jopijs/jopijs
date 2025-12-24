@@ -51,6 +51,24 @@ export class JopiRequest {
         this._headers = this.coreRequest.headers;
     }
 
+    //region Custom data
+
+    get customData(): any {
+        if (!this._customData) this._customData = {};
+        return this._customData;
+    }
+
+    setCustomData(key: string, value: any) {
+        if (!this._customData) this._customData = {};
+        this._customData[key] = value;
+    }
+
+    getCustomData<T = any>(key: string): T | undefined {
+        return this.customData[key];
+    }
+
+    //endregion
+
     //region Properties
 
     private _customData?: any;
@@ -62,11 +80,6 @@ export class JopiRequest {
         }
 
         return this._urlInfos;
-    }
-
-    get customData(): any {
-        if (!this._customData) this._customData = {};
-        return this._customData;
     }
 
     /**
@@ -461,9 +474,29 @@ export class JopiRequest {
 
     protected _isAddedToCache = false;
     protected _cache_ignoreDefaultBehaviors = false;
+    protected _cache_ignoreCacheRead = false;
+    protected _cache_ignoreCacheWrite = false;
 
+    /**
+     * Allows avoiding the auto-cache default behaviors.
+     * The effect depends on when this method is called.
+     */
     cache_ignoreDefaultBehaviors() {
         this._cache_ignoreDefaultBehaviors = true;
+    }
+
+    /**
+     * Allows avoiding getting the value from the cache and bypass it.
+     */
+    cache_ignoreCacheRead() {
+        this._cache_ignoreCacheRead = true;
+    }
+
+    /**
+     * Allows avoiding writing the value into the cache.
+     */
+    cache_ignoreCacheWrite() {
+        this._cache_ignoreCacheWrite = true;
     }
 
 
@@ -1078,7 +1111,6 @@ export class JopiRequest {
     }
 
     private isFakingNoUsers: boolean = false;
-
     private hasNoUserInfos: boolean = false;
     private userInfos?: UserInfos;
     private userJwtToken?: string;
@@ -1286,6 +1318,8 @@ export class JopiRequest {
 
 export class JopiRequestImpl extends JopiRequest {
     public _cache_ignoreDefaultBehaviors = false;
+    public _cache_ignoreCacheRead = false;
+    public _cache_ignoreCacheWrite = false;
 }
 
 export interface JopiRequestSpyData {

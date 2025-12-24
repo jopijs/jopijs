@@ -2,7 +2,7 @@
 
 import React, {useEffect} from "react";
 import * as jk_events from "jopi-toolkit/jk_events";
-import {type ReactStaticEvent} from "./common.tsx";
+import {type ReactStaticEvent, type ServerRequestInstance} from "./common.tsx";
 
 export function useParams(): any {
     if (gPageParams===undefined) {
@@ -83,4 +83,8 @@ export function useStaticEvent(event: jk_events.StaticEvent): ReactStaticEvent {
             }, [listener]);
         }
     }
+}
+
+export function useServerRequest(): ServerRequestInstance {
+    throw new Error("useServerRequest is not available on the browser side.");
 }

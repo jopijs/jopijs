@@ -3,9 +3,7 @@
 import React from "react";
 import {PageController_ExposePrivate} from "../pageController.ts";
 import * as jk_events from "jopi-toolkit/jk_events";
-import type {CookieOptions} from "../cookies/index.ts";
-import {_usePage, type ReactStaticEvent} from "./common.tsx";
-import type {UiUserInfos} from "../user";
+import {_usePage, type ReactStaticEvent, type ServerRequestInstance} from "./common.tsx";
 
 export function useParams(): any {
     return useServerRequest().urlParts;
@@ -34,23 +32,6 @@ export function useServerEffect(effect: React.EffectCallback,
  */
 export function useBrowserEffect(effect: React.EffectCallback,
                                   deps?: React.DependencyList) {
-}
-
-/**
- * Is a subset of JopiRequest, with only browser-side compatible items.
- */
-export interface ServerRequestInstance {
-    urlParts?: Record<string, any>;
-    urlInfos: URL;
-    customData: any;
-
-    user_getUserInfos(): UiUserInfos | undefined;
-
-    headers: Headers;
-    cookie_reqHasCookie(name: string, value?: string): boolean;
-    cookie_getReqCookie(name: string): string | undefined;
-    cookie_addCookieToRes(cookieName: string, cookieValue: string, options?: CookieOptions): void;
-    cookie_deleteResCookie(name: string): void;
 }
 
 export function useServerRequest(): ServerRequestInstance {

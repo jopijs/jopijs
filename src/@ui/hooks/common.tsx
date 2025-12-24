@@ -1,11 +1,12 @@
 // noinspection JSUnusedGlobalSymbols
 
-import React, {useEffect} from "react";
-import {PageContext, PageController, PageController_ExposePrivate, type PageOptions} from "../pageController.ts";
+import React from "react";
+import {PageContext, PageController} from "../pageController.ts";
 import {CssModule, type UseCssModuleContextProps} from "../cssModules.tsx";
-import * as jk_events from "jopi-toolkit/jk_events";
-import type {CookieOptions} from "../cookies/index.ts";
 import {PageModifier} from "../pageModifier.tsx";
+import type {CookieOptions} from "../cookies/index.ts";
+import type {UiUserInfos} from "../user.ts";
+
 
 /**
  * Allow getting a reference to the PageController.
@@ -64,4 +65,26 @@ export function useCssModule(cssModule: undefined | Record<string, string>) {
 export interface ReactStaticEvent {
     send<T>(data: T): T;
     reactListener<T>(listener: (data: T) => void): void;
+}
+
+/**
+ * Is a subset of JopiRequest, with only browser-side compatible items.
+ */
+export interface ServerRequestInstance {
+    urlParts?: Record<string, any>;
+    urlInfos: URL;
+    headers: Headers;
+
+    user_getUserInfos(): UiUserInfos | undefined;
+    role_getUserRoles(): string[];
+    role_userHasRoles(requiredRoles: string[]): boolean;
+    role_userHasRole(requiredRole: string): boolean;
+
+    cache_ignoreCacheWrite(): void;
+    get customData(): any;
+
+    cookie_reqHasCookie(name: string, value?: string): boolean;
+    cookie_getReqCookie(name: string): string | undefined;
+    cookie_addCookieToRes(cookieName: string, cookieValue: string, options?: CookieOptions): void;
+    cookie_deleteResCookie(name: string): void;
 }
