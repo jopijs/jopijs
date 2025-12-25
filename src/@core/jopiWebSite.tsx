@@ -256,7 +256,7 @@ export class WebSiteImpl implements WebSite {
             req.urlInfos.port = "";
             req.urlInfos.protocol = "https";
 
-            return req.res_redirectResponse(true, req.urlInfos.href);
+            return req.res_redirect(req.urlInfos.href, true);
         });
 
         return webSite;

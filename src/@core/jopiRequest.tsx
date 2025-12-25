@@ -403,8 +403,10 @@ export class JopiRequest {
 
     //region Response helpers
 
-    res_redirectResponse(permanent: boolean = false, url?: string | URL): Response {
-        if (!url) url = this.urlInfos;
+    /**
+     * Create a redirection (301 permanent, or 302 temporary).
+     */
+    res_redirect(url: string | URL, permanent: boolean = false): Response {
         return new Response(null, {status: permanent ? 301 : 302, headers: {"location": url.toString()}});
     }
 
@@ -1227,7 +1229,7 @@ export class JopiRequest {
         if (options.replaceIndexHtml !== false) {
             if (this.urlInfos.pathname.endsWith("/index.html")) {
                 this.urlInfos.pathname = this.urlInfos.pathname.slice(0, -10);
-                return this.res_redirectResponse(false);
+                return this.res_redirect(this.urlInfos, false);
             }
 
             if (this.urlInfos.pathname.endsWith("/")) {
