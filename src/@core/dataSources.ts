@@ -71,7 +71,7 @@ export function exposeDataSource_PageData(route: string, securityUid: string, da
         }
         
         const seed = await req.req_getBodyData<any>();
-        const res = await dataProvider.getRefreshedData!({req, seed, isFromBrowser: true});
+        const res = await dataProvider.getRefreshedData!.call(dataProvider, {req, seed, isFromBrowser: true});
         return req.res_jsonResponse(res);
     }});
 

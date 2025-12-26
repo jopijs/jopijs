@@ -959,7 +959,7 @@ export class JopiRequest {
             const pageDataParams = this.routeInfos.pageDataParams;
 
             if (pageDataParams) {
-                this._pageData = await pageDataParams.provider.getDataForCache({req: this});
+                this._pageData = await pageDataParams.provider.getDataForCache.call(pageDataParams.provider, {req: this});
 
                 const html = "window['JOPI_PAGE_DATA'] = " + JSON.stringify({
                     d: this._pageData,

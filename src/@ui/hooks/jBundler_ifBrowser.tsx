@@ -140,7 +140,6 @@ export function usePageData(): UsePageDataResponse {
     });
 
     useEvent("jopi.page.dataRefreshed", (data: PageDataState) => {
-        console.log("Page data refreshed:", data);
         setPageData(data);
     });
 
