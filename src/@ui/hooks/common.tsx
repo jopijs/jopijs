@@ -69,8 +69,13 @@ export interface ReactStaticEvent {
 
 export interface PageDataProviderData {
     seed?: any;
-    items?: any[];
     global?: any;
+    items?: any[];
+
+    // Allows knowing which property must be used as id
+    // to merge old / new items.
+    //
+    itemKey?: string;
 }
 
 export interface UsePageDataResponse extends PageDataProviderData {

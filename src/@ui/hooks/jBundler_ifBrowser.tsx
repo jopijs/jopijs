@@ -96,9 +96,7 @@ export function useServerRequest(): ServerRequestInstance {
 
 //region Page Data
 
-export function usePageData(): UsePageDataResponse|undefined {
-    const [_, setCount] = React.useState(0);
-
+export function usePageData(): UsePageDataResponse {
     if (!gPageDataState) {
         const rawPageData = (window as any)["JOPI_PAGE_DATA"];
 
@@ -123,33 +121,86 @@ export function usePageData(): UsePageDataResponse|undefined {
             // If not url (rawPageData.u) it means there is no getRefreshedData function defined.
             //
             if (pageData && rawPageData.u) {
-                // Using then allow avoiding blocking the current call.
-                //
-                // TODO: je ne peux pas refresh comme ça car je peux avoir plusieurs écouteurs.
-                //       Il me faut donc utiliser un event.
+                // Note: Using ".then(...)" allow avoiding blocking the current call.
                 //
                 refreshPageData(rawPageData.u).then(() => {
                     gPageDataState!.isStaled = false;
-                    setCount(c => c + 1)
+                    jk_events.sendEvent("jopi.page.dataRefreshed", gPageDataState);
                 });
             }
         }
     }
-    
-    return {
+
+    const [pageData, setPageData] = React.useState<UsePageDataResponse>({
         ...gPageDataState.data,
 
         isLoading: gPageDataState.isLoading,
         isStaled: gPageDataState.isStaled,
         isError: gPageDataState.isError
-    };
+    });
+
+    useEvent("jopi.page.dataRefreshed", (data: PageDataState) => {
+        console.log("Page data refreshed:", data);
+        setPageData(data);
+    });
+
+    return pageData;
 }
 
 async function refreshPageData(url: string): Promise<void> {
+    function mergeItems(itemKey: string, newItems: any[], oldItems: any[]): any[] {
+        let res: any[] = [];
+
+        for (let item of newItems) {
+            let id = item[itemKey];
+
+            for (let old of oldItems) {
+                let oldId = old[itemKey];
+
+                if (id === oldId) {
+                    item = {...old, ...item};
+                    break;
+                }
+            }
+
+            res.push(item);
+        }
+
+        return res;
+    }
+
+    function mergeResponse(newData: PageDataProviderData, oldData?: PageDataProviderData): PageDataProviderData {
+        if (!newData) return oldData!;
+
+        if (!newData.seed) {
+            newData.seed = oldData!.seed;
+        }
+
+        if (!newData.global) {
+            newData.global = oldData!.global;
+        }
+
+        if (!newData.itemKey) {
+            newData.itemKey = oldData!.itemKey;
+        }
+
+        if (!newData.items) {
+            newData.items = oldData!.items;
+        } else {
+            if (oldData!.items) {
+                if (!newData.itemKey) {
+                    console.log("Page data: no itemKey defined. Cannot merge items.")
+                } else {
+                    newData.items = mergeItems(newData.itemKey, newData.items, oldData!.items)
+                }
+            }
+        }
+
+        return newData;
+    }
+
     gPageDataState!.isLoading = true;
     gPageDataState!.isError = false;
-
-    console.log("sending seed:", gPageDataState!.data!.seed);
 
     let res = await fetch(url, {
         method: 'POST',
@@ -160,11 +211,12 @@ async function refreshPageData(url: string): Promise<void> {
     gPageDataState!.isLoading = false;
 
     if (res.ok) {
-        gPageDataState!.data = (await res.json()) as PageDataProviderData;
+        let data = (await res.json()) as PageDataProviderData;
+        data = mergeResponse(data, gPageDataState!.data);
+
+        gPageDataState!.data = data;
         gPageDataState!.isError = false;
         gPageDataState!.isStaled = false;
-
-        console.log("received seed:", gPageDataState!.data!.seed);
 
     } else {
         gPageDataState!.isError = true;

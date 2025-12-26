@@ -55,7 +55,7 @@ export function useStaticEvent(event: jk_events.StaticEvent): ReactStaticEvent {
     return gFakeEvent;
 }
 
-export function usePageData(): UsePageDataResponse|undefined {
+export function usePageData(): UsePageDataResponse {
     const req = useServerRequest();
 
     return {
