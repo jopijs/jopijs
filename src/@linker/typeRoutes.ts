@@ -9,8 +9,10 @@ import {
 } from "./engine.ts";
 import * as jk_fs from "jopi-toolkit/jk_fs";
 import * as jk_app from "jopi-toolkit/jk_app";
-import type {RouteAttributes} from "jopijs/generated";
+import type {RouteAttributes, RouteBindPageParams, RouteBindVerbParams} from "jopijs/generated";
 import {normalizeNeedRoleConditionName} from "./common.ts";
+import type {HttpMethod} from "jopijs";
+import {isBrowser} from "jopi-toolkit/jk_what";
 
 export default class TypeRoutes extends AliasType {
     private sourceCode_header = `import {routeBindPage, routeBindVerb} from "jopijs/generated";`;
@@ -21,6 +23,7 @@ export default class TypeRoutes extends AliasType {
 
     private registry: Record<string, RegistryItem> = {};
     private routeConfig: Record<string, RouteAttributes> = {};
+    private pageData: Record<string, RouteAttributes> = {};
 
     async beginGeneratingCode(writer: CodeGenWriter): Promise<void> {
         await this.genCode_AliasRoutes(writer);
@@ -36,7 +39,7 @@ export default class TypeRoutes extends AliasType {
             for (let route of Object.keys(this.routeConfig)) {
                 let routeAttributes = this.routeConfig[route];
                 let relPath = jk_fs.getRelativePath(writer.dir.output_dir, routeAttributes.configFile!);
-                relPath = jk_fs.win32ToLinuxPath(relPath);
+                relPath = writer.toPathForImport(relPath, false);
 
                 // Merge page roles + all roles.
                 let roles: string[] = [];
@@ -47,9 +50,35 @@ export default class TypeRoutes extends AliasType {
                 let allRoles = routeAttributes.needRoles?.[""];
                 if (allRoles) allRoles.forEach(r => { if (!roles.includes(r)) roles.push(r) });
 
-                let sRoles = roles.length ? ", " + JSON.stringify(roles) : "";
+                let sRoles = roles.length ? ", " + JSON.stringify(roles) : ", undefined";
                 this.sourceCode_header += `\nimport routeConfig${count} from "${relPath}";`;
                 this.sourceCode_body += `\n    await routeConfig${count}(new RouteConfig(webSite, ${JSON.stringify(route)}${sRoles}));`;
+
+                count++;
+            }
+        }
+
+        if (Object.keys(this.pageData).length>0) {
+            this.sourceCode_header += `\nimport {setPageDataProvider} from "jopijs/generated";`;
+
+            let count = 1;
+
+            for (let route of Object.keys(this.pageData)) {
+                let routeAttributes = this.pageData[route];
+                let relPath = jk_fs.getRelativePath(writer.dir.output_dir, routeAttributes.pageData!);
+                relPath = writer.toPathForImport(relPath, false);
+
+                // Merge page roles + all roles.
+                let roles: string[] = [];
+
+                let pageRoles = routeAttributes.needRoles?.["PAGE"];
+                if (pageRoles) pageRoles.forEach(r => { if (!roles.includes(r)) roles.push(r) });
+
+                let allRoles = routeAttributes.needRoles?.[""];
+                if (allRoles) allRoles.forEach(r => { if (!roles.includes(r)) roles.push(r) });
+
+                this.sourceCode_header += `\nimport pageData${count} from "${relPath}";`;
+                this.sourceCode_body += `\n    setPageDataProvider(webSite, ${JSON.stringify(route)}, ${roles.length ? JSON.stringify(roles) : "undefined"}, pageData${count}, ${JSON.stringify(routeAttributes.pageData)});`;
 
                 count++;
             }
@@ -79,7 +108,9 @@ export default {`;
             let headers = writer.AI_INSTRUCTIONS;
             let count = 0;
 
-            for (let item of Object.values(this.registry)) {
+            const registryValues = Object.values(this.registry);
+
+            for (let item of registryValues) {
                 if (item.verb==="PAGE") {
                     count++;
 
@@ -91,11 +122,12 @@ export default {`;
                     } else {
                         headers += `import I${count} from ${JSON.stringify(relPath)};\n`;
                         srcRouteFiles += `\n    "${item.route}": I${count},`;
+                        this.bindPage(writer, item.route, item.filePath, item.attributes);
                     }
-
-                    this.bindPage(writer, item.route, item.filePath, item.attributes);
                 } else {
-                    this.bindVerb(writer, item.verb, item.route, item.filePath, item.attributes);
+                    if (!isBrowser) {
+                        this.bindVerb(writer, item.verb, item.route, item.filePath, item.attributes);
+                    }
                 }
             }
 
@@ -157,9 +189,13 @@ export function error401() {
         this.outputDir = getWriter().dir.output_dir;
 
         let dirAttributes = await this.scanAttributes(p.typeDir);
-        //
+
         if (dirAttributes.configFile) {
-            this.routeConfig["/"] = dirAttributes;
+            this.mergeConfig("/", dirAttributes);
+        }
+
+        if (dirAttributes.pageData) {
+            this.mergePageData("/", dirAttributes);
         }
 
         await this.scanDir(p.typeDir, "/", dirAttributes);
@@ -173,7 +209,14 @@ export function error401() {
         let distFilePath = jk_fs.getRelativePath(this.outputDir, filePath);
         distFilePath = writer.toPathForImport(distFilePath, false);
 
-        let routeBindingParams = {route, attributes, filePath: srcFilePath};
+        const routeBindingParams: RouteBindPageParams = {
+            route,
+            filePath: srcFilePath,
+            attributes: {
+                needRoles: attributes.needRoles,
+                disableCache: attributes.disableCache
+            }
+        };
 
         this.sourceCode_header += `\nimport c_${routeId} from "${distFilePath}";`;
         this.sourceCode_body += `\n    await routeBindPage(webSite, c_${routeId}, ${JSON.stringify(routeBindingParams)});`
@@ -184,7 +227,16 @@ export function error401() {
         let relPath = jk_fs.getRelativePath(this.outputDir, filePath);
         relPath = writer.toPathForImport(relPath, false);
 
-        let routeBindingParams = {verb, route, attributes, filePath};
+        const routeBindingParams: RouteBindVerbParams = {
+            verb: verb as HttpMethod,
+            route,
+            filePath,
+            attributes: {
+                needRoles: attributes.needRoles,
+                disableCache: attributes.disableCache
+            }
+        };
+
         this.sourceCode_header += `\nimport f_${routeId} from "${relPath}";`;
         this.sourceCode_body += `\n    await routeBindVerb(webSite, f_${routeId}, ${JSON.stringify(routeBindingParams)});`
     }
@@ -215,6 +267,7 @@ export function error401() {
 
         const res: RouteAttributes = {
             configFile: await resolveFile(dirPath, ["config.tsx", "config.ts"]),
+            pageData: await resolveFile(dirPath, ["pageData.tsx", "pageData.ts"]),
             disableCache: (dirInfos.features?.["autoCache"] === false) ? true : undefined,
             priority: dirInfos.priority,
             dirInfos
@@ -263,19 +316,11 @@ export function error401() {
                 }
 
                 if (dirAttributes.configFile) {
-                    let currentItem = this.routeConfig[newRoute];
+                    this.mergeConfig(newRoute, dirAttributes);
+                }
 
-                    if (currentItem) {
-                        const currentPriority = currentItem.priority || PriorityLevel.default;
-                        const newPriority = dirAttributes.priority || PriorityLevel.default;
-
-                        if (newPriority>currentPriority) {
-                            this.routeConfig[newRoute] = dirAttributes;
-                        }
-
-                    } else {
-                        this.routeConfig[newRoute] = dirAttributes;
-                    }
+                if (dirAttributes.pageData) {
+                    this.mergePageData(newRoute, dirAttributes);
                 }
 
                 await this.scanDir(dirItem.fullPath, newRoute, dirAttributes);
@@ -323,6 +368,38 @@ export function error401() {
                     }
                 }
             }
+        }
+    }
+
+    mergeConfig(newRoute: string, dirAttributes: RouteAttributes) {
+        let currentItem = this.routeConfig[newRoute];
+
+        if (currentItem) {
+            const currentPriority = currentItem.priority || PriorityLevel.default;
+            const newPriority = dirAttributes.priority || PriorityLevel.default;
+
+            if (newPriority>currentPriority) {
+                this.routeConfig[newRoute] = dirAttributes;
+            }
+
+        } else {
+            this.routeConfig[newRoute] = dirAttributes;
+        }
+    }
+
+    private mergePageData(newRoute: string, dirAttributes: RouteAttributes) {
+        let currentItem = this.pageData[newRoute];
+
+        if (currentItem) {
+            const currentPriority = currentItem.priority || PriorityLevel.default;
+            const newPriority = dirAttributes.priority || PriorityLevel.default;
+
+            if (newPriority>currentPriority) {
+                this.pageData[newRoute] = dirAttributes;
+            }
+
+        } else {
+            this.pageData[newRoute] = dirAttributes;
         }
     }
 }

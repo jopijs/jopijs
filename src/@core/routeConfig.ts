@@ -6,7 +6,7 @@ import type {MenuItemForExtraPageParams} from "jopijs/ui";
 export class RouteConfig {
     constructor(private readonly webSite: WebSiteImpl,
                 private readonly route: string,
-                private requiredRoles: string[]) {
+                private requiredRoles: string[]|undefined) {
 
         this.onPage = new RouteConfig_OnPage(this.webSite, this.route, "GET");
         this.onGET = new RouteConfig_Core(this.webSite, this.route, "GET");

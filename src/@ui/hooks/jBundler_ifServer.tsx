@@ -3,7 +3,11 @@
 import React from "react";
 import {PageController_ExposePrivate} from "../pageController.ts";
 import * as jk_events from "jopi-toolkit/jk_events";
-import {_usePage, type ReactStaticEvent, type ServerRequestInstance} from "./common.tsx";
+import {
+    _usePage,
+    type ReactStaticEvent,
+    type ServerRequestInstance, type UsePageDataResponse
+} from "./common.tsx";
 
 export function useParams(): any {
     return useServerRequest().urlParts;
@@ -49,6 +53,17 @@ export function useEvent(evenName: string|string[], listener: (data: any) => voi
 
 export function useStaticEvent(event: jk_events.StaticEvent): ReactStaticEvent {
     return gFakeEvent;
+}
+
+export function usePageData(): UsePageDataResponse|undefined {
+    const req = useServerRequest();
+
+    return {
+        ...req.react_getPageData(),
+        isStaled: false,
+        isError: false,
+        isLoading: false
+    };
 }
 
 const gFakeEvent: ReactStaticEvent = {

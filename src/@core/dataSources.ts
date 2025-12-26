@@ -2,15 +2,20 @@ import type {JTableDs, JTableDs_ReadParams} from "jopi-toolkit/jk_data";
 import type {WebSite} from "./jopiWebSite";
 import type {JopiRequest} from "./jopiRequest";
 import {sleep} from "jopi-toolkit/jk_timer";
+import type {PageDataProviderData} from "jopijs/ui";
 
 interface RegisteredDataSource {
-    name: string;
     securityUid: string;
+    onCall: (req: JopiRequest) => Promise<Response>;
+}
+
+//region Data Table
+
+interface RegisteredDataSource_Table extends RegisteredDataSource {
+    name: string;
     dataSource: JTableDs;
     permissions: Record<string, string[]>;
 }
-
-const toExpose: Record<string, RegisteredDataSource> = {};
 
 // noinspection JSUnusedGlobalSymbols
 /**
@@ -18,34 +23,76 @@ const toExpose: Record<string, RegisteredDataSource> = {};
  * Warning: if mainly called by generated code.
  */
 export function exposeDataSource_Table(name: string, securityUid: string, dataSource: JTableDs, permissions: Record<string, string[]>) {
-    toExpose[name] = {name, securityUid, dataSource, permissions};
+    toExpose.push({
+        securityUid,
+
+        onCall: async (req) => {
+            let reqData = await req.req_getBodyData<{
+                dsName: string;
+                read?: JTableDs_ReadParams;
+            }>();
+
+            if (reqData.read) {
+                let requiredRoles = permissions.READ;
+                if (requiredRoles) req.role_assertUserHasOneOfThisRoles(requiredRoles);
+
+                let res = await dataSource.read(reqData.read);
+                return req.res_jsonResponse(res);
+            }
+
+            return req.res_returnError400_BadRequest();
+        }
+    });
 }
+
+//endregion
+
+//region Page data
+
+export interface PageDataProvider {
+    getDataForCache(params: GetDataForCacheParams): Promise<PageDataProviderData>;
+    getRefreshedData?(params: GetRefreshedDataParams): Promise<PageDataProviderData>;
+}
+
+export interface GetDataForCacheParams {
+    req: JopiRequest;
+}
+
+export interface GetRefreshedDataParams {
+    req: JopiRequest;
+    seed: any;
+    isFromBrowser?: boolean;
+}
+
+export function exposeDataSource_PageData(route: string, securityUid: string, dataProvider: PageDataProvider, allowedRoles: string[]|undefined): string {
+    toExpose.push({securityUid, onCall: async (req) => {
+        if (allowedRoles) {
+            req.role_assertUserHasOneOfThisRoles(allowedRoles);
+        }
+        
+        const seed = await req.req_getBodyData<any>();
+        const res = await dataProvider.getRefreshedData!({req, seed, isFromBrowser: true});
+        return req.res_jsonResponse(res);
+    }});
+
+    return "/_jopi/ds/" + securityUid;
+}
+
+//endregion
+
+//region Server
+
+const toExpose: RegisteredDataSource[] = [];
 
 export function installDataSourcesServer(webSite: WebSite) {
-    for (let key in toExpose) {
-        const dsInfos = toExpose[key];
-        webSite.onPOST("/_jopi/ds/" + dsInfos.securityUid, req => onDsTableCall_POST(req, dsInfos));
+    for (let dsInfos of toExpose) {
+        const onCall = dsInfos.onCall;
+
+        webSite.onPOST("/_jopi/ds/" + dsInfos.securityUid, async req => {
+            if (gHttpProxyReadPause) await sleep(gHttpProxyReadPause);
+            return onCall(req)
+        });
     }
-}
-
-interface HttpRequestParams {
-    dsName: string;
-    read?: JTableDs_ReadParams;
-}
-
-async function onDsTableCall_POST(req: JopiRequest, dsInfos: RegisteredDataSource): Promise<Response> {
-    let reqData = await req.req_getBodyData<HttpRequestParams>();
-
-    if (reqData.read) {
-        let requiredRoles = dsInfos.permissions.READ;
-        if (requiredRoles) req.role_assertUserHasRoles(requiredRoles);
-
-        if (gHttpProxyReadPause) await sleep(gHttpProxyReadPause);
-        let res = await dsInfos.dataSource.read(reqData.read);
-        return req.res_jsonResponse(res);
-    }
-
-    return req.res_returnError400_BadRequest();
 }
 
 /**
@@ -56,3 +103,5 @@ let gHttpProxyReadPause: number = 0;
 export function setHttpProxyReadPause(pauseMs: number) {
     gHttpProxyReadPause = pauseMs;
 }
+
+//endregion

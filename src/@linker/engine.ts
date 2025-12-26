@@ -16,7 +16,10 @@ const LOG = false;
 export async function resolveFile(dirToSearch: string, fileNames: string[]): Promise<string|undefined> {
     for (let fileName of fileNames) {
         let filePath = jk_fs.join(dirToSearch, fileName);
-        if (await jk_fs.isFile(filePath)) return filePath;
+
+        if (await jk_fs.isFile(filePath)) {
+            return filePath;
+        }
     }
 
     return undefined;
@@ -693,13 +696,12 @@ export abstract class AliasType {
             }
         }
 
-        let result: ExtractDirectoryInfosResult = { itemPath: dirPath, dirItems: [] };
+        let result: ExtractDirectoryInfosResult = { itemPath: dirPath };
 
         const items = await getSortedDirItem(dirPath);
 
         for (let item of items) {
-            if (!await checkDirItem(item)) continue;
-            result.dirItems.push(item);
+            await checkDirItem(item);
         }
 
         let defaultFeatures = this.getDefaultFeatures();
@@ -814,7 +816,7 @@ export interface TransformItemParams {
 }
 
 export interface ExtractDirectoryInfosResult {
-    dirItems: jk_fs.DirItem[];
+    //dirItems: jk_fs.DirItem[];
     itemPath: string;
 
     myUid?: string;

@@ -32,6 +32,7 @@ import {isSinglePageMode} from "jopijs/loader-client";
 import {createBundleForPage} from "./bundler/index.ts";
 import {type BrowserCacheValidationInfos, type ReqReturnFileParams} from "./browserCacheControl.ts";
 import {WebSiteMirrorCache} from "./caches/webSiteMirrorCache.ts";
+import type {PageDataProviderData} from "jopijs/ui";
 
 export class JopiRequest {
     public cache: PageCache;
@@ -924,6 +925,15 @@ export class JopiRequest {
         return ReactServer.renderToStaticMarkup(element);
     }
 
+    private _pageData: PageDataProviderData|undefined;
+
+    /**
+     * Return the raw page data for this Request.
+     */
+    react_getPageData(): PageDataProviderData|undefined {
+        return this._pageData;
+    }
+
     /**
      * The new render function.
      * Used while refactoring the renderer.
@@ -946,9 +956,28 @@ export class JopiRequest {
                 bodyEnd: [<script key="jopi.mainSript" type="module" src={bundlePath + pageKey + ".js"}></script>]
             };
 
+            const pageDataParams = this.routeInfos.pageDataParams;
+
+            if (pageDataParams) {
+                this._pageData = await pageDataParams.provider.getDataForCache({req: this});
+
+                const html = "window['JOPI_PAGE_DATA'] = " + JSON.stringify({
+                    d: this._pageData,
+                    u: pageDataParams.url
+                });
+
+                options.bodyEnd.push(
+                    <script type="text/javascript" key="jopi.pageData"
+                            dangerouslySetInnerHTML={{__html: html}}></script>
+                );
+            }
+
             // Allow faking the environment of the page.
             const controller = new PageController_ExposePrivate<unknown>(
-                false, (this.webSite as WebSiteImpl).mustRemoveTrailingSlashes, options);
+                false,
+                (this.webSite as WebSiteImpl).mustRemoveTrailingSlashes,
+                options
+            );
 
             controller.setServerRequest(this);
             (this.webSite as WebSiteImpl).executeBrowserInstall(controller);
@@ -964,7 +993,11 @@ export class JopiRequest {
                 jsonSearchParams = searchParams.toJSON();
             }
 
-            const html = ReactServer.renderToStaticMarkup(<Page controller={controller} ><C params={params} searchParams={jsonSearchParams}/></Page>);
+            const html = ReactServer.renderToStaticMarkup(
+                <Page controller={controller} >
+                    <C params={params} searchParams={jsonSearchParams}/>
+                </Page>);
+
             return new Response(html, {status: 200, headers: {"content-type": "text/html;charset=utf-8"}});
         }
         catch (e: any) {
@@ -1136,7 +1169,7 @@ export class JopiRequest {
      * - true if the user has at least one of the required roles.
      * - false if the user has none of the required roles.
      */
-    public role_userHasRoles(requiredRoles: string[]): boolean {
+    public role_userHasOneOfThisRoles(requiredRoles: string[]): boolean {
         const userInfos = this.user_getUserInfos();
         if (!userInfos) return false;
 
@@ -1170,15 +1203,15 @@ export class JopiRequest {
      * Test if the user has at least one of the required roles.
      * If not, will directly return a 401 error.
      */
-    public role_assertUserHasRoles(requiredRoles: string[]) {
-        if (!this.role_userHasRoles(requiredRoles)) {
+    public role_assertUserHasOneOfThisRoles(requiredRoles: string[]) {
+        if (!this.role_userHasOneOfThisRoles(requiredRoles)) {
             throw new SBPE_NotAuthorizedException();
         }
     }
 
     /**
      * Test if the user has this required role.
-     * If not, will directly return a 401 error.
+     * If not will directly return a 401 error.
      */
     public role_assertUserHasRole(requiredRole: string) {
         if (!this.role_userHasRole(requiredRole)) {

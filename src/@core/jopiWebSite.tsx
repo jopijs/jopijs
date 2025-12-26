@@ -32,7 +32,7 @@ import {getNewServerInstanceBuilder, type ServerInstanceBuilder} from "./serverI
 import {PriorityLevel, sortByPriority, type ValueWithPriority} from "jopi-toolkit/jk_tools";
 import {logCache_notInCache, logServer_request} from "./_logs.ts";
 import type {TryReturnFileParams} from "./browserCacheControl.ts";
-import {installDataSourcesServer} from "./dataSources.ts";
+import {installDataSourcesServer, type PageDataProvider} from "./dataSources.ts";
 
 export type RouteHandler = (req: JopiRequest) => Promise<Response>;
 
@@ -433,7 +433,7 @@ export class WebSiteImpl implements WebSite {
                 const roles = req.routeInfos.requiredRoles;
 
                 extraMiddlewares.push((req: JopiRequest) => {
-                    req.role_assertUserHasRoles(roles);
+                    req.role_assertUserHasOneOfThisRoles(roles);
                     return null;
                 });
             }
@@ -971,6 +971,15 @@ export interface WebSiteRouteInfos {
 
     middlewares?: ValueWithPriority<JopiMiddleware>[];
     postMiddlewares?: ValueWithPriority<JopiPostMiddleware>[];
+
+    /**
+     * Data provider for the page.
+     */
+    pageDataParams?: {
+        provider: PageDataProvider;
+        roles?: string[];
+        url?: string;
+    };
 
     /**
      * A list of roles which are required.

@@ -2,7 +2,12 @@
 
 import React, {useEffect} from "react";
 import * as jk_events from "jopi-toolkit/jk_events";
-import {type ReactStaticEvent, type ServerRequestInstance} from "./common.tsx";
+import {
+    type PageDataProviderData,
+    type ReactStaticEvent,
+    type ServerRequestInstance,
+    type UsePageDataResponse
+} from "./common.tsx";
 
 export function useParams(): any {
     if (gPageParams===undefined) {
@@ -88,3 +93,94 @@ export function useStaticEvent(event: jk_events.StaticEvent): ReactStaticEvent {
 export function useServerRequest(): ServerRequestInstance {
     throw new Error("useServerRequest is not available on the browser side.");
 }
+
+//region Page Data
+
+export function usePageData(): UsePageDataResponse|undefined {
+    const [_, setCount] = React.useState(0);
+
+    if (!gPageDataState) {
+        const rawPageData = (window as any)["JOPI_PAGE_DATA"];
+
+        if (!rawPageData) {
+            gPageDataState = {
+                isLoading: false,
+                isStaled: false,
+                isError: false,
+                hasData: false
+            };
+        } else {
+            const pageData = rawPageData.d as PageDataProviderData;
+
+            gPageDataState = {
+                data: pageData,
+                hasData: pageData !== undefined,
+                isLoading: false,
+                isStaled: true,
+                isError: false
+            };
+
+            // If not url (rawPageData.u) it means there is no getRefreshedData function defined.
+            //
+            if (pageData && rawPageData.u) {
+                // Using then allow avoiding blocking the current call.
+                //
+                // TODO: je ne peux pas refresh comme ça car je peux avoir plusieurs écouteurs.
+                //       Il me faut donc utiliser un event.
+                //
+                refreshPageData(rawPageData.u).then(() => {
+                    gPageDataState!.isStaled = false;
+                    setCount(c => c + 1)
+                });
+            }
+        }
+    }
+    
+    return {
+        ...gPageDataState.data,
+
+        isLoading: gPageDataState.isLoading,
+        isStaled: gPageDataState.isStaled,
+        isError: gPageDataState.isError
+    };
+}
+
+async function refreshPageData(url: string): Promise<void> {
+    gPageDataState!.isLoading = true;
+    gPageDataState!.isError = false;
+
+    console.log("sending seed:", gPageDataState!.data!.seed);
+
+    let res = await fetch(url, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(gPageDataState!.data!.seed)
+    });
+
+    gPageDataState!.isLoading = false;
+
+    if (res.ok) {
+        gPageDataState!.data = (await res.json()) as PageDataProviderData;
+        gPageDataState!.isError = false;
+        gPageDataState!.isStaled = false;
+
+        console.log("received seed:", gPageDataState!.data!.seed);
+
+    } else {
+        gPageDataState!.isError = true;
+    }
+}
+
+interface PageDataState {
+    data?: PageDataProviderData,
+    hasData?: boolean,
+    canRefresh?: true,
+    isLoading: boolean,
+    isStaled: boolean
+    isError: boolean
+}
+
+
+let gPageDataState: PageDataState|undefined;
+
+//endregion
