@@ -125,7 +125,14 @@ export function usePageData(): UsePageDataResponse {
                 //
                 refreshPageData(rawPageData.u).then(() => {
                     gPageDataState!.isStaled = false;
-                    jk_events.sendEvent("jopi.page.dataRefreshed", gPageDataState);
+
+                    jk_events.sendEvent("jopi.page.dataRefreshed", {
+                        ...gPageDataState!.data,
+
+                        isLoading: false,
+                        isStaled: false,
+                        isError: gPageDataState!.isError
+                    });
                 });
             }
         }
@@ -230,7 +237,6 @@ interface PageDataState {
     isStaled: boolean
     isError: boolean
 }
-
 
 let gPageDataState: PageDataState|undefined;
 
