@@ -98,7 +98,7 @@
       "default": "./dist/@loader/index.js"
     },
     "./loader/loader.mjs": "./src/@loader/loader.mjs",
-    "./bun-server-static": "./src/@loader/bunHtmlCompiler.mjs",
+    "./bun-hmr": "./src/@loader/bunHMR.mjs",
     "./loader-tools": {
       "bun": "./src/@loader-tools/index.ts",
       "default": "./dist/@loader-tools/index.js"

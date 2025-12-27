@@ -11,15 +11,6 @@ const myPlugin = {
             const loader = path.extname(p2).toLowerCase().substring(1);
             return {contents: newContent, loader: loader};
         });
-
-        // Note: this is not working since it's executed only once at the first start
-        //       and not after each rebuild.
-
-        /*build.onStart(async () => {
-            //console.log("Jopi - Bun static compiler loader - beforeRebuild");
-            //await timer(3000);
-            //await compile(import.meta, getDefaultLinkerConfig());
-        });*/
     }
 }
 
