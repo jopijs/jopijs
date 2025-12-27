@@ -39,6 +39,7 @@ export function jopiReplaceText__Old(): Plugin {
             build.onLoad({ filter: /\.(tsx|jsx|ts|js)$/ }, async (args) => {
                 const oldContent = await fs.readFile(args.path, 'utf8');
                 let newContent = oldContent.replaceAll("jBundler_ifServer", "jBundler_ifBrowser");
+                newContent = newContent.replaceAll("JOPI_BUNDLER_UI_MODE", "default");
                 if (newContent === oldContent) return undefined;
 
                 const useSourceMap = !!build.initialOptions.sourcemap;
@@ -51,6 +52,7 @@ export function jopiReplaceText__Old(): Plugin {
                 const existingSourceMap = await getExistingSourceMap(args.path, oldContent);
                 const magic = new MagicString(oldContent, {filename: args.path});
                 magic.replaceAll("jBundler_ifServer", "jBundler_ifBrowser");
+                magic.replaceAll("JOPI_BUNDLER_UI_MODE", "default");
 
                 const map = magic.generateMap({
                     file: args.path,
@@ -111,6 +113,7 @@ export function jopiReplaceText(): Plugin {
             build.onLoad({ filter: /\.(tsx|jsx|ts|js)$/ }, async (args) => {
                 const oldContent = await fs.readFile(args.path, 'utf8');
                 let newContent = oldContent.replaceAll("jBundler_ifServer", "jBundler_ifBrowser");
+                newContent = newContent.replaceAll("JOPI_BUNDLER_UI_MODE", "default");
                 if (newContent === oldContent) return undefined;
 
                 let loader = path.extname(args.path).toLowerCase().substring(1);

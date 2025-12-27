@@ -59,6 +59,7 @@ export function useCssModule(cssModule: undefined | Record<string, string>) {
 
         // Will allow inlining the style inside the page.
         ctx.addToBodyBegin(fileHash, <CssModule key={fileHash} module={cssModule}/>);
+        //ctx.addToHeader(fileHash, <CssModule key={fileHash} module={cssModule}/>);
     }
 }
 
