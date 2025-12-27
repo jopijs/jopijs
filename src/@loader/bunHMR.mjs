@@ -15,7 +15,7 @@ const myPlugin = {
             return {contents: newContent, loader: loader};
         });
 
-        installEsBuildPlugins(build);
+        installEsBuildPlugins(build, true);
     }
 }
 

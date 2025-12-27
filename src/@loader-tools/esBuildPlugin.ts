@@ -74,7 +74,7 @@ function createJopiRawFile(targetFilePath: string, processType: string): any {
     };
 }
 
-export function installEsBuildPlugins(build: Bun.PluginBuilder) {
+export function installEsBuildPlugins(build: Bun.PluginBuilder, _isReactHMR = false) {
     build.onResolve({filter: /\.module\.(css|scss)$/}, (args) => {
         const result = resolveAndCheckPath(args.path, path.dirname(args.importer));
 
@@ -89,6 +89,7 @@ export function installEsBuildPlugins(build: Bun.PluginBuilder) {
         //@ts-ignore
         return createJopiRawFile(result.path!, "cssmodule");
     });
+
 
     // The only role of this resolver is to be able to know who is importing a CSS/SCSS file.
     //

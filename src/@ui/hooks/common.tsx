@@ -41,6 +41,13 @@ export function usePageModifier(): PageModifier {
     return new PageModifier(page);
 }
 
+// @ts-ignore
+const _isReactHMR = "JOPI_BUNDLER_UI_MODE" === "ReactHMR";
+
+export function isReactHMR() {
+    return _isReactHMR;
+}
+
 export function useCssModule(cssModule: undefined | Record<string, string>) {
     if (!cssModule) return;
 
