@@ -22,7 +22,7 @@ import {
     type ResponseModifier, type ServeFileOptions, type TestCookieValue, type TextModifier, type UserInfos,
     type WebSite,
     WebSiteImpl,
-    type WebSiteRouteInfos
+    type WebSiteRouteInfos, SBPE_ServerByPassException
 } from "./jopiWebSite.tsx";
 
 import {parseCookies} from "./internalTools.ts";
@@ -1001,8 +1001,12 @@ export class JopiRequest {
             return new Response(html, {status: 200, headers: {"content-type": "text/html;charset=utf-8"}});
         }
         catch (e: any) {
-            console.error(e);
-            return await this.res_returnError500_ServerError(e);
+            if (!(e instanceof SBPE_ServerByPassException)) {
+                console.error(e);
+                return await this.res_returnError500_ServerError(e);
+            } else {
+                throw e;
+            }
         }
     }
 
