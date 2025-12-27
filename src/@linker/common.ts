@@ -10,8 +10,12 @@ export function normalizeNeedRoleConditionName(condName: string, filePath: strin
 
     let target = condName.substring(0, needRoleIdx).toUpperCase();
 
-    if (!acceptedTargets.includes(target)) {
-        throw declareLinkerError(`Condition target ${target} is unknown`, filePath);
+    if (target) {
+        if (!acceptedTargets.includes(target)) {
+            throw declareLinkerError(`Condition target ${target} is unknown`, filePath);
+        }
+    } else {
+        target = "ALL";
     }
 
     let role = condName.substring(needRoleIdx + 8).toLowerCase();

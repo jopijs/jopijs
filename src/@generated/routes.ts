@@ -139,8 +139,12 @@ function applyAttributes(infos: WebSiteRouteInfos, attributes: ApplyAttributesPa
     if (attributes.needRoles) {
         infos.requiredRoles = attributes.needRoles[verb];
 
-        let allRoles = attributes.needRoles["all"];
-        if (allRoles) infos.requiredRoles = infos.requiredRoles?.concat(allRoles);
+        let allRoles = attributes.needRoles["ALL"];
+
+        if (allRoles) {
+            if (infos.requiredRoles) infos.requiredRoles = [...infos.requiredRoles, ...allRoles];
+            else infos.requiredRoles = allRoles;
+        }
     }
 
     if (attributes.disableCache) {
