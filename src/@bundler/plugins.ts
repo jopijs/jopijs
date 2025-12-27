@@ -178,6 +178,6 @@ export function jopiDetectRebuild(params: EsBuildParams): Plugin {
 export const jopiLoaderPlugin: Plugin = {
     name: "jopi-loader",
     setup(build) {
-        installEsBuildPlugins(build as unknown as Bun.PluginBuilder)
+        installEsBuildPlugins(build as unknown as Bun.PluginBuilder, "esbuild")
     },
 };

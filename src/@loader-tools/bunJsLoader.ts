@@ -9,7 +9,7 @@ export function installBunJsLoader() {
         name: "jopi-loader",
         setup(build) {
             // For CSS Modules and imports with ?inline and ?raw
-            installEsBuildPlugins(build);
+            installEsBuildPlugins(build, "bun");
 
             // For .css/.scss/.png/.txt/...
             build.onLoad({filter: supportedExtensionsRegExp}, async ({path}) => {

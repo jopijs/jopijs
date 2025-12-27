@@ -23,6 +23,16 @@ async function processCssModule(path: string) {
     };
 }
 
+async function processCssFile(path: string) {
+    // Warning: is ok with EsBuild but not with Bun.js
+    // It's why we don't process Tailwind CSS for direct CSS.
+    //
+    return {
+        contents: await jk_fs.readTextFromFile(path),
+        loader: "css",
+    };
+}
+
 async function inlineAndRawModuleHandler(options: string, resPath: string) {
     // Occurs when it's compiled with TypeScript.
     if (!await jk_fs.isFile(resPath)) {
@@ -37,6 +47,9 @@ async function inlineAndRawModuleHandler(options: string, resPath: string) {
     };
 }
 
+/**
+ * Returns the absolute path of the file, while resolving symlink.
+ */
 export function resolveAndCheckPath(filePath: string, resolveDir: string): {path?: string, error?: string} {
     let absolutePath: string;
 
@@ -74,7 +87,12 @@ function createJopiRawFile(targetFilePath: string, processType: string): any {
     };
 }
 
-export function installEsBuildPlugins(build: Bun.PluginBuilder, _isReactHMR = false) {
+export function installEsBuildPlugins(build: Bun.PluginBuilder, who: string) {
+    const isEsBuild = who=="esbuild";
+    const isBun_default = who=="bun";
+    const isBun_ReactHMR = who=="bun-react-hmr";
+    const isBun = isBun_default || isBun_ReactHMR;
+
     build.onResolve({filter: /\.module\.(css|scss)$/}, (args) => {
         const result = resolveAndCheckPath(args.path, path.dirname(args.importer));
 
@@ -91,18 +109,23 @@ export function installEsBuildPlugins(build: Bun.PluginBuilder, _isReactHMR = fa
     });
 
 
-    // The only role of this resolver is to be able to know who is importing a CSS/SCSS file.
-    //
-    build.onResolve({filter: /\.(css|scss)$/}, (args) => {
-        jk_events.sendEvent("jopi.bundler.resolve.css", {
-            resolveDir: args.resolveDir,
-            path: args.path,
-            importer: args.importer
-        });
+    if (!isBun) {
+        build.onResolve({filter: /\.(css|scss)$/}, (args) => {
+            let [filePath, option] = args.path.split('?');
+            const result = resolveAndCheckPath(filePath, path.dirname(args.importer));
 
-        // Avoid influencing the transformation.
-        return null;
-    });
+            if (result.error) {
+                return {
+                    errors: [{
+                        text: result.error
+                    }]
+                };
+            }
+
+            //@ts-ignore
+            return createJopiRawFile(result.path!, "css");
+        });
+    }
 
     // @ts-ignore
     build.onResolve({filter: /\?(?:inline|raw)$/}, async (args) => {
@@ -136,6 +159,12 @@ export function installEsBuildPlugins(build: Bun.PluginBuilder, _isReactHMR = fa
                 return inlineAndRawModuleHandler("raw", filePath);
             case "cssmodule":
                 return processCssModule(filePath);
+            case "css":
+                // Note: with Bun we can't override CSS processing.
+                // It's why we don't check Tailwind preprocess in CSS.
+                // But we do it for CSS-Modules.
+                //
+                return processCssFile(filePath);
         }
     });
 }
