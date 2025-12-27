@@ -1,6 +1,7 @@
 // noinspection JSUnusedGlobalSymbols
 
 import React from "react";
+import ReactDOM from "react-dom/client";
 import {type ServerRequestInstance} from "./hooks/index.ts";
 import {decodeUserInfosFromCookie, isUserInfoCookieUpdated, type UiUserInfos} from "./user.ts";
 import {deleteCookie} from "./cookies/index.ts";
@@ -26,6 +27,10 @@ export interface PageOptions {
  */
 export class PageController<T = any> implements UiApplication_Host {
     private readonly isServerSide: boolean = isServerSide;
+    
+    // @ts-ignore
+    private readonly isReactHMR: boolean = "JOPI_BUNDLER_UI_MODE" === "ReactHMR";
+    
     private readonly usedKeys = new Set<String>();
 
     protected readonly state: PageOptions;
@@ -82,6 +87,21 @@ export class PageController<T = any> implements UiApplication_Host {
             if (!this.checkKey("h" + key)) return this;
             if (!this.state.head) this.state.head = [entry];
             else this.state.head.push(entry);
+        } else if (this.isReactHMR) {
+            if (!document?.head) return this;
+            const element = React.isValidElement(entry) ? entry : React.createElement(React.Fragment, null, entry);
+            const container = document.createElement('div');
+            container.setAttribute('data-header-key', key);
+
+            const existingElement = document.querySelector(`[data-header-key="${key}"]`);
+            if (existingElement) existingElement.remove();
+
+            const root = ReactDOM.createRoot(container);
+            root.render(element);
+
+            document.head.appendChild(container);
+        } else {
+            // Do nothing, since the server already add it.
         }
 
         return this;
