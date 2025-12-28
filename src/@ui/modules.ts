@@ -7,7 +7,7 @@ import {isServerSide} from "jopi-toolkit/jk_what";
 import {type IsObjectRegistry} from "./objectRegistry.ts";
 import {getDefaultPageController} from "./pageController.ts";
 
-export interface UiApplication_Host {
+export interface JopiUiApplication_Host {
     objectRegistry: IsObjectRegistry;
 
     getCurrentURL(): URL;
@@ -32,14 +32,14 @@ type UiInitializer = () => void;
  * * On the server side, it's executed for each page.
  * * On the browser side, it's executed for each browser refresh.
  */
-export class UiApplication {
+export class JopiUiApplication {
     public readonly objectRegistry: IsObjectRegistry;
     public readonly events: jk_events.EventGroup;
     public readonly isBrowserSide: boolean = !isServerSide;
-    protected readonly host: UiApplication_Host;
+    protected readonly host: JopiUiApplication_Host;
 
-    constructor(host?: UiApplication_Host, extra?: ExtraPageParams|undefined) {
-        gDefaultUiApplication = this;
+    constructor(host?: JopiUiApplication_Host, extra?: ExtraPageParams|undefined) {
+        gDefaultJopiUiApplication = this;
 
         if (!host) host = getDefaultPageController();
         this.host = host;
@@ -189,8 +189,8 @@ export interface MenuItemForExtraPageParams {
     priority?: number
 }
 
-export function getDefaultUiApplication(): UiApplication {
-    return gDefaultUiApplication;
+export function getDefaultJopiUiApplication(): JopiUiApplication {
+    return gDefaultJopiUiApplication;
 }
 
-let gDefaultUiApplication: UiApplication;
+let gDefaultJopiUiApplication: JopiUiApplication;

@@ -137,7 +137,7 @@ const REACT_TEMPLATE = `import React from "react";
 import ReactDOM from "react-dom/client";
 import {PageContext, PageController_ExposePrivate} from "jopijs/ui";
 import C from "__PATH__";
-import {UiApplication, useParams} from "jopijs/ui";
+import {JopiUiApplication, useParams} from "jopijs/ui";
 
 import installer from "__INSTALL__";
 __EXTRA_IMPORTS__
@@ -145,7 +145,7 @@ __EXTRA_IMPORTS__
 window["__JOPI_ROUTE__"] = __ROUTE__;
 window["__JOPI_OPTIONS__"] = __OPTIONS__;
 
-installer(new UiApplication(undefined, __PAGE_EXTRA_PARAMS__));
+installer(new JopiUiApplication(undefined, __PAGE_EXTRA_PARAMS__));
 
 function Render(p) {
     const [_, setCount] = React.useState(0);

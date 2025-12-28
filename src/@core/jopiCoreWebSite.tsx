@@ -11,8 +11,8 @@ import React from "react";
 import {
     type MenuItemForExtraPageParams,
     type ExtraPageParams,
-    UiApplication,
-    type UiApplication_Host,
+    JopiUiApplication,
+    type JopiUiApplication_Host,
     PageController,
     type UiUserInfos
 } from "jopijs/ui";
@@ -473,13 +473,13 @@ export class CoreWebSite {
      * Allow overriding the instance used by modules 'uiInit.tsx' files.
      * @param builder
      */
-    setModuleInitClassInstanceBuilder(builder: (host: UiApplication_Host, extraParams: ExtraPageParams) =>  UiApplication) {
+    setModuleInitClassInstanceBuilder(builder: (host: JopiUiApplication_Host, extraParams: ExtraPageParams) =>  JopiUiApplication) {
         this.createModuleInitInstance = builder;
     }
 
-    private createModuleInitInstance(pageController: UiApplication_Host, extraParams: any): UiApplication {
+    private createModuleInitInstance(pageController: JopiUiApplication_Host, extraParams: any): JopiUiApplication {
         // Note: this function can be replaced.
-        return new UiApplication(pageController, extraParams);
+        return new JopiUiApplication(pageController, extraParams);
     }
 
     //endregion
