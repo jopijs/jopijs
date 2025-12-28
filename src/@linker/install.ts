@@ -1,11 +1,11 @@
 import * as jk_fs from "jopi-toolkit/jk_fs";
 import * as jk_events from "jopi-toolkit/jk_events";
 import {getBrowserInstallScript, getServerInstallScript} from "./engine.ts";
-import {JopiWebSite, type CoreWebSite} from "jopijs";
+import {JopiWebSiteBuilder, type CoreWebSite} from "jopijs";
 
 export type InstallFunction<T> = (registry: T) => void;
 
-export async function loadServerInstall(webSite: JopiWebSite, onWebSiteCreate: (h: (webSite: CoreWebSite) => void|Promise<void>) => void) {
+export async function loadServerInstall(webSite: JopiWebSiteBuilder, onWebSiteCreate: (h: (webSite: CoreWebSite) => void|Promise<void>) => void) {
     let installFilePath = getServerInstallScript();
     if (!await jk_fs.isFile(installFilePath)) return;
     installFilePath = jk_fs.pathToFileURL(installFilePath).href;

@@ -42,7 +42,7 @@ import {isDevelopment} from "jopi-toolkit/jk_process";
 class JopiApp {
     private _isStartAppSet: boolean = false;
 
-    startApp(importMeta: any, f: (webSite: JopiWebSite) => void|Promise<void>): void {
+    startApp(importMeta: any, f: (webSite: JopiWebSiteBuilder) => void|Promise<void>): void {
         const doStart = async () => {
             await jk_app.waitServerSideReady();
             await jk_app.declareAppStarted();
@@ -184,7 +184,7 @@ export interface FileServerOptions {
     onNotFound: (req: JopiRequest) => Response|Promise<Response>
 }
 
-export class JopiWebSite {
+export class JopiWebSiteBuilder {
     protected readonly origin: string;
     protected readonly hostName: string;
     private webSite?: CoreWebSiteImpl;
@@ -312,7 +312,7 @@ export class JopiWebSite {
         return new CertificateBuilder(this, this.internals);
     }
 
-    fastConfigure_fileServer(options: FileServerOptions): JopiWebSite {
+    fastConfigure_fileServer(options: FileServerOptions): JopiWebSiteBuilder {
         this.fileServerOptions = options;
         return this;
     }
@@ -331,7 +331,7 @@ export class JopiWebSite {
                 return me;
             },
 
-            DONE_configure_fileServer: (): JopiWebSite => {
+            DONE_configure_fileServer: (): JopiWebSiteBuilder => {
                 return parent;
             }
         };
@@ -347,7 +347,7 @@ export class JopiWebSite {
         }
     }
 
-    fastConfigure_jwtTokenAuth<T>(privateKey: string, store: any[] | UserAuthentificationFunction<T>): JopiWebSite {
+    fastConfigure_jwtTokenAuth<T>(privateKey: string, store: any[] | UserAuthentificationFunction<T>): JopiWebSiteBuilder {
         const builder = new JwtTokenAuth_Builder(this, this.internals);
         let config = builder.setPrivateKey_STEP(privateKey).step_setUserStore();
 
@@ -361,7 +361,7 @@ export class JopiWebSite {
         return this;
     }
 
-    add_SseEvent(path: string|string[], handler: SseEvent): JopiWebSite {
+    add_SseEvent(path: string|string[], handler: SseEvent): JopiWebSiteBuilder {
         this.internals.afterHook.push((webSite) => {
             webSite.addSseEVent(path, handler);
         });
@@ -373,13 +373,13 @@ export class JopiWebSite {
      * Allows the linker to generate an event entry.
      * Will allow to do `import myEvent from "@/events/myEventName`
      */
-    add_staticEvent(name: string): JopiWebSite {
+    add_staticEvent(name: string): JopiWebSiteBuilder {
         linker_addStaticEvent(name);
         return this;
     }
 
     configure_postCss() {
-        const parent: JopiWebSite = this;
+        const parent: JopiWebSiteBuilder = this;
 
         const me = {
             setPlugin: (handler: PostCssInitializer) => {
@@ -396,7 +396,7 @@ export class JopiWebSite {
     }
 
     configure_behaviors(): WebSite_ConfigureBehaviors {
-        const parent: JopiWebSite = this;
+        const parent: JopiWebSiteBuilder = this;
 
         const me: WebSite_ConfigureBehaviors = {
             enableTrailingSlashes(value: boolean = true) {
@@ -404,7 +404,7 @@ export class JopiWebSite {
                 return me;
             },
 
-            DONE_configure_behaviors(): JopiWebSite {
+            DONE_configure_behaviors(): JopiWebSiteBuilder {
                 return parent;
             }
         }
@@ -413,7 +413,7 @@ export class JopiWebSite {
     }
 
     configure_devBehaviors(): WebSite_ConfigureDevBehaviors {
-        const parent: JopiWebSite = this;
+        const parent: JopiWebSiteBuilder = this;
 
         const me: WebSite_ConfigureDevBehaviors = {
             slowDownHttpDataSources(pauseMs: number) {
@@ -423,7 +423,7 @@ export class JopiWebSite {
                 return me;
             },
 
-            DONE_configure_devBehaviors(): JopiWebSite {
+            DONE_configure_devBehaviors(): JopiWebSiteBuilder {
                 return parent;
             }
         }
@@ -440,7 +440,7 @@ export class JopiWebSite {
     }
 
     configure_bundler() {
-        const parent: JopiWebSite = this;
+        const parent: JopiWebSiteBuilder = this;
 
         const me = {
             dontEmbed_ReactJS: () => {
@@ -455,7 +455,7 @@ export class JopiWebSite {
                 return me;
             },
 
-            END_configure_bundler(): JopiWebSite {
+            END_configure_bundler(): JopiWebSiteBuilder {
                 return parent;
             }
         }
@@ -464,7 +464,7 @@ export class JopiWebSite {
     }
 
     configure_tailwindProcessor() {
-        const parent: JopiWebSite = this;
+        const parent: JopiWebSiteBuilder = this;
 
         const me = {
             disableTailwind: () => {
@@ -499,7 +499,7 @@ export class JopiWebSite {
                 return me;
             },
 
-            END_configure_tailwindProcessor(): JopiWebSite {
+            END_configure_tailwindProcessor(): JopiWebSiteBuilder {
                 return parent;
             }
         }
@@ -529,7 +529,7 @@ export class JopiWebSite {
         return new WebSite_ConfigureCors(this);
     }
 
-    fastConfigure_cors(allowedHosts?: string[]): JopiWebSite {
+    fastConfigure_cors(allowedHosts?: string[]): JopiWebSiteBuilder {
         const b = new WebSite_ConfigureCors(this);
 
         if (allowedHosts) {
@@ -551,7 +551,7 @@ interface WebSiteInternal {
     onHookWebSite?: (webSite: CoreWebSite) => void;
 }
 
-class WebSite_ExposePrivate extends JopiWebSite {
+class WebSite_ExposePrivate extends JopiWebSiteBuilder {
     isWebSiteReady() {
         return this._isWebSiteReady;
     }
@@ -562,7 +562,7 @@ class WebSite_ExposePrivate extends JopiWebSite {
 }
 
 class WebSite_ConfigureCors {
-    constructor(private readonly webSite: JopiWebSite) {
+    constructor(private readonly webSite: JopiWebSiteBuilder) {
     }
 
     add_allowedHost(hostName: string) {
@@ -582,16 +582,16 @@ class WebSite_ConfigureCors {
         return this;
     }
 
-    DONE_configure_cors(): JopiWebSite {
+    DONE_configure_cors(): JopiWebSiteBuilder {
         return this.webSite;
     }
 }
 
 class WebSite_AddSpecialPageHandler {
-    constructor(private readonly webSite: JopiWebSite, private readonly internals: WebSiteInternal) {
+    constructor(private readonly webSite: JopiWebSiteBuilder, private readonly internals: WebSiteInternal) {
     }
 
-    END_add_specialPageHandler(): JopiWebSite {
+    END_add_specialPageHandler(): JopiWebSiteBuilder {
         return this.webSite;
     }
 
@@ -623,7 +623,7 @@ class WebSite_AddSpecialPageHandler {
 class WebSite_AddSourceServerBuilder<T> extends CreateServerFetch<T, WebSite_AddSourceServerBuilder_NextStep<T>> {
     private serverFetch?: ServerFetch<T>;
 
-    constructor(private readonly webSite: JopiWebSite, private readonly internals: WebSiteInternal) {
+    constructor(private readonly webSite: JopiWebSiteBuilder, private readonly internals: WebSiteInternal) {
         super();
 
         this.internals.afterHook.push(async webSite => {
@@ -637,7 +637,7 @@ class WebSite_AddSourceServerBuilder<T> extends CreateServerFetch<T, WebSite_Add
         return new WebSite_AddSourceServerBuilder_NextStep(this.webSite, this.internals, options);
     }
 
-    END_add_sourceServer(): JopiWebSite {
+    END_add_sourceServer(): JopiWebSiteBuilder {
         return this.webSite;
     }
 
@@ -647,7 +647,7 @@ class WebSite_AddSourceServerBuilder<T> extends CreateServerFetch<T, WebSite_Add
 }
 
 class WebSite_AddSourceServerBuilder_NextStep<T> extends CreateServerFetch_NextStep<T> {
-    constructor(private readonly webSite: JopiWebSite, private readonly internals: WebSiteInternal, options: ServerFetchOptions<T>) {
+    constructor(private readonly webSite: JopiWebSiteBuilder, private readonly internals: WebSiteInternal, options: ServerFetchOptions<T>) {
         super(options);
 
         this.internals.afterHook.push(async webSite => {
@@ -655,7 +655,7 @@ class WebSite_AddSourceServerBuilder_NextStep<T> extends CreateServerFetch_NextS
         });
     }
 
-    END_add_sourceServer(): JopiWebSite {
+    END_add_sourceServer(): JopiWebSiteBuilder {
         return this.webSite;
     }
 
@@ -665,7 +665,7 @@ class WebSite_AddSourceServerBuilder_NextStep<T> extends CreateServerFetch_NextS
 }
 
 class WebSite_MiddlewareBuilder {
-    constructor(private readonly webSite: JopiWebSite, private readonly internals: WebSiteInternal) {
+    constructor(private readonly webSite: JopiWebSiteBuilder, private readonly internals: WebSiteInternal) {
     }
 
     add_middleware(method: HttpMethod|undefined, middleware: JopiMiddleware, options?: MiddlewareOptions): WebSite_MiddlewareBuilder {
@@ -684,7 +684,7 @@ class WebSite_MiddlewareBuilder {
         return this;
     }
 
-    END_configure_middlewares(): JopiWebSite {
+    END_configure_middlewares(): JopiWebSiteBuilder {
         return this.webSite;
     }
 }
@@ -693,7 +693,7 @@ class WebSite_CacheBuilder {
     private cache?: PageCache;
     private readonly rules: CacheRules[] = [];
 
-    constructor(private readonly webSite: JopiWebSite, private readonly internals: WebSiteInternal) {
+    constructor(private readonly webSite: JopiWebSiteBuilder, private readonly internals: WebSiteInternal) {
         this.internals.afterHook.push(async webSite => {
             (webSite as CoreWebSiteImpl).setCacheRules(this.rules);
 
@@ -720,7 +720,7 @@ class WebSite_CacheBuilder {
         return this;
     }
 
-    END_configure_cache(): JopiWebSite {
+    END_configure_cache(): JopiWebSiteBuilder {
         return this.webSite;
     }
 }
@@ -732,7 +732,7 @@ interface WebSite_ConfigureBehaviors {
      */
     enableTrailingSlashes(value: boolean|undefined): WebSite_ConfigureBehaviors;
 
-    DONE_configure_behaviors(): JopiWebSite;
+    DONE_configure_behaviors(): JopiWebSiteBuilder;
 }
 
 interface WebSite_ConfigureDevBehaviors {
@@ -742,7 +742,7 @@ interface WebSite_ConfigureDevBehaviors {
      */
     slowDownHttpDataSources(pauseMs: number): WebSite_ConfigureDevBehaviors;
 
-    DONE_configure_devBehaviors(): JopiWebSite;
+    DONE_configure_devBehaviors(): JopiWebSiteBuilder;
 }
 
 //endregion
@@ -793,7 +793,7 @@ function useCertificateStore(dirPath: string, hostName: string) {
 }
 
 class CertificateBuilder {
-    constructor(private readonly parent: JopiWebSite, private readonly internals: WebSiteInternal) {
+    constructor(private readonly parent: JopiWebSiteBuilder, private readonly internals: WebSiteInternal) {
     }
 
     generate_localDevCert(saveInDir: string = "certs") {
@@ -837,7 +837,7 @@ class CertificateBuilder {
 //region LetsEncryptCertificateBuilder
 
 class LetsEncryptCertificateBuilder {
-    constructor(private readonly parent: JopiWebSite, private readonly params: LetsEncryptParams) {
+    constructor(private readonly parent: JopiWebSiteBuilder, private readonly params: LetsEncryptParams) {
     }
 
     DONE_add_httpCertificate() {
@@ -888,7 +888,7 @@ interface JWT_BEGIN {
 }
 
 interface JWT_FINISH {
-    DONE_configure_jwtTokenAuth(): JopiWebSite;
+    DONE_configure_jwtTokenAuth(): JopiWebSiteBuilder;
 }
 
 interface JWT_StepBegin_SetUserStore {
@@ -924,7 +924,7 @@ interface JWT_Step_Configure {
 //endregion
 
 class JwtTokenAuth_Builder {
-    constructor(private readonly parent: JopiWebSite, private readonly internals: WebSiteInternal) {
+    constructor(private readonly parent: JopiWebSiteBuilder, private readonly internals: WebSiteInternal) {
     }
 
     FINISH() {
