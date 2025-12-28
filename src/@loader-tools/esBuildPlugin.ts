@@ -5,7 +5,6 @@ import path from "node:path";
 import fs from "node:fs";
 import * as jk_app from "jopi-toolkit/jk_app";
 import * as jk_fs from "jopi-toolkit/jk_fs";
-import * as jk_events from "jopi-toolkit/jk_events";
 
 // Note: Bun.js plugins are partially compatible with EsBuild modules.
 

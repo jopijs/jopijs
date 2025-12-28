@@ -1,21 +1,13 @@
-import type {Config as TailwindConfig} from 'tailwindcss';
 import postcss from 'postcss';
 import {CoreWebSite} from "../jopiCoreWebSite.tsx";
 import path from "node:path";
-import * as jk_fs from "jopi-toolkit/jk_fs";
 import * as jk_app from "jopi-toolkit/jk_app";
 
 export type PostCssInitializer = (sources: string[], tailwindPlugin:  postcss.AcceptedPlugin|undefined) => postcss.AcceptedPlugin[];
 
 export interface BundlerConfig {
     tailwind: {
-        config?: TailwindConfig;
-
-        globalCssContent?: string;
-        globalCssFilePath?: string;
-
         disable?: boolean;
-        extraSourceFiles?: string[];
     },
 
     postCss: {

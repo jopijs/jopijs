@@ -7,7 +7,6 @@ import * as jk_timer from "jopi-toolkit/jk_timer";
 import * as jk_term from "jopi-toolkit/jk_term";
 import * as jk_events from "jopi-toolkit/jk_events";
 
-import type {Config as TailwindConfig} from 'tailwindcss';
 import {type FetchOptions, type ServerDownResult, ServerFetch, type ServerFetchOptions} from "./serverFetch.ts";
 import {getLetsEncryptCertificate, type LetsEncryptParams, type OnTimeoutError} from "./letsEncrypt.ts";
 import {type UserInfos_WithLoginPassword, UserStore_WithLoginPassword} from "./userStores.ts";
@@ -468,33 +467,6 @@ export class JopiWebSiteBuilder {
         const me = {
             disableTailwind: () => {
                 getBundlerConfig().tailwind.disable = true;
-                return me;
-            },
-
-            setGlobalCssContent: (template: string) => {
-                getBundlerConfig().tailwind.globalCssContent = template;
-                return me;
-            },
-
-            setConfig: (config: TailwindConfig) => {
-                getBundlerConfig().tailwind.config = config;
-                return me;
-            },
-
-            /**
-             * Allows adding extra-sources files to scan.
-             * Can also be motifs. Ex: "./myDir/*.{js,ts,jsx,tsx}"
-             */
-            addExtraSourceFiles: (...files: string[]) => {
-                const config = getBundlerConfig().tailwind;
-                if (!config.extraSourceFiles) config.extraSourceFiles = [];
-                config.extraSourceFiles.push(...files);
-                return me;
-            },
-
-            setGlobalCssFilePath: (filePath: string) => {
-                const config = getBundlerConfig().tailwind;
-                config.globalCssFilePath = filePath;
                 return me;
             },
 

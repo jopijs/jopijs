@@ -7,9 +7,11 @@ import * as jk_app from "jopi-toolkit/jk_app";
 import * as jk_fs from "jopi-toolkit/jk_fs";
 import path from "node:path";
 import tailwindPostcss from "@tailwindcss/postcss";
-import type {BundlerConfig, CreateBundleParams} from "jopijs";
+import type {CreateBundleParams} from "jopijs";
 
 let gGlobalCssContent: string | undefined;
+
+//region Tailwind
 
 /**
  * Remove '@import' already found into globalCss
@@ -41,20 +43,8 @@ function removeImportDoublon(globalCss: string, content: string): string {
     return lines.join("\n");
 }
 
-export async function getGlobalCssFileContent(config: BundlerConfig): Promise<string> {
+export async function getGlobalCssFileContent(): Promise<string> {
     if (gGlobalCssContent) return gGlobalCssContent;
-
-    if (config.tailwind.globalCssContent) {
-        return config.tailwind.globalCssContent;
-    }
-
-    if (config.tailwind.globalCssFilePath) {
-        if (!await jk_fs.isFile(config.tailwind.globalCssFilePath)) {
-            throw new Error(`Tailwind - File not found where resolving 'global.css': ${config.tailwind.globalCssFilePath}`);
-        }
-
-        return jk_fs.readTextFromFile(config.tailwind.globalCssFilePath);
-    }
 
     let rootDir = jk_fs.dirname(jk_app.findPackageJson());
     let dirItems = await jk_fs.listDir(jk_fs.join(rootDir, "src"));
@@ -111,20 +101,55 @@ export async function applyTailwindProcessor(params: CreateBundleParams): Promis
     }
 
     const outFilePath = path.resolve(genDir, "tailwind.css");
-
-    if (await jk_fs.isFile(outFilePath)) {
-        await jk_fs.unlink(outFilePath);
-    }
+    await jk_fs.unlink(outFilePath);
 
     // Assure the file exists.
     await jk_fs.writeTextToFile(outFilePath, "");
 
-    let postCss = await applyPostCss(params, sourceFiles);
-    if (postCss) await append(postCss);
+    if (!params.config.tailwind.disable) {
+        const tailwindPlugin = createTailwindPlugin(sourceFiles);
+        let postCss = await compileGlobalCss(tailwindPlugin, params.outputDir);
+        if (postCss) await append(postCss);
+    }
+}
+
+function createTailwindPlugin(filesToScan: string[]): postcss.AcceptedPlugin {
+    let config: {content: string[]} = {content: filesToScan};
+    return tailwindPostcss({config} as any);
 }
 
 /**
+ * Generate Tailwind CSS file a list of source files and returns the CSS or undefined.
+ */
+async function compileGlobalCss(tailwindPlugin: postcss.AcceptedPlugin, fromDir: string): Promise<string|undefined> {
+    let plugins: postcss.AcceptedPlugin[] = [tailwindPlugin];
+    let globalCssContent = await getGlobalCssFileContent();
+
+    try {
+        const processor = postcss(plugins);
+
+        const result = await processor.process(globalCssContent, {
+            // Setting 'from' allows resolving correctly the node_modules resolving.
+            from: fromDir
+        });
+
+        return result.css;
+    }
+    catch (e: any) {
+        console.error("Error while compiling for Tailwind:", e);
+        return undefined;
+    }
+}
+
+//endregion
+
+//region CSS Modules
+
+/**
  * Compile a CSS or SCSS file to a JavaScript file.
+ *
+ * Is called from EsBuild bundler.
+ * But also Bun.js and Node.js bundler.
  */
 export async function compileCssModule(filePath: string): Promise<string> {
     // Occurs when it's compiled with TypeScript.
@@ -175,66 +200,12 @@ export async function compileCssModule(filePath: string): Promise<string> {
     knownClassNames.__CSS__ = css;
     knownClassNames.__FILE_HASH__ = jk_crypto.md5(filePath);
 
-    // Here __TOKENS__ contain something like {myLocalStyle: "LocalStyleButton__myLocalStyle___n1l3e"}.
-    // The goal is to resolve the computed class name and the original name.
-
-    if (process.env.JOPI_BUNLDER_ESBUILD) {
-        return `export default ${JSON.stringify(knownClassNames)};`;
-    }
-
     return `export default ${JSON.stringify(knownClassNames)};`
-}
-
-/**
- * Generate Tailwind CSS file a list of source files and returns the CSS or undefined.
- */
-async function applyPostCss(params: CreateBundleParams, sourceFiles: string[]): Promise<string|undefined> {
-    if (!sourceFiles.length) return "";
-
-    const bundlerConfig = params.config;
-
-    let plugins: postcss.AcceptedPlugin[] = [];
-
-    let config = bundlerConfig.tailwind.config || {};
-    if (!config.content) config.content = sourceFiles;
-    else config.content = [...sourceFiles, ...(config.content as string[])];
-
-    if (bundlerConfig.tailwind.extraSourceFiles) {
-        if (!config.content) config.content = [];
-        config.content = [...config.content, ...bundlerConfig.tailwind.extraSourceFiles];
-    }
-
-    let tailwindPlugin = bundlerConfig.tailwind.disable ? undefined : tailwindPostcss({config} as any);
-
-    if (bundlerConfig.postCss.initializer) {
-        plugins = bundlerConfig.postCss.initializer(sourceFiles, tailwindPlugin);
-    } else if (tailwindPlugin) {
-        plugins = [tailwindPlugin];
-    } else {
-        return undefined;
-    }
-
-    if (!plugins.length) return undefined;
-
-    let globalCssContent = await getGlobalCssFileContent(bundlerConfig);
-
-    try {
-        const processor = postcss(plugins);
-
-        const result = await processor.process(globalCssContent, {
-            // Setting 'from' allows resolving correctly the node_modules resolving.
-            from: params.outputDir
-        });
-
-        return result.css;
-    }
-    catch (e: any) {
-        console.error("Error while compiling for Tailwind:", e);
-        return undefined;
-    }
 }
 
 function scssToCss(filePath: string): any {
     const res = sass.compile(filePath, { style: 'expanded' });
     return res.css.toString();
 }
+
+//endregion
