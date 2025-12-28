@@ -1,9 +1,9 @@
-import type {PageDataProvider} from "jopijs";
+import type {JopiPageDataProvider} from "jopijs";
 import {declareLinkerError} from "jopijs/linker";
 import * as jk_crypto from "jopi-toolkit/jk_crypto";
 import {exposeDataSource_PageData} from "../@core";
 
-export function setPageDataProvider(webSite: any, route: string, allowedRoles: string[], provider: PageDataProvider, filePath: string) {
+export function setPageDataProvider(webSite: any, route: string, allowedRoles: string[], provider: JopiPageDataProvider, filePath: string) {
     if (!provider.getRefreshedData && !provider.getDataForCache) {
         throw declareLinkerError(`Page data : Invalid data provider for route ${route}`, filePath);
     }

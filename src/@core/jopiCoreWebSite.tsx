@@ -32,7 +32,7 @@ import {getNewServerInstanceBuilder, type ServerInstanceBuilder} from "./serverI
 import {PriorityLevel, sortByPriority, type ValueWithPriority} from "jopi-toolkit/jk_tools";
 import {logCache_notInCache, logServer_request} from "./_logs.ts";
 import type {TryReturnFileParams} from "./browserCacheControl.ts";
-import {installDataSourcesServer, type PageDataProvider} from "./dataSources.ts";
+import {installDataSourcesServer, type JopiPageDataProvider} from "./dataSources.ts";
 
 export type RouteHandler = (req: JopiRequest) => Promise<Response>;
 
@@ -874,7 +874,7 @@ export interface WebSiteRouteInfos {
      * Data provider for the page.
      */
     pageDataParams?: {
-        provider: PageDataProvider;
+        provider: JopiPageDataProvider;
         roles?: string[];
         url?: string;
     };

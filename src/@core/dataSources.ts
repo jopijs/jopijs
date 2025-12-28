@@ -49,7 +49,7 @@ export function exposeDataSource_Table(name: string, securityUid: string, dataSo
 
 //region Page data
 
-export interface PageDataProvider {
+export interface JopiPageDataProvider {
     getDataForCache(params: GetDataForCacheParams): Promise<PageDataProviderData>;
     getRefreshedData?(params: GetRefreshedDataParams): Promise<PageDataProviderData>;
 }
@@ -64,7 +64,7 @@ export interface GetRefreshedDataParams {
     isFromBrowser?: boolean;
 }
 
-export function exposeDataSource_PageData(route: string, securityUid: string, dataProvider: PageDataProvider, allowedRoles: string[]|undefined): string {
+export function exposeDataSource_PageData(route: string, securityUid: string, dataProvider: JopiPageDataProvider, allowedRoles: string[]|undefined): string {
     toExpose.push({securityUid, onCall: async (req) => {
         if (allowedRoles) {
             req.role_assertUserHasOneOfThisRoles(allowedRoles);

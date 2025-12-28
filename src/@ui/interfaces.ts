@@ -1,4 +1,4 @@
-export interface PageProps {
+export interface JopiPageProps {
     params: any;
     searchParams: any;
 }
