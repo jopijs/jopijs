@@ -1,4 +1,4 @@
-import {CoreWebSiteImpl} from "../jopiCoreWebSite.tsx";
+import {CoreWebSite} from "../jopiCoreWebSite.tsx";
 import * as jk_fs from "jopi-toolkit/jk_fs";
 import * as jk_events from "jopi-toolkit/jk_events";
 import {getBundleDirPath} from "./config.ts";
@@ -22,7 +22,7 @@ export interface CreateBundleParams {
     outputDir: string;
     genDir: string;
     publicUrl: string;
-    webSite: CoreWebSiteImpl;
+    webSite: CoreWebSite;
     config: BundlerConfig,
     requireTailwind: boolean;
     virtualUrlMap: VirtualUrlEntry[];
@@ -35,7 +35,7 @@ export interface CreateBundleParams {
     promise?: Promise<void>;
 }
 
-export async function createBundle(webSite: CoreWebSiteImpl): Promise<void> {
+export async function createBundle(webSite: CoreWebSite): Promise<void> {
     const genDir = getBundleDirPath(webSite);
     const outputDir = jk_fs.join(genDir, "out");
 

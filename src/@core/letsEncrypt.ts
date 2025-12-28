@@ -1,5 +1,5 @@
 import * as acme from 'acme-client';
-import {type SslCertificatePath, type CoreWebSite, CoreWebSiteImpl} from "./jopiCoreWebSite.tsx";
+import {type SslCertificatePath, CoreWebSite} from "./jopiCoreWebSite.tsx";
 import path from "node:path";
 import * as jk_timer from "jopi-toolkit/jk_timer";
 import * as jk_fs from "jopi-toolkit/jk_fs";
@@ -125,7 +125,7 @@ export async function checkWebSite(httpsWebSite: CoreWebSite, params: LetsEncryp
     // ACME challenge requires port 80 of the server.
     const webSite80 = httpsWebSite.getOrCreateHttpRedirectWebsite();
 
-    const certPaths = getCertificateDir(params.certificateDir, (webSite80 as CoreWebSiteImpl).host);
+    const certPaths = getCertificateDir(params.certificateDir, webSite80.host);
     let canLog = params.log;
 
     let certState = await getCertificateState(certPaths, params);
@@ -140,7 +140,7 @@ export async function checkWebSite(httpsWebSite: CoreWebSite, params: LetsEncryp
     let vChallengeToken = "";
     let vKeyAuthorization = "";
 
-    const host = new URL((webSite80 as CoreWebSiteImpl).welcomeUrl).host;
+    const host = new URL(webSite80.welcomeUrl).host;
 
     if (canLog) {
         if (certState==CertificateState.IsExpired) console.log("LetsEncrypt - Will renew certificate for", host);

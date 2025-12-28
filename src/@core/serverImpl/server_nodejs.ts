@@ -17,7 +17,7 @@ import type {
     HttpMethod,
     JopiWebSocket,
     JopiWsRouteHandler,
-    CoreWebSiteImpl,
+    CoreWebSite,
     WebSiteRouteInfos
 } from "../jopiCoreWebSite.tsx";
 import {SBPE_MustReturnWithoutResponseException} from "../jopiCoreWebSite.tsx";
@@ -189,7 +189,7 @@ export class NodeJsServerInstanceBuilder implements ServerInstanceBuilder {
     private readonly router: RouterContext<WebSiteRouteInfos> = createRouter<WebSiteRouteInfos>();
     private readonly wsRouter: RouterContext<JopiWsRouteHandler> = createRouter<JopiWsRouteHandler>();
 
-    constructor(private readonly webSite: CoreWebSiteImpl) {
+    constructor(private readonly webSite: CoreWebSite) {
     }
 
     addRoute(verb: HttpMethod, path: string, routeInfos: WebSiteRouteInfos) {

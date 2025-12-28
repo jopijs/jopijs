@@ -3,7 +3,7 @@
 import path from "node:path";
 
 import fs from "node:fs/promises";
-import { ServerAlreadyStartedError, type SslCertificatePath, type CoreWebSite, CoreWebSiteImpl } from "./jopiCoreWebSite.tsx";
+import { ServerAlreadyStartedError, type SslCertificatePath, CoreWebSite } from "./jopiCoreWebSite.tsx";
 
 import * as jk_app from "jopi-toolkit/jk_app";
 import * as jk_fs from "jopi-toolkit/jk_fs";
@@ -11,7 +11,7 @@ import * as jk_os from "jopi-toolkit/jk_os";
 import * as jk_tools from "jopi-toolkit/jk_tools";
 
 class JopiServer {
-    private webSite?: CoreWebSiteImpl;
+    private webSite?: CoreWebSite;
     private server?: CoreServer;
     private _isStarted = false;
 
@@ -41,8 +41,7 @@ class JopiServer {
 
     setWebsite(webSite: CoreWebSite): CoreWebSite {
         if (this._isStarted) throw new ServerAlreadyStartedError();
-        this.webSite = webSite as CoreWebSiteImpl;
-        return webSite;
+        return this.webSite = webSite;
     }
 
     async stopServer(): Promise<void> {

@@ -41,111 +41,6 @@ export interface MiddlewareOptions {
     regExp?: RegExp;
 }
 
-export interface CoreWebSite {
-    data: any;
-
-    getWelcomeUrl(): string;
-
-    getCache(): PageCache;
-
-    setCache(pageCache: PageCache): void;
-
-    disableAutomaticCache(): void;
-
-    onPage(path: string, pageKey: string, reactComponent: React.FC<any>): WebSiteRouteInfos;
-
-    onVerb(verb: HttpMethod, path: string | string[], handler: (req: JopiRequest) => Promise<Response>): WebSiteRouteInfos;
-
-    onGET(path: string | string[], handler: (req: JopiRequest) => Promise<Response>): WebSiteRouteInfos;
-
-    onPOST(path: string | string[], handler: (req: JopiRequest) => Promise<Response>): WebSiteRouteInfos;
-
-    onPUT(path: string | string[], handler: (req: JopiRequest) => Promise<Response>): WebSiteRouteInfos;
-
-    onDELETE(path: string | string[], handler: (req: JopiRequest) => Promise<Response>): WebSiteRouteInfos;
-
-    onPATCH(path: string | string[], handler: (req: JopiRequest) => Promise<Response>): WebSiteRouteInfos;
-
-    onHEAD(path: string | string[], handler: (req: JopiRequest) => Promise<Response>): WebSiteRouteInfos;
-
-    onOPTIONS(path: string | string[], handler: (req: JopiRequest) => Promise<Response>): WebSiteRouteInfos;
-
-    onWebSocketConnect(path: string, handler: JopiWsRouteHandler): void;
-
-    addSseEVent(path: string|string[], handler: SseEvent): void;
-
-    on404_NotFound(handler: JopiRouteHandler): void;
-    return404(req: JopiRequest): Promise<Response>;
-
-    on500_Error(handler: JopiRouteHandler): void;
-    return500(req: JopiRequest, error?: any | string): Promise<Response>;
-
-    on401_Unauthorized(handler: JopiRouteHandler): void;
-    return401(req: JopiRequest, error?: Error | string): Promise<Response>;
-
-    /**
-     * Try to authenticate a user.
-     *
-     * @param loginInfo
-     *      Information about the user login/password.
-     *      The real type is depending on what you use with the Website.setAuthHandler function.
-     */
-    tryAuthUser<T = LoginPassword>(loginInfo: T): Promise<AuthResult>;
-
-    /**
-     * Set the function which will verify user authentification
-     * and returns information about this user once connected.
-     */
-    setAuthHandler<T>(authHandler: UserAuthentificationFunction<T>): void;
-
-    /**
-     * Create a JWT token with the data.
-     */
-    createJwtToken(data: UserInfos): string | undefined;
-
-    /**
-     * Verify and decode the JWT token.
-     * Returns the data this token contains, or undefined if the token is invalid.
-     */
-    decodeJwtToken(req: JopiRequest, token: string): UserInfos | undefined;
-
-    /**
-     * Set the secret token for JWT cookies.
-     */
-    setJwtSecret(secret: string): void;
-
-    /**
-     * Allow hooking how the JWT token is stored in the user response.
-     */
-    setJwtTokenStore(store: JwtTokenStore): void;
-
-    /**
-     * If you are using HTTPs, allow creating an HTTP website
-     * which will automatically redirect to the HTTP.
-     */
-    getOrCreateHttpRedirectWebsite(): CoreWebSite;
-
-    /**
-     * Ask to update the current SSL certificate.
-     * Will allow updating without restarting the server, nor losing connections.
-     * Warning: only works with bun.ts, node.ts implementation does nothing.
-     */
-    updateSslCertificate(certificate: SslCertificatePath): void;
-
-    getHeadersToCache(): string[];
-
-    addHeaderToCache(header: string): void;
-
-    addGlobalMiddleware(method: HttpMethod|"*"|undefined, middleware: JopiMiddleware, options?: MiddlewareOptions): void;
-    addGlobalPostMiddleware(method: HttpMethod|"*"|undefined, middleware: JopiPostMiddleware, options?: MiddlewareOptions): void;
-
-    addSourceServer<T>(serverFetch: ServerFetch<T>, weight?: number): void;
-
-    enableCors(allows?: string[]): void;
-
-    readonly events: EventGroup;
-}
-
 export interface CacheRules {
     regExp?: RegExp;
 
@@ -182,7 +77,7 @@ export interface CacheRules {
     ifNotInCache(req: JopiRequest, isPage: boolean): void;
 }
 
-export class CoreWebSiteImpl implements CoreWebSite {
+export class CoreWebSite {
     readonly port: number;
     readonly host: string;
     readonly welcomeUrl: string;
@@ -249,7 +144,7 @@ export class CoreWebSiteImpl implements CoreWebSite {
         urlInfos.port = "";
         urlInfos.protocol = "http";
 
-        const webSite = new CoreWebSiteImpl(urlInfos.href);
+        const webSite = new CoreWebSite(urlInfos.href);
         this.http80WebSite = webSite;
 
         webSite.onGET("/**", async req => {
@@ -315,7 +210,7 @@ export class CoreWebSiteImpl implements CoreWebSite {
 
     //region Middlewares
 
-    addGlobalMiddleware(method: HttpMethod|"*"|undefined, middleware: JopiMiddleware, options: MiddlewareOptions) {
+    addGlobalMiddleware(method: HttpMethod|"*"|undefined, middleware: JopiMiddleware, options?: MiddlewareOptions) {
         options = options || {};
 
         let m = method ? method : "*";
@@ -323,7 +218,7 @@ export class CoreWebSiteImpl implements CoreWebSite {
         this.globalMiddlewares[m].push({priority: options.priority||PriorityLevel.default, value: middleware, regExp: options.regExp});
     }
 
-    addGlobalPostMiddleware(method: HttpMethod|"*"|undefined, middleware: JopiPostMiddleware, options: MiddlewareOptions) {
+    addGlobalPostMiddleware(method: HttpMethod|"*"|undefined, middleware: JopiPostMiddleware, options?: MiddlewareOptions) {
         options = options || {};
 
         let m = method ? method : "*";
@@ -1041,7 +936,7 @@ export class JopiWebSocket {
 }
 
 export function newWebSite(url: string, options?: WebSiteOptions): CoreWebSite {
-    return new CoreWebSiteImpl(url, options);
+    return new CoreWebSite(url, options);
 }
 
 export type JopiRouteHandler = (req: JopiRequest) => Promise<Response>;

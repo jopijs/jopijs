@@ -1,6 +1,6 @@
 import type {Config as TailwindConfig} from 'tailwindcss';
 import postcss from 'postcss';
-import {type CoreWebSite, CoreWebSiteImpl} from "../jopiCoreWebSite.tsx";
+import {CoreWebSite} from "../jopiCoreWebSite.tsx";
 import path from "node:path";
 import * as jk_fs from "jopi-toolkit/jk_fs";
 import * as jk_app from "jopi-toolkit/jk_app";
@@ -45,7 +45,7 @@ export function getBundleDirPath(webSite: CoreWebSite) {
     // This can create a situation where we have 2 output directories for
     // the same website.
     //
-    let webSiteHost = (webSite as CoreWebSiteImpl).host.replaceAll(".", "_").replaceAll(":", "_");
+    let webSiteHost = (webSite as CoreWebSite).host.replaceAll(".", "_").replaceAll(":", "_");
     return path.join(gTempDirPath, webSiteHost);
 }
 

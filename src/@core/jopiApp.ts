@@ -24,8 +24,7 @@ import {
     type MiddlewareOptions,
     type UserAuthentificationFunction,
     type UserInfos,
-    type CoreWebSite,
-    CoreWebSiteImpl,
+    CoreWebSite,
     WebSiteOptions
 } from "./jopiCoreWebSite.tsx";
 
@@ -187,7 +186,7 @@ export interface FileServerOptions {
 export class JopiWebSiteBuilder {
     protected readonly origin: string;
     protected readonly hostName: string;
-    private webSite?: CoreWebSiteImpl;
+    private webSite?: CoreWebSite;
     protected readonly options: WebSiteOptions = {};
 
     protected readonly afterHook: ((webSite: CoreWebSite)=>(Promise<void>))[] = [];
@@ -261,7 +260,7 @@ export class JopiWebSiteBuilder {
 
             for (let hook of this.beforeHook) await hook();
 
-            this.webSite = new CoreWebSiteImpl(this.origin, this.options);
+            this.webSite = new CoreWebSite(this.origin, this.options);
 
             for (const hook of this.afterHook) {
                 try {
@@ -361,7 +360,7 @@ export class JopiWebSiteBuilder {
         return this;
     }
 
-    add_SseEvent(path: string|string[], handler: SseEvent): JopiWebSiteBuilder {
+    add_SseEvent(path: string, handler: SseEvent): JopiWebSiteBuilder {
         this.internals.afterHook.push((webSite) => {
             webSite.addSseEVent(path, handler);
         });
@@ -695,7 +694,7 @@ class WebSite_CacheBuilder {
 
     constructor(private readonly webSite: JopiWebSiteBuilder, private readonly internals: WebSiteInternal) {
         this.internals.afterHook.push(async webSite => {
-            (webSite as CoreWebSiteImpl).setCacheRules(this.rules);
+            webSite.setCacheRules(this.rules);
 
             if (this.cache) {
                 webSite.setCache(this.cache);

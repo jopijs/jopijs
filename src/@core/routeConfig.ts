@@ -1,10 +1,10 @@
-import type {JopiMiddleware, JopiPostMiddleware, CoreWebSiteImpl} from "./jopiCoreWebSite.tsx";
+import type {JopiMiddleware, JopiPostMiddleware, CoreWebSite} from "./jopiCoreWebSite.tsx";
 import type {JopiRequest} from "./jopiRequest.tsx";
 import {PriorityLevel} from "jopi-toolkit/jk_tools";
 import type {MenuItemForExtraPageParams} from "jopijs/ui";
 
 export class RouteConfig {
-    constructor(private readonly webSite: CoreWebSiteImpl,
+    constructor(private readonly webSite: CoreWebSite,
                 private readonly route: string,
                 private requiredRoles: string[]|undefined) {
 
@@ -66,7 +66,7 @@ export class RouteConfig {
 }
 
 class RouteConfig_Core {
-    constructor(protected readonly webSite: CoreWebSiteImpl,
+    constructor(protected readonly webSite: CoreWebSite,
                 protected readonly route: string,
                 protected readonly method: string) {
     }

@@ -5,7 +5,7 @@ import {NodeJsServerInstanceBuilder} from "./serverImpl/server_nodejs.ts";
 import {
     type HttpMethod,
     JopiWebSocket,
-    CoreWebSiteImpl,
+    CoreWebSite,
     type WebSiteRouteInfos
 } from "./jopiCoreWebSite.tsx";
 import React from "react";
@@ -27,7 +27,7 @@ export interface ServerInstanceBuilder {
     tryReturnFile(params: TryReturnFileParams): Promise<Response|undefined>;
 }
 
-export function getNewServerInstanceBuilder(webSite: CoreWebSiteImpl): ServerInstanceBuilder {
+export function getNewServerInstanceBuilder(webSite: CoreWebSite): ServerInstanceBuilder {
     if (isBunJS) {
         return new BunJsServerInstanceBuilder(webSite);
     } else {

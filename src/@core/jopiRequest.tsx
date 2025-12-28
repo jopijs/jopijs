@@ -20,8 +20,7 @@ import {
     type HttpMethod, type JopiRouteHandler, type LoginPassword, SBPE_NotAuthorizedException,
     type RequestBody,
     type ResponseModifier, type ServeFileOptions, type TestCookieValue, type TextModifier, type UserInfos,
-    type CoreWebSite,
-    CoreWebSiteImpl,
+    CoreWebSite,
     type WebSiteRouteInfos, SBPE_ServerByPassException
 } from "./jopiCoreWebSite.tsx";
 
@@ -47,7 +46,7 @@ export class JopiRequest {
                 public readonly coreServer: CoreServer,
                 public readonly routeInfos: WebSiteRouteInfos)
     {
-        this.cache = (webSite as CoreWebSiteImpl).mainCache;
+        this.cache = webSite.mainCache;
         this.mainCache = this.cache;
         this._req_headers = this.coreRequest.headers;
     }
@@ -440,7 +439,7 @@ export class JopiRequest {
     //region Fetch / Proxy
 
     proxy_directProxyToServer(): Promise<Response> {
-        return (this.webSite as CoreWebSiteImpl).loadBalancer.directProxy(this);
+        return this.webSite.loadBalancer.directProxy(this);
     }
 
     proxy_proxyRequestTo(server: ServerFetch<any>): Promise<Response> {
@@ -453,7 +452,7 @@ export class JopiRequest {
 
     proxy_fetchServer(headers?: Headers, method: string = "GET", url?: URL, body?: RequestBody): Promise<Response> {
         if (!url) url = this.req_urlInfos;
-        return (this.webSite as CoreWebSiteImpl).loadBalancer.fetch(method, url, body, headers);
+        return this.webSite.loadBalancer.fetch(method, url, body, headers);
     }
 
     //endregion
@@ -518,7 +517,7 @@ export class JopiRequest {
         if (this._isAddedToCache) return;
         this._isAddedToCache = false;
 
-        return this.cache.addToCache(this, this.req_urlInfos, response, (this.webSite as CoreWebSiteImpl).getHeadersToCache());
+        return this.cache.addToCache(this, this.req_urlInfos, response, this.webSite.getHeadersToCache());
     }
 
     /**
@@ -1003,7 +1002,7 @@ export class JopiRequest {
             this.userJwtToken = authResult.authToken;
             this.userInfos = authResult.userInfos!;
 
-            (this.webSite as CoreWebSiteImpl).storeJwtToken(this);
+            this.webSite.storeJwtToken(this);
 
             return authResult;
         }
@@ -1166,7 +1165,7 @@ export class JopiRequest {
         if (cacheValidationInfos instanceof Response) return cacheValidationInfos;
 
         // Will return the file and add the browser cache headers.
-        return (this.webSite as CoreWebSiteImpl).tryReturnFile({
+        return this.webSite.tryReturnFile({
             req: this,
             filePath,
             contentEncoding: params?.contentEncoding,
@@ -1326,12 +1325,12 @@ export class JopiRequestImpl extends JopiRequest {
             // Allow faking the environment of the page.
             const controller = new PageController_ExposePrivate<unknown>(
                 false,
-                (this.webSite as CoreWebSiteImpl).mustRemoveTrailingSlashes,
+                this.webSite.mustRemoveTrailingSlashes,
                 options
             );
 
             controller.setServerRequest(this);
-            (this.webSite as CoreWebSiteImpl).executeBrowserInstall(controller);
+            this.webSite.executeBrowserInstall(controller);
 
             const params = this.req_urlParts;
             const searchParams = this.req_urlInfos.searchParams;
