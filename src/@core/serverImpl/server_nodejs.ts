@@ -24,7 +24,7 @@ import {SBPE_MustReturnWithoutResponseException} from "../jopiCoreWebSite.tsx";
 import type {ServerInstanceBuilder} from "../serverInstanceBuilder.ts";
 import {addRoute, createRouter, findRoute, type RouterContext} from "rou3";
 import React from "react";
-import {JopiRequestImpl} from "../jopiRequest";
+import {JopiRequestImpl} from "../jopiRequest.tsx";
 
 class NodeServerInstance implements CoreServer {
     private readonly server: http.Server<typeof http.IncomingMessage, typeof http.ServerResponse>;

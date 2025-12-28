@@ -9,7 +9,7 @@ import * as jk_fs from "jopi-toolkit/jk_fs";
 import {getBundleDirPath} from "../bundler/index.ts";
 import {hasJopiDevUiFlag} from "jopijs/loader-client";
 import {addBrowserCacheControlHeaders, type TryReturnFileParams} from "../browserCacheControl.ts";
-import {type JopiRequest, JopiRequestImpl} from "../jopiRequest";
+import {JopiRequestImpl} from "../jopiRequest.tsx";
 
 //region SSE Events
 

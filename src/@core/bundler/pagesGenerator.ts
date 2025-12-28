@@ -3,7 +3,7 @@ import * as jk_fs from "jopi-toolkit/jk_fs";
 import * as jk_crypto from "jopi-toolkit/jk_crypto";
 import {getBrowserInstallScript} from "jopijs/linker";
 import {getBrowserRefreshScript, isBrowserRefreshEnabled, isSinglePageMode, isReactHMR} from "jopijs/loader-client";
-import {getGlobalCssFileContent} from "./index.ts";
+import {getGlobalCssFileContent} from "jopijs/postcss";
 import type {CreateBundleParams} from "./index.ts";
 
 // *********************************************************************************************************************

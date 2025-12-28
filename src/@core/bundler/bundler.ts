@@ -69,10 +69,6 @@ export async function createBundle(webSite: CoreWebSite): Promise<void> {
     configureServer(outputDir);
 }
 
-let gCreateBundleData: CreateBundleParams|undefined;
-
-let gPageBundlerIsOk: Record<string, boolean> = {};
-
 export async function createBundleForPage(pageKey: string, route: string) {
     // Allow knowing of this page is already compiled.
     if (gPageBundlerIsOk[pageKey]) return;
@@ -120,6 +116,8 @@ async function executeBundler(params: CreateBundleParams) {
         endLog();
     }
 }
-//
+
 const FALLBACK_PACKAGE = "jopijs/bundler";
 let gIsBundlerLoader = false;
+let gCreateBundleData: CreateBundleParams|undefined;
+let gPageBundlerIsOk: Record<string, boolean> = {};

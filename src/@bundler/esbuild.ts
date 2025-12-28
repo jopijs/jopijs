@@ -3,7 +3,7 @@ import * as jk_fs from "jopi-toolkit/jk_fs";
 import * as n_what from "jopi-toolkit/jk_what";
 import type {CreateBundleParams} from "jopijs";
 import {jopiReplaceText, jopiLoaderPlugin, jopiDetectRebuild} from "./plugins.ts";
-import {applyTailwindProcessor} from "./tailwind.ts";
+import {applyTailwindProcessor} from "jopijs/postcss";
 
 export interface EsBuildParams extends CreateBundleParams {
     metaDataFilePath: string;
