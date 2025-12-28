@@ -32,7 +32,7 @@ export default class TypeRoutes extends AliasType {
 
     private async genCode_DeclareServerRoutes(writer: CodeGenWriter) {
         if (Object.keys(this.routeConfig).length>0) {
-            this.sourceCode_header += `\nimport {RouteConfig} from "jopijs";`;
+            this.sourceCode_header += `\nimport {JopiRouteConfig} from "jopijs";`;
 
             let count = 1;
 
@@ -52,7 +52,7 @@ export default class TypeRoutes extends AliasType {
 
                 let sRoles = roles.length ? ", " + JSON.stringify(roles) : ", undefined";
                 this.sourceCode_header += `\nimport routeConfig${count} from "${relPath}";`;
-                this.sourceCode_body += `\n    await routeConfig${count}(new RouteConfig(webSite, ${JSON.stringify(route)}${sRoles}));`;
+                this.sourceCode_body += `\n    await routeConfig${count}(new JopiRouteConfig(webSite, ${JSON.stringify(route)}${sRoles}));`;
 
                 count++;
             }

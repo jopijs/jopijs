@@ -11,7 +11,7 @@ export * from "./middlewares/index.ts";
 
 export * from "./letsEncrypt.ts";
 export * from "./jopiApp.ts";
-export * from "./routeConfig.ts";
+export * from "./jopiRouteConfig.ts";
 
 export * from "./jopiRequest.tsx";
 export * from "./jopiCoreWebSite.tsx";

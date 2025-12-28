@@ -3,7 +3,7 @@ import type {JopiRequest} from "./jopiRequest.tsx";
 import {PriorityLevel} from "jopi-toolkit/jk_tools";
 import type {MenuItemForExtraPageParams} from "jopijs/ui";
 
-export class RouteConfig {
+export class JopiRouteConfig {
     constructor(private readonly webSite: CoreWebSite,
                 private readonly route: string,
                 private requiredRoles: string[]|undefined) {
