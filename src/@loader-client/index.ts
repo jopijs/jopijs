@@ -1,5 +1,5 @@
 import process from 'node:process';
-import type {WebSite} from "../@core";
+import type {CoreWebSite} from "../@core";
 import * as jk_events from "jopi-toolkit/jk_events";
 import {isBunJS} from "jopi-toolkit/jk_what";
 import {DontCallBeforeElapsed} from "jopi-toolkit/jk_tools";
@@ -93,7 +93,7 @@ export function getBrowserRefreshScript() {
     return `(${g_sse_onChange})()`;
 }
 
-export function installBrowserRefreshSseEvent(webSite: WebSite) {
+export function installBrowserRefreshSseEvent(webSite: CoreWebSite) {
     webSite.addSseEVent("/_jopirw_/bundler", {
         getWelcomeMessage() {
             return "Jopi - Browser refresh";

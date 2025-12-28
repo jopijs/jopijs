@@ -1,5 +1,5 @@
 import type {ServerFetch} from "./serverFetch.ts";
-import {type SendingBody} from "./jopiWebSite.tsx";
+import {type SendingBody} from "./jopiCoreWebSite.tsx";
 import {JopiRequest} from "./jopiRequest.js";
 import * as jk_timer from "jopi-toolkit/jk_timer";
 

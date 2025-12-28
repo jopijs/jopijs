@@ -1,8 +1,8 @@
 import type {CoreServer, SseEvent, SseEventController, WebSocketConnectionInfos} from "../jopiServer.ts";
 import {
     type HttpMethod, type JopiWebSocket,
-    SBPE_DirectSendThisResponseException , type WebSiteImpl, type WebSiteRouteInfos
-} from "../jopiWebSite.tsx";
+    SBPE_DirectSendThisResponseException , type CoreWebSiteImpl, type WebSiteRouteInfos
+} from "../jopiCoreWebSite.tsx";
 import type {ServerInstanceBuilder} from "../serverInstanceBuilder.ts";
 import React from "react";
 import * as jk_fs from "jopi-toolkit/jk_fs";
@@ -118,7 +118,7 @@ export class BunJsServerInstanceBuilder implements ServerInstanceBuilder {
 
     private readonly pageToBuild: Record<string, string> = {};
 
-    constructor(private readonly webSite: WebSiteImpl) {
+    constructor(private readonly webSite: CoreWebSiteImpl) {
         this.isReactHmrEnabled = hasJopiDevUiFlag();
     }
 

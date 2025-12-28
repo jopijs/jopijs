@@ -1,5 +1,5 @@
 import React from "react";
-import {type HttpMethod, JopiRequest, WebSiteImpl, type WebSiteRouteInfos} from "jopijs";
+import {type HttpMethod, JopiRequest, CoreWebSiteImpl, type WebSiteRouteInfos} from "jopijs";
 import * as jk_crypto from "jopi-toolkit/jk_crypto";
 import * as jk_events from "jopi-toolkit/jk_events";
 import {PriorityLevel} from "jopi-toolkit/jk_tools";
@@ -40,7 +40,7 @@ interface ApplyAttributesParams {
     disableCache?: boolean;
 }
 
-export async function routeBindPage(webSite: WebSiteImpl, reactComponent: React.FC<any>, params: RouteBindPageParams) {
+export async function routeBindPage(webSite: CoreWebSiteImpl, reactComponent: React.FC<any>, params: RouteBindPageParams) {
     const pageKey = "page_" + jk_crypto.fastHash(params.route);
     let infos: WebSiteRouteInfos;
 
@@ -125,7 +125,7 @@ export async function routeBindPage(webSite: WebSiteImpl, reactComponent: React.
     await jk_events.sendAsyncEvent("@jopi.route.newPage", params);
 }
 
-export async function routeBindVerb(webSite: WebSiteImpl, handler: RouteHandler, params: RouteBindVerbParams) {
+export async function routeBindVerb(webSite: CoreWebSiteImpl, handler: RouteHandler, params: RouteBindVerbParams) {
     let infos = webSite.onVerb(params.verb, params.route, handler);
     applyAttributes(infos, params.attributes, params.verb);
 

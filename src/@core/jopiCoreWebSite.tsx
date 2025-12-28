@@ -41,7 +41,7 @@ export interface MiddlewareOptions {
     regExp?: RegExp;
 }
 
-export interface WebSite {
+export interface CoreWebSite {
     data: any;
 
     getWelcomeUrl(): string;
@@ -123,7 +123,7 @@ export interface WebSite {
      * If you are using HTTPs, allow creating an HTTP website
      * which will automatically redirect to the HTTP.
      */
-    getOrCreateHttpRedirectWebsite(): WebSite;
+    getOrCreateHttpRedirectWebsite(): CoreWebSite;
 
     /**
      * Ask to update the current SSL certificate.
@@ -182,12 +182,12 @@ export interface CacheRules {
     ifNotInCache(req: JopiRequest, isPage: boolean): void;
 }
 
-export class WebSiteImpl implements WebSite {
+export class CoreWebSiteImpl implements CoreWebSite {
     readonly port: number;
     readonly host: string;
     readonly welcomeUrl: string;
     readonly isHttps?: boolean = false;
-    private http80WebSite?: WebSite;
+    private http80WebSite?: CoreWebSite;
     certificate?: SslCertificatePath;
 
     _onRebuildCertificate?: () => void;
@@ -241,7 +241,7 @@ export class WebSiteImpl implements WebSite {
         this.loadBalancer.addServer<T>(serverFetch, weight);
     }
     
-    getOrCreateHttpRedirectWebsite(): WebSite {
+    getOrCreateHttpRedirectWebsite(): CoreWebSite {
         if (this.http80WebSite) return this.http80WebSite;
         if (this.port===80) return this;
 
@@ -249,7 +249,7 @@ export class WebSiteImpl implements WebSite {
         urlInfos.port = "";
         urlInfos.protocol = "http";
 
-        const webSite = new WebSiteImpl(urlInfos.href);
+        const webSite = new CoreWebSiteImpl(urlInfos.href);
         this.http80WebSite = webSite;
 
         webSite.onGET("/**", async req => {
@@ -1024,7 +1024,7 @@ export interface WebSiteRouteInfos {
 }
 
 export class JopiWebSocket {
-    constructor(private readonly webSite: WebSite, private readonly server: CoreServer, private readonly webSocket: WebSocket) {
+    constructor(private readonly webSite: CoreWebSite, private readonly server: CoreServer, private readonly webSocket: WebSocket) {
     }
 
     close(): void {
@@ -1040,8 +1040,8 @@ export class JopiWebSocket {
     }
 }
 
-export function newWebSite(url: string, options?: WebSiteOptions): WebSite {
-    return new WebSiteImpl(url, options);
+export function newWebSite(url: string, options?: WebSiteOptions): CoreWebSite {
+    return new CoreWebSiteImpl(url, options);
 }
 
 export type JopiRouteHandler = (req: JopiRequest) => Promise<Response>;
@@ -1069,7 +1069,7 @@ export class SBPE_ErrorPage extends SBPE_ServerByPassException {
         super("error");
     }
 
-    async apply(webSite: WebSite, req: JopiRequest): Promise<Response> {
+    async apply(webSite: CoreWebSite, req: JopiRequest): Promise<Response> {
         try {
             switch (this.code) {
                 case 404:

@@ -10,11 +10,11 @@ export * from "./automaticStartStop.ts";
 export * from "./middlewares/index.ts";
 
 export * from "./letsEncrypt.ts";
-export * from "./jopiEasy.ts";
+export * from "./jopiApp.ts";
 export * from "./routeConfig.ts";
 
 export * from "./jopiRequest.tsx";
-export * from "./jopiWebSite.tsx";
+export * from "./jopiCoreWebSite.tsx";
 export * from "./jopiServer.ts";
 export * from "./browserCacheControl.ts";
 

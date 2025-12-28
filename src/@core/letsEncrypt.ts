@@ -1,10 +1,10 @@
 import * as acme from 'acme-client';
-import {type SslCertificatePath, type WebSite, WebSiteImpl} from "./jopiWebSite.tsx";
+import {type SslCertificatePath, type CoreWebSite, CoreWebSiteImpl} from "./jopiCoreWebSite.tsx";
 import path from "node:path";
 import * as jk_timer from "jopi-toolkit/jk_timer";
 import * as jk_fs from "jopi-toolkit/jk_fs";
 
-export type OnTimeoutError = (webSite: WebSite, isRenew: boolean) => void;
+export type OnTimeoutError = (webSite: CoreWebSite, isRenew: boolean) => void;
 
 export interface LetsEncryptParams {
     email: string;
@@ -79,11 +79,11 @@ async function saveCertificate(certPaths: SslCertificatePath, key: string, cert:
  * Download a LetsEncrypt certificate.
  * Will be renewed if no current certificat or if the current one is perempted.
  */
-export async function getLetsEncryptCertificate(httpsWebSite: WebSite, params: LetsEncryptParams): Promise<void> {
+export async function getLetsEncryptCertificate(httpsWebSite: CoreWebSite, params: LetsEncryptParams): Promise<void> {
     return checkWebSite(httpsWebSite, params, false);
 }
 
-export async function checkWebSite(httpsWebSite: WebSite, params: LetsEncryptParams, isFromCron: boolean): Promise<void> {
+export async function checkWebSite(httpsWebSite: CoreWebSite, params: LetsEncryptParams, isFromCron: boolean): Promise<void> {
     /**
      * Write a proof.
      */
@@ -125,7 +125,7 @@ export async function checkWebSite(httpsWebSite: WebSite, params: LetsEncryptPar
     // ACME challenge requires port 80 of the server.
     const webSite80 = httpsWebSite.getOrCreateHttpRedirectWebsite();
 
-    const certPaths = getCertificateDir(params.certificateDir, (webSite80 as WebSiteImpl).host);
+    const certPaths = getCertificateDir(params.certificateDir, (webSite80 as CoreWebSiteImpl).host);
     let canLog = params.log;
 
     let certState = await getCertificateState(certPaths, params);
@@ -140,7 +140,7 @@ export async function checkWebSite(httpsWebSite: WebSite, params: LetsEncryptPar
     let vChallengeToken = "";
     let vKeyAuthorization = "";
 
-    const host = new URL((webSite80 as WebSiteImpl).welcomeUrl).host;
+    const host = new URL((webSite80 as CoreWebSiteImpl).welcomeUrl).host;
 
     if (canLog) {
         if (certState==CertificateState.IsExpired) console.log("LetsEncrypt - Will renew certificate for", host);
@@ -218,7 +218,7 @@ export async function checkWebSite(httpsWebSite: WebSite, params: LetsEncryptPar
 }
 
 interface CronEntry {
-    webSite: WebSite;
+    webSite: CoreWebSite;
     params: LetsEncryptParams
 }
 
@@ -234,7 +234,7 @@ function startCron() {
     });
 }
 
-function registerToCron(webSite: WebSite, params: LetsEncryptParams) {
+function registerToCron(webSite: CoreWebSite, params: LetsEncryptParams) {
     if (!gIsCronStarted) {
         startCron();
     }

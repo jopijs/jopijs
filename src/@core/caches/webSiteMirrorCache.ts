@@ -4,7 +4,7 @@ import type {JopiRequest} from "../jopiRequest";
 import fs from "node:fs/promises";
 import {makeIterable} from "../internalTools.ts";
 import type {CacheEntry, PageCache} from "./cache.ts";
-import {SBPE_NotAuthorizedException} from "../jopiWebSite.tsx";
+import {SBPE_NotAuthorizedException} from "../jopiCoreWebSite.tsx";
 
 export class WebSiteMirrorCache implements PageCache {
     public readonly rootDir: string;

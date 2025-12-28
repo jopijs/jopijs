@@ -1,5 +1,5 @@
 import type {JTableDs, JTableDs_ReadParams} from "jopi-toolkit/jk_data";
-import type {WebSite} from "./jopiWebSite";
+import type {CoreWebSite} from "./jopiCoreWebSite";
 import type {JopiRequest} from "./jopiRequest";
 import {sleep} from "jopi-toolkit/jk_timer";
 import type {PageDataProviderData} from "jopijs/ui";
@@ -84,7 +84,7 @@ export function exposeDataSource_PageData(route: string, securityUid: string, da
 
 const toExpose: RegisteredDataSource[] = [];
 
-export function installDataSourcesServer(webSite: WebSite) {
+export function installDataSourcesServer(webSite: CoreWebSite) {
     for (let dsInfos of toExpose) {
         const onCall = dsInfos.onCall;
 

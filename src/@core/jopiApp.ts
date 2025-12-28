@@ -14,30 +14,23 @@ import {type UserInfos_WithLoginPassword, UserStore_WithLoginPassword} from "./u
 import {getBundlerConfig, type PostCssInitializer} from "./bundler/index.ts";
 import {getInMemoryCache, initMemoryCache, type InMemoryCacheOptions} from "./caches/InMemoryCache.ts";
 import {SimpleFileCache} from "./caches/SimpleFileCache.ts";
-import {
-    type CrawlerCanIgnoreIfAlreadyCrawled,
-    ProcessUrlResult,
-    type UrlProcessedInfos,
-    WebSiteCrawler,
-    type WebSiteCrawlerOptions
-} from "jopijs/crawler";
 import {JopiRequest} from "./jopiRequest.ts";
+
 import {
     type CacheRules,
     type HttpMethod,
     type JopiMiddleware,
     type JopiPostMiddleware,
-    type JopiRouteHandler,
     type MiddlewareOptions,
     type UserAuthentificationFunction,
     type UserInfos,
-    type WebSite,
-    WebSiteImpl,
+    type CoreWebSite,
+    CoreWebSiteImpl,
     WebSiteOptions
-} from "./jopiWebSite.tsx";
+} from "./jopiCoreWebSite.tsx";
+
 import type {PageCache} from "./caches/cache.ts";
 import {getServer, type SseEvent} from "./jopiServer.ts";
-import {HTTP_VERBS} from "./publicTools.ts";
 import {getPackageJsonConfig} from "jopijs/loader-tools";
 import {initLinker} from "./linker.ts";
 import {addStaticEvent as linker_addStaticEvent} from "jopijs/linker";
@@ -49,12 +42,15 @@ import {isDevelopment} from "jopi-toolkit/jk_process";
 class JopiApp {
     private _isStartAppSet: boolean = false;
 
-    startApp(importMeta: any, f: (jopiEasy: JopiEasy) => void|Promise<void>): void {
-        async function doStart() {
+    startApp(importMeta: any, f: (webSite: JopiWebSite) => void|Promise<void>): void {
+        const doStart = async () => {
             await jk_app.waitServerSideReady();
             await jk_app.declareAppStarted();
 
-            let res = f(new JopiEasy());
+            const url = this.getDefaultUrl();
+            const webSite = new WebSite_ExposePrivate(url);
+
+            let res = f(webSite);
             if (res instanceof Promise) await res;
         }
 
@@ -68,13 +64,7 @@ class JopiApp {
         jk_app.setApplicationMainFile(importMeta.filename);
         doStart().then();
     }
-}
 
-let gMetricsOnWebsiteStarted: LoggerGroupCallback = logServer_startApp.beginInfo("Starting Application");
-
-let gWebSiteCreated = false;
-
-export class JopiEasy {
     private getDefaultUrl(): string {
         let config = getPackageJsonConfig();
 
@@ -83,193 +73,11 @@ export class JopiEasy {
 
         throw new Error("Invalid package.json configuration. 'jopi.webSiteUrl' or 'jopi.webSiteListeningUrl' must be set");
     }
-
-    create_webSiteServer(url?: string, ref?: RefFor_WebSite): JopiEasyWebSite {
-        if (gWebSiteCreated) throw new Error("WebSite already created");
-        gWebSiteCreated = true;
-
-        if (!url) {
-            url = this.getDefaultUrl();
-        }
-
-        const res = new JopiEasyWebSite_ExposePrivate(url);
-        if (ref) ref.webSite = res;
-        return res;
-    }
-
-    create_webSiteDownloader(urlOrigin?: string|undefined): CrawlerDownloader {
-        if (gWebSiteCreated) throw new Error("WebSite already created");
-        gWebSiteCreated = true;
-
-        if (!urlOrigin) {
-            urlOrigin = this.getDefaultUrl();
-        }
-        
-        return new CrawlerDownloader(urlOrigin);
-    }
 }
 
-export class RefFor_WebSite {
-    webSite?: JopiEasyWebSite;
-
-    waitWebSiteReady(): Promise<void> {
-        if (!this.webSite) return Promise.reject("website not set");
-
-        return new Promise<void>((resolve) => {
-            this.webSite?.on_webSiteReady(resolve);
-        });
-    }
-}
+let gMetricsOnWebsiteStarted: LoggerGroupCallback = logServer_startApp.beginInfo("Starting Application");
 
 export const jopiApp = new JopiApp();
-
-//region Crawler
-
-class CrawlerDownloader {
-    private readonly _options: WebSiteCrawlerOptions = {};
-    private _outputDir: string = "www-out";
-    private _startUrl?: string;
-    private readonly _urlPrefix: string;
-    private _ignoreIfAlreadyDownloaded?: boolean;
-    private _onUrlProcessed?: (infos: UrlProcessedInfos)=>void;
-    private _filter_canIgnoreIfAlreadyCrawled?: (url: string, infos: CrawlerCanIgnoreIfAlreadyCrawled) => boolean;
-
-
-    constructor(private readonly urlOrigin: string) {
-        const urlInfos = new URL(urlOrigin);
-        this._urlPrefix = urlInfos.origin;
-        this._outputDir = path.resolve(process.cwd(), "www_" + urlInfos.hostname);
-    }
-
-    /**
-     * Define the directory where files will be downloaded.
-     * If not set, that it takes the current url and the hostname.
-     */
-    set_outputDir(outputDir: string){
-        this._outputDir = outputDir;
-        return this;
-    }
-    
-    /**
-     * Define the start point url.
-     * If not set, the default is "/".
-     * @param url
-     */
-    set_startUrl(url: string) {
-        this._startUrl = this.normalizeUrl(url);
-        return this;
-    }
-
-    private normalizeUrl(url: string): string {
-        if (url.startsWith(this._urlPrefix)) {
-            return url.substring(this._urlPrefix.length);
-        }
-
-        return url;
-    }
-
-    /**
-     * Add url with must be crawled.
-     * Is required if these urls aren't reachable from the start point.
-     */
-    set_extraUrls(urlList: string[]) {
-        urlList = urlList.map(u => this.normalizeUrl(u));
-        this._options.scanThisUrls = [...new Set([...this._options.scanThisUrls||[], ...urlList])];
-        return this;
-    }
-
-    /**
-     * Allow avoiding downloading again a resource if already in cache.
-     * @param value
-     */
-    setOption_ignoreIfAlreadyDownloaded(value = true) {
-        this._ignoreIfAlreadyDownloaded = value;
-        return this;
-    }
-
-    /**
-     * Set a function which is called when a URL has been processed.
-     *
-     * @param listener - A function that received information about the URL and his processing state.
-     */
-    on_urlProcessed(listener: (infos: UrlProcessedInfos) => void) {
-        this._onUrlProcessed = listener;
-        return this;
-    }
-
-    /**
-     * Sets a filter function to determine whether a URL can be downloaded.
-     *
-     * @param filter - A function that takes the URL as a string and a boolean flag
-     *                 indicating if it is a resource, and returns a boolean indicating
-     *                 whether the URL can be downloaded.
-     *
-     *                 Returns true if the url can be processed.
-     */
-    setFilter_canProcessThisUrl(filter: (url: string, isResource: boolean)=>boolean) {
-        this._options.canDownload = filter;
-        return this;
-    }
-
-    setFilter_canIgnoreIfAlreadyDownloaded(filter: (url: string, infos: CrawlerCanIgnoreIfAlreadyCrawled)=>boolean) {
-        if (this._ignoreIfAlreadyDownloaded===undefined) {
-            this._ignoreIfAlreadyDownloaded = true;
-        }
-
-        this._filter_canIgnoreIfAlreadyCrawled = filter;
-        return this;
-    }
-
-    async START_DOWNLOAD(): Promise<void> {
-        const downloader = this;
-
-        const crawler = new WebSiteCrawler(this.urlOrigin, {
-            outputDir: this._outputDir,
-
-            onUrlProcessed(infos) {
-                switch (infos.state) {
-                    case ProcessUrlResult.IGNORED:
-                        console.log("👎  Website downloader, url IGNORED:", infos.sourceUrl);
-                        break;
-
-                    case ProcessUrlResult.ERROR:
-                        console.log("❌  Website downloader, url ERROR:", infos.sourceUrl);
-                        break;
-
-                    case ProcessUrlResult.OK:
-                        console.log("✅  Website downloader, url DOWNLOADED:", infos.sourceUrl);
-                        break;
-
-                    case ProcessUrlResult.REDIRECTED:
-                        console.log("🚫  Website downloader, url REDIRECTED:", infos.sourceUrl);
-                        break;
-                }
-
-                if (downloader._onUrlProcessed) {
-                    downloader._onUrlProcessed(infos);
-                }
-            },
-
-            canIgnoreIfAlreadyCrawled(url, infos) {
-                if (!downloader._ignoreIfAlreadyDownloaded) return false;
-
-                if (downloader._filter_canIgnoreIfAlreadyCrawled) {
-                    return downloader._filter_canIgnoreIfAlreadyCrawled(url, infos)
-                }
-
-                return true;
-            },
-
-            ... this._options
-        });
-
-        console.log("Downloading website", this.urlOrigin)
-        await crawler.start(this._startUrl);
-        console.log("Download finished for", this.urlOrigin)
-    }
-}
-
-//endregion
 
 //region CreateServerFetch
 
@@ -376,13 +184,13 @@ export interface FileServerOptions {
     onNotFound: (req: JopiRequest) => Response|Promise<Response>
 }
 
-export class JopiEasyWebSite {
+export class JopiWebSite {
     protected readonly origin: string;
     protected readonly hostName: string;
-    private webSite?: WebSiteImpl;
+    private webSite?: CoreWebSiteImpl;
     protected readonly options: WebSiteOptions = {};
 
-    protected readonly afterHook: ((webSite: WebSite)=>(Promise<void>))[] = [];
+    protected readonly afterHook: ((webSite: CoreWebSite)=>(Promise<void>))[] = [];
     protected readonly beforeHook: (()=>Promise<void>)[] = [];
 
     protected readonly internals: WebSiteInternal;
@@ -444,7 +252,7 @@ export class JopiEasyWebSite {
     }
 
     private async initWebSiteInstance(): Promise<void> {
-        const onWebSiteCreate = (h: (webSite: WebSite) => void|Promise<void>) => {
+        const onWebSiteCreate = (h: (webSite: CoreWebSite) => void|Promise<void>) => {
             this.internals.afterHook.push(h);
         }
 
@@ -453,7 +261,7 @@ export class JopiEasyWebSite {
 
             for (let hook of this.beforeHook) await hook();
 
-            this.webSite = new WebSiteImpl(this.origin, this.options);
+            this.webSite = new CoreWebSiteImpl(this.origin, this.options);
 
             for (const hook of this.afterHook) {
                 try {
@@ -491,7 +299,7 @@ export class JopiEasyWebSite {
         }
     }
 
-    hook_webSite(hook: (webSite: WebSite) => void): this {
+    hook_webSite(hook: (webSite: CoreWebSite) => void): this {
         this.internals.onHookWebSite = hook;
         return this;
     }
@@ -504,7 +312,7 @@ export class JopiEasyWebSite {
         return new CertificateBuilder(this, this.internals);
     }
 
-    fastConfigure_fileServer(options: FileServerOptions): JopiEasyWebSite {
+    fastConfigure_fileServer(options: FileServerOptions): JopiWebSite {
         this.fileServerOptions = options;
         return this;
     }
@@ -523,7 +331,7 @@ export class JopiEasyWebSite {
                 return me;
             },
 
-            DONE_configure_fileServer: (): JopiEasyWebSite => {
+            DONE_configure_fileServer: (): JopiWebSite => {
                 return parent;
             }
         };
@@ -539,7 +347,7 @@ export class JopiEasyWebSite {
         }
     }
 
-    fastConfigure_jwtTokenAuth<T>(privateKey: string, store: any[] | UserAuthentificationFunction<T>): JopiEasyWebSite {
+    fastConfigure_jwtTokenAuth<T>(privateKey: string, store: any[] | UserAuthentificationFunction<T>): JopiWebSite {
         const builder = new JwtTokenAuth_Builder(this, this.internals);
         let config = builder.setPrivateKey_STEP(privateKey).step_setUserStore();
 
@@ -553,7 +361,7 @@ export class JopiEasyWebSite {
         return this;
     }
 
-    add_SseEvent(path: string|string[], handler: SseEvent): JopiEasyWebSite {
+    add_SseEvent(path: string|string[], handler: SseEvent): JopiWebSite {
         this.internals.afterHook.push((webSite) => {
             webSite.addSseEVent(path, handler);
         });
@@ -565,13 +373,13 @@ export class JopiEasyWebSite {
      * Allows the linker to generate an event entry.
      * Will allow to do `import myEvent from "@/events/myEventName`
      */
-    add_staticEvent(name: string): JopiEasyWebSite {
+    add_staticEvent(name: string): JopiWebSite {
         linker_addStaticEvent(name);
         return this;
     }
 
     configure_postCss() {
-        const parent: JopiEasyWebSite = this;
+        const parent: JopiWebSite = this;
 
         const me = {
             setPlugin: (handler: PostCssInitializer) => {
@@ -588,7 +396,7 @@ export class JopiEasyWebSite {
     }
 
     configure_behaviors(): WebSite_ConfigureBehaviors {
-        const parent: JopiEasyWebSite = this;
+        const parent: JopiWebSite = this;
 
         const me: WebSite_ConfigureBehaviors = {
             enableTrailingSlashes(value: boolean = true) {
@@ -596,7 +404,7 @@ export class JopiEasyWebSite {
                 return me;
             },
 
-            DONE_configure_behaviors(): JopiEasyWebSite {
+            DONE_configure_behaviors(): JopiWebSite {
                 return parent;
             }
         }
@@ -605,7 +413,7 @@ export class JopiEasyWebSite {
     }
 
     configure_devBehaviors(): WebSite_ConfigureDevBehaviors {
-        const parent: JopiEasyWebSite = this;
+        const parent: JopiWebSite = this;
 
         const me: WebSite_ConfigureDevBehaviors = {
             slowDownHttpDataSources(pauseMs: number) {
@@ -615,7 +423,7 @@ export class JopiEasyWebSite {
                 return me;
             },
 
-            DONE_configure_devBehaviors(): JopiEasyWebSite {
+            DONE_configure_devBehaviors(): JopiWebSite {
                 return parent;
             }
         }
@@ -632,7 +440,7 @@ export class JopiEasyWebSite {
     }
 
     configure_bundler() {
-        const parent: JopiEasyWebSite = this;
+        const parent: JopiWebSite = this;
 
         const me = {
             dontEmbed_ReactJS: () => {
@@ -647,7 +455,7 @@ export class JopiEasyWebSite {
                 return me;
             },
 
-            END_configure_bundler(): JopiEasyWebSite {
+            END_configure_bundler(): JopiWebSite {
                 return parent;
             }
         }
@@ -656,7 +464,7 @@ export class JopiEasyWebSite {
     }
 
     configure_tailwindProcessor() {
-        const parent: JopiEasyWebSite = this;
+        const parent: JopiWebSite = this;
 
         const me = {
             disableTailwind: () => {
@@ -691,7 +499,7 @@ export class JopiEasyWebSite {
                 return me;
             },
 
-            END_configure_tailwindProcessor(): JopiEasyWebSite {
+            END_configure_tailwindProcessor(): JopiWebSite {
                 return parent;
             }
         }
@@ -721,7 +529,7 @@ export class JopiEasyWebSite {
         return new WebSite_ConfigureCors(this);
     }
 
-    fastConfigure_cors(allowedHosts?: string[]): JopiEasyWebSite {
+    fastConfigure_cors(allowedHosts?: string[]): JopiWebSite {
         const b = new WebSite_ConfigureCors(this);
 
         if (allowedHosts) {
@@ -732,7 +540,18 @@ export class JopiEasyWebSite {
     }
 }
 
-class JopiEasyWebSite_ExposePrivate extends JopiEasyWebSite {
+interface WebSiteInternal {
+    origin: string;
+    hostName: string;
+    options: WebSiteOptions;
+
+    afterHook: ((webSite: CoreWebSite) => void|Promise<void>)[];
+    beforeHook: (() => Promise<void>)[];
+
+    onHookWebSite?: (webSite: CoreWebSite) => void;
+}
+
+class WebSite_ExposePrivate extends JopiWebSite {
     isWebSiteReady() {
         return this._isWebSiteReady;
     }
@@ -743,7 +562,7 @@ class JopiEasyWebSite_ExposePrivate extends JopiEasyWebSite {
 }
 
 class WebSite_ConfigureCors {
-    constructor(private readonly webSite: JopiEasyWebSite) {
+    constructor(private readonly webSite: JopiWebSite) {
     }
 
     add_allowedHost(hostName: string) {
@@ -763,16 +582,16 @@ class WebSite_ConfigureCors {
         return this;
     }
 
-    DONE_configure_cors(): JopiEasyWebSite {
+    DONE_configure_cors(): JopiWebSite {
         return this.webSite;
     }
 }
 
 class WebSite_AddSpecialPageHandler {
-    constructor(private readonly webSite: JopiEasyWebSite, private readonly internals: WebSiteInternal) {
+    constructor(private readonly webSite: JopiWebSite, private readonly internals: WebSiteInternal) {
     }
 
-    END_add_specialPageHandler(): JopiEasyWebSite {
+    END_add_specialPageHandler(): JopiWebSite {
         return this.webSite;
     }
 
@@ -804,7 +623,7 @@ class WebSite_AddSpecialPageHandler {
 class WebSite_AddSourceServerBuilder<T> extends CreateServerFetch<T, WebSite_AddSourceServerBuilder_NextStep<T>> {
     private serverFetch?: ServerFetch<T>;
 
-    constructor(private readonly webSite: JopiEasyWebSite, private readonly internals: WebSiteInternal) {
+    constructor(private readonly webSite: JopiWebSite, private readonly internals: WebSiteInternal) {
         super();
 
         this.internals.afterHook.push(async webSite => {
@@ -818,7 +637,7 @@ class WebSite_AddSourceServerBuilder<T> extends CreateServerFetch<T, WebSite_Add
         return new WebSite_AddSourceServerBuilder_NextStep(this.webSite, this.internals, options);
     }
 
-    END_add_sourceServer(): JopiEasyWebSite {
+    END_add_sourceServer(): JopiWebSite {
         return this.webSite;
     }
 
@@ -828,7 +647,7 @@ class WebSite_AddSourceServerBuilder<T> extends CreateServerFetch<T, WebSite_Add
 }
 
 class WebSite_AddSourceServerBuilder_NextStep<T> extends CreateServerFetch_NextStep<T> {
-    constructor(private readonly webSite: JopiEasyWebSite, private readonly internals: WebSiteInternal, options: ServerFetchOptions<T>) {
+    constructor(private readonly webSite: JopiWebSite, private readonly internals: WebSiteInternal, options: ServerFetchOptions<T>) {
         super(options);
 
         this.internals.afterHook.push(async webSite => {
@@ -836,7 +655,7 @@ class WebSite_AddSourceServerBuilder_NextStep<T> extends CreateServerFetch_NextS
         });
     }
 
-    END_add_sourceServer(): JopiEasyWebSite {
+    END_add_sourceServer(): JopiWebSite {
         return this.webSite;
     }
 
@@ -846,7 +665,7 @@ class WebSite_AddSourceServerBuilder_NextStep<T> extends CreateServerFetch_NextS
 }
 
 class WebSite_MiddlewareBuilder {
-    constructor(private readonly webSite: JopiEasyWebSite, private readonly internals: WebSiteInternal) {
+    constructor(private readonly webSite: JopiWebSite, private readonly internals: WebSiteInternal) {
     }
 
     add_middleware(method: HttpMethod|undefined, middleware: JopiMiddleware, options?: MiddlewareOptions): WebSite_MiddlewareBuilder {
@@ -865,7 +684,7 @@ class WebSite_MiddlewareBuilder {
         return this;
     }
 
-    END_configure_middlewares(): JopiEasyWebSite {
+    END_configure_middlewares(): JopiWebSite {
         return this.webSite;
     }
 }
@@ -874,9 +693,9 @@ class WebSite_CacheBuilder {
     private cache?: PageCache;
     private readonly rules: CacheRules[] = [];
 
-    constructor(private readonly webSite: JopiEasyWebSite, private readonly internals: WebSiteInternal) {
+    constructor(private readonly webSite: JopiWebSite, private readonly internals: WebSiteInternal) {
         this.internals.afterHook.push(async webSite => {
-            (webSite as WebSiteImpl).setCacheRules(this.rules);
+            (webSite as CoreWebSiteImpl).setCacheRules(this.rules);
 
             if (this.cache) {
                 webSite.setCache(this.cache);
@@ -901,7 +720,7 @@ class WebSite_CacheBuilder {
         return this;
     }
 
-    END_configure_cache(): JopiEasyWebSite {
+    END_configure_cache(): JopiWebSite {
         return this.webSite;
     }
 }
@@ -913,7 +732,7 @@ interface WebSite_ConfigureBehaviors {
      */
     enableTrailingSlashes(value: boolean|undefined): WebSite_ConfigureBehaviors;
 
-    DONE_configure_behaviors(): JopiEasyWebSite;
+    DONE_configure_behaviors(): JopiWebSite;
 }
 
 interface WebSite_ConfigureDevBehaviors {
@@ -923,7 +742,7 @@ interface WebSite_ConfigureDevBehaviors {
      */
     slowDownHttpDataSources(pauseMs: number): WebSite_ConfigureDevBehaviors;
 
-    DONE_configure_devBehaviors(): JopiEasyWebSite;
+    DONE_configure_devBehaviors(): JopiWebSite;
 }
 
 //endregion
@@ -941,81 +760,6 @@ async function autoStartServer() {
 }
 
 const myServer = getServer();
-
-//endregion
-
-//region Reverse proxy
-
-class ReverseProxyBuilder {
-    private readonly webSite: JopiEasyWebSite_ExposePrivate;
-    private readonly internals: WebSiteInternal;
-
-    constructor(url: string, ref?: RefFor_WebSite) {
-        this.webSite = new JopiEasyWebSite_ExposePrivate(url);
-        if (ref) ref.webSite = this.webSite;
-
-        this.internals = this.webSite.getInternals();
-
-        this.internals.afterHook.push(async webSite => {
-            const handler: JopiRouteHandler = req => {
-                req.headers.set('X-Forwarded-Proto', req.urlInfos.protocol.replace(':', ''));
-                req.headers.set('X-Forwarded-Host', req.urlInfos.host)
-
-                const clientIp = req.coreServer.requestIP(req.coreRequest)?.address;
-                req.headers.set("X-Forwarded-For", clientIp!);
-
-                return req.proxy_directProxyToServer();
-            };
-
-            HTTP_VERBS.forEach(verb => {
-                webSite.onVerb(verb, "/**", handler);
-            });
-        });
-    }
-
-    add_target<T>(): ReverseProxyBuilder_AddTarget<T> {
-        const {builder, getOptions} = ReverseProxyBuilder_AddTarget.newBuilder<T>(this);
-
-        this.internals.afterHook.push(async webSite => {
-            let options = getOptions();
-
-            if (options) {
-                webSite.addSourceServer(ServerFetch.useAsIs<T>(options));
-            }
-        });
-
-        return builder;
-    }
-
-    DONE_create_reverseProxy(): JopiEasyWebSite_ExposePrivate {
-        return this.webSite;
-    }
-}
-
-class ReverseProxyBuilder_AddTarget<T> extends CreateServerFetch<T, ReverseProxyBuilder_AddTarget_NextStep<T>> {
-    static newBuilder<T>(parent: ReverseProxyBuilder): { builder: ReverseProxyBuilder_AddTarget<T>, getOptions: () => ServerFetchOptions<T> | undefined } {
-        const b = new ReverseProxyBuilder_AddTarget<T>(parent);
-        return {builder: b, getOptions: () => b.options};
-    }
-
-    constructor(private readonly parent: ReverseProxyBuilder) {
-        super();
-    }
-
-    DONE_add_target(): ReverseProxyBuilder {
-        return this.parent;
-    }
-}
-
-class ReverseProxyBuilder_AddTarget_NextStep<T> extends CreateServerFetch_NextStep<T> {
-    constructor(private readonly parent: ReverseProxyBuilder, protected options: ServerFetchOptions<T>) {
-        super(options);
-    }
-
-    DONE_add_target(): ReverseProxyBuilder {
-        return this.parent;
-    }
-}
 
 //endregion
 
@@ -1049,7 +793,7 @@ function useCertificateStore(dirPath: string, hostName: string) {
 }
 
 class CertificateBuilder {
-    constructor(private readonly parent: JopiEasyWebSite, private readonly internals: WebSiteInternal) {
+    constructor(private readonly parent: JopiWebSite, private readonly internals: WebSiteInternal) {
     }
 
     generate_localDevCert(saveInDir: string = "certs") {
@@ -1093,7 +837,7 @@ class CertificateBuilder {
 //region LetsEncryptCertificateBuilder
 
 class LetsEncryptCertificateBuilder {
-    constructor(private readonly parent: JopiEasyWebSite, private readonly params: LetsEncryptParams) {
+    constructor(private readonly parent: JopiWebSite, private readonly params: LetsEncryptParams) {
     }
 
     DONE_add_httpCertificate() {
@@ -1144,7 +888,7 @@ interface JWT_BEGIN {
 }
 
 interface JWT_FINISH {
-    DONE_configure_jwtTokenAuth(): JopiEasyWebSite;
+    DONE_configure_jwtTokenAuth(): JopiWebSite;
 }
 
 interface JWT_StepBegin_SetUserStore {
@@ -1162,7 +906,6 @@ interface JWT_UseCustomStore {
 }
 
 interface JWT_UseSimpleLoginPassword {
-    getStoreRef(h: GetValue<UserStore_WithLoginPassword>): JWT_UseSimpleLoginPassword;
     addOne(login: string, password: string, userInfos: UserInfos): JWT_UseSimpleLoginPassword;
     addMany(users: UserInfos_WithLoginPassword[]): JWT_UseSimpleLoginPassword;
     DONE_use_simpleLoginPassword(): JWT_StepBegin_Configure;
@@ -1178,11 +921,10 @@ interface JWT_Step_Configure {
     DONE_stepConfigure(): JWT_FINISH;
 }
 
-
 //endregion
 
 class JwtTokenAuth_Builder {
-    constructor(private readonly parent: JopiEasyWebSite, private readonly internals: WebSiteInternal) {
+    constructor(private readonly parent: JopiWebSite, private readonly internals: WebSiteInternal) {
     }
 
     FINISH() {
@@ -1264,11 +1006,6 @@ class JwtTokenAuth_Builder {
 
     _useSimpleLoginPassword_REPEAT(): JWT_UseSimpleLoginPassword {
         return {
-            getStoreRef: (h: GetValue<UserStore_WithLoginPassword>) => {
-                h(this.loginPasswordStore!);
-                return this._useSimpleLoginPassword_REPEAT();
-            },
-
             addOne: (login: string, password: string, userInfos: UserInfos) => this.useSimpleLoginPassword_addOne(login, password, userInfos),
             addMany: (users: UserInfos_WithLoginPassword[]) => this.useSimpleLoginPassword_addMany(users),
             DONE_use_simpleLoginPassword: () => this.useSimpleLoginPassword_DONE()
@@ -1318,22 +1055,5 @@ class JwtTokenAuth_Builder {
 
 let gCorsConstraints: string[] = [];
 let giIsCorsDisabled = false;
-
-//endregion
-
-//region Helpers
-
-type GetValue<T> = (value: T) => void;
-
-interface WebSiteInternal {
-    origin: string;
-    hostName: string;
-    options: WebSiteOptions;
-
-    afterHook: ((webSite: WebSite) => void|Promise<void>)[];
-    beforeHook: (() => Promise<void>)[];
-
-    onHookWebSite?: (webSite: WebSite) => void;
-}
 
 //endregion

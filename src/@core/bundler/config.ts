@@ -1,6 +1,6 @@
 import type {Config as TailwindConfig} from 'tailwindcss';
 import postcss from 'postcss';
-import {type WebSite, WebSiteImpl} from "../jopiWebSite.tsx";
+import {type CoreWebSite, CoreWebSiteImpl} from "../jopiCoreWebSite.tsx";
 import path from "node:path";
 import * as jk_fs from "jopi-toolkit/jk_fs";
 import * as jk_app from "jopi-toolkit/jk_app";
@@ -40,12 +40,12 @@ export function getBundlerConfig(): BundlerConfig {
     return gBundlerConfig;
 }
 
-export function getBundleDirPath(webSite: WebSite) {
+export function getBundleDirPath(webSite: CoreWebSite) {
     // To known: the loader uses jopi.webSiteUrl from "package.json".
     // This can create a situation where we have 2 output directories for
     // the same website.
     //
-    let webSiteHost = (webSite as WebSiteImpl).host.replaceAll(".", "_").replaceAll(":", "_");
+    let webSiteHost = (webSite as CoreWebSiteImpl).host.replaceAll(".", "_").replaceAll(":", "_");
     return path.join(gTempDirPath, webSiteHost);
 }
 

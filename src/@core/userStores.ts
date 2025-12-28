@@ -1,4 +1,4 @@
-import {type UserInfos, type WebSite} from "./jopiWebSite.tsx";
+import {type UserInfos, type CoreWebSite} from "./jopiCoreWebSite.tsx";
 
 export interface UserLoginPassword {
     login: string;
@@ -16,7 +16,7 @@ export class UserStore_WithLoginPassword {
         this.users.push(infos);
     }
 
-    setAuthHandler(webSite: WebSite) {
+    setAuthHandler(webSite: CoreWebSite) {
         webSite.setAuthHandler<UserLoginPassword>(loginInfo => {
             let foundUser = this.users.find(e => e.login===loginInfo.login);
 

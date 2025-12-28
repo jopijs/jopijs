@@ -17,10 +17,10 @@ import type {
     HttpMethod,
     JopiWebSocket,
     JopiWsRouteHandler,
-    WebSiteImpl,
+    CoreWebSiteImpl,
     WebSiteRouteInfos
-} from "../jopiWebSite.tsx";
-import {SBPE_MustReturnWithoutResponseException} from "../jopiWebSite.tsx";
+} from "../jopiCoreWebSite.tsx";
+import {SBPE_MustReturnWithoutResponseException} from "../jopiCoreWebSite.tsx";
 import type {ServerInstanceBuilder} from "../serverInstanceBuilder.ts";
 import {addRoute, createRouter, findRoute, type RouterContext} from "rou3";
 import React from "react";
@@ -188,7 +188,7 @@ export class NodeJsServerInstanceBuilder implements ServerInstanceBuilder {
     private readonly router: RouterContext<WebSiteRouteInfos> = createRouter<WebSiteRouteInfos>();
     private readonly wsRouter: RouterContext<JopiWsRouteHandler> = createRouter<JopiWsRouteHandler>();
 
-    constructor(private readonly webSite: WebSiteImpl) {
+    constructor(private readonly webSite: CoreWebSiteImpl) {
     }
 
     addRoute(verb: HttpMethod, path: string, routeInfos: WebSiteRouteInfos) {
