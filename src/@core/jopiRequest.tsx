@@ -35,11 +35,11 @@ import {WebSiteMirrorCache} from "./caches/webSiteMirrorCache.ts";
 import type {PageDataProviderData} from "jopijs/ui";
 
 export class JopiRequest {
-    public cache: PageCache;
+    private cache: PageCache;
 
-    public readonly mainCache: PageCache;
+    private readonly mainCache: PageCache;
     private cookies?: { [name: string]: string };
-    private _headers: Headers;
+    private _req_headers: Headers;
 
     constructor(public readonly webSite: CoreWebSite,
                 private _urlInfos: URL|undefined,
@@ -49,7 +49,7 @@ export class JopiRequest {
     {
         this.cache = (webSite as CoreWebSiteImpl).mainCache;
         this.mainCache = this.cache;
-        this._headers = this.coreRequest.headers;
+        this._req_headers = this.coreRequest.headers;
     }
 
     //region Custom data
@@ -70,11 +70,13 @@ export class JopiRequest {
 
     //endregion
 
+    //region Request
+
     //region Properties
 
     private _customData?: any;
 
-    get urlInfos(): URL {
+    get req_urlInfos(): URL {
         if (!this._urlInfos) {
             this._urlInfos = new URL(this.coreRequest.url);
             this._urlInfos.hash = "";
@@ -86,31 +88,31 @@ export class JopiRequest {
     /**
      * Return the verb used for the request (GET, POST, PUT, DELETE, ...)
      */
-    get method(): HttpMethod {
+    get req_method(): HttpMethod {
         return this.coreRequest.method as HttpMethod;
     }
 
     /**
      * Return the content type of the request.
      */
-    get reqContentType(): string | null {
+    get req_ContentType(): string | null {
         return this.coreRequest.headers.get("content-type");
     }
 
-    get url(): string {
+    get req_url(): string {
         return this.coreRequest.url;
     }
 
-    get body(): RequestBody {
+    get req_body(): RequestBody {
         return this.coreRequest.body;
     }
 
-    get headers(): Headers {
-        return this._headers;
+    get req_headers(): Headers {
+        return this._req_headers;
     }
 
-    set headers(value: Headers) {
-        this._headers = value;
+    set req_headers(value: Headers) {
+        this._req_headers = value;
     }
 
     /**
@@ -119,14 +121,14 @@ export class JopiRequest {
      * and route http://mywebsite/:product/list
      * then urlParts contains {product: "product-name"}
      */
-    urlParts?: any;
+    req_urlParts?: any;
 
     /**
      * Returns the url search params.
      * For "https://my-site/?sort=asc&filter=jopi", it returns {sort: "asc", filter: "jopi"}.
      */
-    get urlSearchParams(): any {
-        const sp = this.urlInfos.searchParams;
+    get req_urlSearchParams(): any {
+        const sp = this.req_urlInfos.searchParams;
         if (!sp.size) return {};
 
         const res: any = {};
@@ -137,12 +139,12 @@ export class JopiRequest {
     /**
      * Returns information on the caller IP.
      */
-    get requestIP(): ServerSocketAddress | null {
+    get req_callerIP(): ServerSocketAddress | null {
         return this.coreServer.requestIP(this.coreRequest);
     }
 
-    get isFromLocalhost() {
-        const ip = this.requestIP;
+    get req_isFromLocalhost() {
+        const ip = this.req_callerIP;
         if (!ip) return false;
 
         const address = ip.address;
@@ -159,14 +161,12 @@ export class JopiRequest {
 
     //endregion
 
-    //region Request
-
     /**
      * Remove the hash (#this-part) and search params (?a=this-part) from the url.
      */
     req_clearSearchParamsAndHash() {
-        this.urlInfos.search = "";
-        this.urlInfos.hash = "";
+        this.req_urlInfos.search = "";
+        this.req_urlInfos.hash = "";
     }
 
     //endregion
@@ -185,14 +185,14 @@ export class JopiRequest {
         let res: any = {};
 
         if (!(options && options.ignoreUrl)) {
-            const searchParams = this.urlInfos.searchParams;
+            const searchParams = this.req_urlInfos.searchParams;
 
             if (searchParams.size) {
                 searchParams.forEach((value, key) => res[key] = value);
             }
 
-            if (this.urlParts) {
-                res = {...res, ...this.urlParts};
+            if (this.req_urlParts) {
+                res = {...res, ...this.req_urlParts};
             }
         }
 
@@ -268,15 +268,15 @@ export class JopiRequest {
     async req_getDataInfos<T = any>(): Promise<T> {
         let res: any = {};
 
-        const searchParams = this.urlInfos.searchParams;
+        const searchParams = this.req_urlInfos.searchParams;
 
         if (searchParams.size) {
             const t: any = res.searchParams = {};
             searchParams.forEach((value, key) => t[key] = value);
         }
 
-        if (this.urlParts) {
-            res.urlParts = {...this.urlParts};
+        if (this.req_urlParts) {
+            res.urlParts = {...this.req_urlParts};
         }
 
         if (this.req_isBodyJson) {
@@ -314,40 +314,25 @@ export class JopiRequest {
     }
 
     get req_isBodyJson(): boolean {
-        const ct = this.reqContentType;
+        const ct = this.req_ContentType;
         if (ct === null) return false;
         return ct.startsWith("application/json");
     }
 
     get req_isBodyFormData(): boolean {
-        const ct = this.reqContentType;
+        const ct = this.req_ContentType;
         if (ct === null) return false;
         return ct.startsWith("multipart/form-data");
     }
 
     get req_isBodyXFormUrlEncoded(): boolean {
-        const ct = this.reqContentType;
+        const ct = this.req_ContentType;
         if (ct === null) return false;
         return ct.startsWith("application/x-www-form-urlencoded");
     }
 
     req_bodyAsText(): Promise<string> {
         return this.coreRequest.text();
-    }
-
-    /**
-     * Validate the data Schema.
-     * If invalid, throw a special exception allowing
-     * to directly send a response to the caller.
-     */
-    tool_validateDataSchema(data: any, schema: jk_schema.Schema) {
-        let error = jk_schema.validateSchema(data, schema);
-
-        if (error) {
-            throw new SBPE_DirectSendThisResponseException(() => {
-                return this.res_returnError400_BadRequest("Invalid data")
-            });
-        }
     }
 
     async req_bodyAsJson<T = any>(dataSchema?: jk_schema.Schema): Promise<T> {
@@ -467,7 +452,7 @@ export class JopiRequest {
     }
 
     proxy_fetchServer(headers?: Headers, method: string = "GET", url?: URL, body?: RequestBody): Promise<Response> {
-        if (!url) url = this.urlInfos;
+        if (!url) url = this.req_urlInfos;
         return (this.webSite as CoreWebSiteImpl).loadBalancer.fetch(method, url, body, headers);
     }
 
@@ -507,23 +492,23 @@ export class JopiRequest {
      * Get from the cache the entry corresponding to the current url.
      */
     async cache_getFromCache(): Promise<Response | undefined> {
-        return await this.cache.getFromCache(this, this.urlInfos);
+        return await this.cache.getFromCache(this, this.req_urlInfos);
     }
 
     async cache_hasInCache(): Promise<boolean> {
-        return await this.cache.hasInCache(this.urlInfos);
+        return await this.cache.hasInCache(this.req_urlInfos);
     }
 
     cache_removeFromCache(url?: URL): Promise<void> {
         // Avoid double.
         //
         if (!url) {
-            url = this.urlInfos;
+            url = this.req_urlInfos;
             url.hostname = url.hostname.toLowerCase();
             url.pathname = url.pathname.toLowerCase();
         }
 
-        return this.cache.removeFromCache(url || this.urlInfos);
+        return this.cache.removeFromCache(url || this.req_urlInfos);
     }
 
     cache_addToCache(response: Response) {
@@ -533,7 +518,7 @@ export class JopiRequest {
         if (this._isAddedToCache) return;
         this._isAddedToCache = false;
 
-        return this.cache.addToCache(this, this.urlInfos, response, (this.webSite as CoreWebSiteImpl).getHeadersToCache());
+        return this.cache.addToCache(this, this.req_urlInfos, response, (this.webSite as CoreWebSiteImpl).getHeadersToCache());
     }
 
     /**
@@ -712,6 +697,22 @@ export class JopiRequest {
 
     //region Tools
 
+
+    /**
+     * Validate the data Schema.
+     * If invalid, throw a special exception allowing
+     * to directly send a response to the caller.
+     */
+    private tool_validateDataSchema(data: any, schema: jk_schema.Schema) {
+        let error = jk_schema.validateSchema(data, schema);
+
+        if (error) {
+            throw new SBPE_DirectSendThisResponseException(() => {
+                return this.res_returnError400_BadRequest("Invalid data")
+            });
+        }
+    }
+
     async tool_duplicateReadableStream(stream: ReadableStream | null): Promise<(ReadableStream<any> | null)[]> {
         if (!stream) return [null, null];
         return stream.tee();
@@ -775,9 +776,9 @@ export class JopiRequest {
         }
 
         console.log();
-        console.log(headerColor(this.method, this.url));
+        console.log(headerColor(this.req_method, this.req_url));
         console.log(titleColor("|- referer: "), data.reqReferer);
-        console.log(titleColor("|- reqContentType:"), data.reqContentType);
+        console.log(titleColor("|- req_ContentType:"), data.req_ContentType);
         console.log(titleColor("|- reqData:"), data.reqData);
         console.log(titleColor("|- reqCookie:"), data.reqCookies);
         console.log(titleColor("|- resContentType:"), data.resContentType);
@@ -799,17 +800,17 @@ export class JopiRequest {
         this.coreRequest = spyReq;
 
         onSpy({
-            method: this.method,
+            method: this.req_method,
             res: () => spyRes,
 
-            reqUrl: this.url,
-            reqReferer: this.headers.get("referer"),
-            reqContentType: this.reqContentType,
+            reqUrl: this.req_url,
+            reqReferer: this.req_headers.get("referer"),
+            req_ContentType: this.req_ContentType,
             reqData: await this.req_getDataInfos(),
             resContentType: res.headers.get("content-type"),
             resContentTypeCat: this.resValue_getContentTypeCategory(res),
 
-            reqCookies: this.headers.get("cookie"),
+            reqCookies: this.req_headers.get("cookie"),
             resCookieSet: spyRes.headers.getSetCookie(),
 
             resStatus: spyRes.status,
@@ -822,10 +823,10 @@ export class JopiRequest {
 
     tool_filterSearchParams(filter?: SearchParamFilterFunction) {
         if (filter) {
-            filter(this.urlInfos);
+            filter(this.req_urlInfos);
         } else {
             if (this.routeInfos.searchParamFilter) {
-                this.routeInfos.searchParamFilter(this.urlInfos);
+                this.routeInfos.searchParamFilter(this.req_urlInfos);
             }
         }
     }
@@ -834,13 +835,7 @@ export class JopiRequest {
 
     //region Post process
 
-    private postProcess: ((res: Response) => Response)[] | undefined;
-
-    _applyPostProcess(res: Response): Response {
-        if (!this.postProcess) return res;
-        this.postProcess.forEach(hook => res = hook(res));
-        return res;
-    }
+    protected postProcess: ((res: Response) => Response)[] | undefined;
 
     //endregion
 
@@ -925,89 +920,13 @@ export class JopiRequest {
         return ReactServer.renderToStaticMarkup(element);
     }
 
-    private _pageData: PageDataProviderData|undefined;
+    protected _pageData: PageDataProviderData|undefined;
 
     /**
      * Return the raw page data for this Request.
      */
     react_getPageData(): PageDataProviderData|undefined {
         return this._pageData;
-    }
-
-    /**
-     * The new render function.
-     * Used while refactoring the renderer.
-     * Used while refactoring the renderer.
-     */
-    async react_fromPage(pageKey: string, C: React.FC<any>): Promise<Response> {
-        try {
-            let bundlePath = "/_bundle/";
-
-            // When dev-mode (JOPI_DEV or JOPI_DEV_UI) then we compile the page one by one.
-            //
-            if (gIsSinglePageMode) {
-                await createBundleForPage(pageKey, this.routeInfos.route);
-                bundlePath += pageKey + "/";
-            }
-
-            // What we will include in our HTML.
-            const options = {
-                head: [<link key="jopi.mainBundle" rel="stylesheet" type="text/css" href={bundlePath + pageKey + ".css"} />],
-                bodyEnd: [<script key="jopi.mainSript" type="module" src={bundlePath + pageKey + ".js"}></script>]
-            };
-
-            const pageDataParams = this.routeInfos.pageDataParams;
-
-            if (pageDataParams) {
-                this._pageData = await pageDataParams.provider.getDataForCache.call(pageDataParams.provider, {req: this});
-
-                const html = "window['JOPI_PAGE_DATA'] = " + JSON.stringify({
-                    d: this._pageData,
-                    u: pageDataParams.url
-                });
-
-                options.bodyEnd.push(
-                    <script type="text/javascript" key="jopi.pageData"
-                            dangerouslySetInnerHTML={{__html: html}}></script>
-                );
-            }
-
-            // Allow faking the environment of the page.
-            const controller = new PageController_ExposePrivate<unknown>(
-                false,
-                (this.webSite as CoreWebSiteImpl).mustRemoveTrailingSlashes,
-                options
-            );
-
-            controller.setServerRequest(this);
-            (this.webSite as CoreWebSiteImpl).executeBrowserInstall(controller);
-
-            const params = this.urlParts;
-            const searchParams = this.urlInfos.searchParams;
-            let jsonSearchParams: any;
-
-            if (isNodeJS) {
-                jsonSearchParams = {};
-                searchParams.forEach((v, k) => jsonSearchParams[k] = v);
-            } else {
-                jsonSearchParams = searchParams.toJSON();
-            }
-
-            const html = ReactServer.renderToStaticMarkup(
-                <Page controller={controller} >
-                    <C params={params} searchParams={jsonSearchParams}/>
-                </Page>);
-
-            return new Response(html, {status: 200, headers: {"content-type": "text/html;charset=utf-8"}});
-        }
-        catch (e: any) {
-            if (!(e instanceof SBPE_ServerByPassException)) {
-                console.error(e);
-                return await this.res_returnError500_ServerError(e);
-            } else {
-                throw e;
-            }
-        }
     }
 
     //endregion
@@ -1043,7 +962,7 @@ export class JopiRequest {
             return undefined;
         }
 
-        let authHeader = this.headers.get("authorization");
+        let authHeader = this.req_headers.get("authorization");
 
         if (authHeader) {
             if (authHeader.startsWith("Bearer ")) {
@@ -1263,18 +1182,18 @@ export class JopiRequest {
         options = options || gEmptyObject;
 
         if (options.replaceIndexHtml !== false) {
-            if (this.urlInfos.pathname.endsWith("/index.html")) {
-                this.urlInfos.pathname = this.urlInfos.pathname.slice(0, -10);
-                return this.res_redirect(this.urlInfos, false);
+            if (this.req_urlInfos.pathname.endsWith("/index.html")) {
+                this.req_urlInfos.pathname = this.req_urlInfos.pathname.slice(0, -10);
+                return this.res_redirect(this.req_urlInfos, false);
             }
 
-            if (this.urlInfos.pathname.endsWith("/")) {
-                this.urlInfos.pathname += "index.html";
+            if (this.req_urlInfos.pathname.endsWith("/")) {
+                this.req_urlInfos.pathname += "index.html";
             }
         }
 
         const sfc = new WebSiteMirrorCache(filesRootPath);
-        const fromCache = await sfc.getFromCache(this, this.urlInfos);
+        const fromCache = await sfc.getFromCache(this, this.req_urlInfos);
         if (fromCache) return fromCache;
 
         if (options.onNotFound) {
@@ -1289,7 +1208,7 @@ export class JopiRequest {
     }
 
     file_validateCacheHeadersWith(headers: any): Response|undefined {
-        let reqEtag = this.headers.get("if-none-match")
+        let reqEtag = this.req_headers.get("if-none-match")
         let myEtag = headers["etag"];
 
         if (reqEtag && (reqEtag===myEtag)) {
@@ -1299,7 +1218,7 @@ export class JopiRequest {
             });
         }
 
-        let reqLastModifiedSince = this.headers.get("if-modified-since");
+        let reqLastModifiedSince = this.req_headers.get("if-modified-since");
         let myLastModifiedSince = headers["if-modified-since"];
 
         if (myLastModifiedSince && reqLastModifiedSince) {
@@ -1319,7 +1238,7 @@ export class JopiRequest {
         let fileState = await jk_fs.getFileStat(filePath);
         if (!fileState) return undefined;
 
-        let lastModifiedSince = this.headers.get("if-modified-since");
+        let lastModifiedSince = this.req_headers.get("if-modified-since");
 
         if (lastModifiedSince) {
             const fileModifiedTime = new Date(fileState.mtimeMs).getTime();
@@ -1333,7 +1252,7 @@ export class JopiRequest {
             }
         }
 
-        let etag = this.headers.get("if-none-match")
+        let etag = this.req_headers.get("if-none-match")
         let calcEtag: string|undefined;
 
         if (etag) {
@@ -1358,6 +1277,89 @@ export class JopiRequestImpl extends JopiRequest {
     public _cache_ignoreDefaultBehaviors = false;
     public _cache_ignoreCacheRead = false;
     public _cache_ignoreCacheWrite = false;
+
+    _applyPostProcess(res: Response): Response {
+        if (!this.postProcess) return res;
+        this.postProcess.forEach(hook => res = hook(res));
+        return res;
+    }
+
+
+    /**
+     * The new render function.
+     * Used while refactoring the renderer.
+     * Used while refactoring the renderer.
+     */
+    async react_fromPage(pageKey: string, C: React.FC<any>): Promise<Response> {
+        try {
+            let bundlePath = "/_bundle/";
+
+            // When dev-mode (JOPI_DEV or JOPI_DEV_UI) then we compile the page one by one.
+            //
+            if (gIsSinglePageMode) {
+                await createBundleForPage(pageKey, this.routeInfos.route);
+                bundlePath += pageKey + "/";
+            }
+
+            // What we will include in our HTML.
+            const options = {
+                head: [<link key="jopi.mainBundle" rel="stylesheet" type="text/css" href={bundlePath + pageKey + ".css"} />],
+                bodyEnd: [<script key="jopi.mainSript" type="module" src={bundlePath + pageKey + ".js"}></script>]
+            };
+
+            const pageDataParams = this.routeInfos.pageDataParams;
+
+            if (pageDataParams) {
+                this._pageData = await pageDataParams.provider.getDataForCache.call(pageDataParams.provider, {req: this});
+
+                const html = "window['JOPI_PAGE_DATA'] = " + JSON.stringify({
+                    d: this._pageData,
+                    u: pageDataParams.url
+                });
+
+                options.bodyEnd.push(
+                    <script type="text/javascript" key="jopi.pageData"
+                            dangerouslySetInnerHTML={{__html: html}}></script>
+                );
+            }
+
+            // Allow faking the environment of the page.
+            const controller = new PageController_ExposePrivate<unknown>(
+                false,
+                (this.webSite as CoreWebSiteImpl).mustRemoveTrailingSlashes,
+                options
+            );
+
+            controller.setServerRequest(this);
+            (this.webSite as CoreWebSiteImpl).executeBrowserInstall(controller);
+
+            const params = this.req_urlParts;
+            const searchParams = this.req_urlInfos.searchParams;
+            let jsonSearchParams: any;
+
+            if (isNodeJS) {
+                jsonSearchParams = {};
+                searchParams.forEach((v, k) => jsonSearchParams[k] = v);
+            } else {
+                jsonSearchParams = searchParams.toJSON();
+            }
+
+            const html = ReactServer.renderToStaticMarkup(
+                <Page controller={controller} >
+                    <C params={params} searchParams={jsonSearchParams}/>
+                </Page>);
+
+            return new Response(html, {status: 200, headers: {"content-type": "text/html;charset=utf-8"}});
+        }
+        catch (e: any) {
+            if (!(e instanceof SBPE_ServerByPassException)) {
+                console.error(e);
+                return await this.res_returnError500_ServerError(e);
+            } else {
+                throw e;
+            }
+        }
+    }
 }
 
 export interface JopiRequestSpyData {
@@ -1365,7 +1367,7 @@ export interface JopiRequestSpyData {
 
     reqUrl: string;
     reqReferer: string | null;
-    reqContentType: string | null;
+    req_ContentType: string | null;
     reqData: any;
 
     // Allow avoiding printing the response content.

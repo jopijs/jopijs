@@ -60,7 +60,7 @@ export class PageController<T = any> implements UiApplication_Host {
      */
     public getCurrentURL(): URL {
         if (this.serverRequest) {
-            return this.serverRequest.urlInfos;
+            return this.serverRequest.req_urlInfos;
         }
 
         return new URL(window.location.href);

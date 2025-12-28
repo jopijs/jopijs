@@ -10,7 +10,7 @@ import {
 } from "./common.tsx";
 
 export function useParams(): any {
-    return useServerRequest().urlParts;
+    return useServerRequest().req_urlParts;
 }
 
 /**
@@ -39,8 +39,7 @@ export function useBrowserEffect(effect: React.EffectCallback,
 }
 
 export function useServerRequest(): ServerRequestInstance {
-    let page = _usePage();
-    return (page as PageController_ExposePrivate).getServerRequest();
+    return (_usePage() as PageController_ExposePrivate).getServerRequest();
 }
 
 /**
@@ -48,7 +47,7 @@ export function useServerRequest(): ServerRequestInstance {
  * unregister when the component unmount.
  */
 export function useEvent(evenName: string|string[], listener: (data: any) => void) {
-    // Nothing on server side.
+    // Nothing on the server side.
 }
 
 export function useStaticEvent(event: jk_events.StaticEvent): ReactStaticEvent {

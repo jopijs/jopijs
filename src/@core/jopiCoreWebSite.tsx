@@ -253,10 +253,10 @@ export class CoreWebSiteImpl implements CoreWebSite {
         this.http80WebSite = webSite;
 
         webSite.onGET("/**", async req => {
-            req.urlInfos.port = "";
-            req.urlInfos.protocol = "https";
+            req.req_urlInfos.port = "";
+            req.req_urlInfos.protocol = "https";
 
-            return req.res_redirect(req.urlInfos.href, true);
+            return req.res_redirect(req.req_urlInfos.href, true);
         });
 
         return webSite;
@@ -482,7 +482,7 @@ export class CoreWebSiteImpl implements CoreWebSite {
                         }
                     }
 
-                    logCache_notInCache.info(w => w(`${req.method} request`, {url: req.urlInfos?.href}));
+                    logCache_notInCache.info(w => w(`${req.req_method} request`, {url: req.req_urlInfos?.href}));
 
                     if (ifNotInCache) {
                         ifNotInCache(req, isPage);
@@ -741,9 +741,9 @@ export class CoreWebSiteImpl implements CoreWebSite {
         if (urlInfos) urlInfos.hash = "";
 
         const req = new JopiRequestImpl(this, urlInfos, coreRequest, coreServer, routeInfos!);
-        req.urlParts = urlParts;
+        req.req_urlParts = urlParts;
 
-        const endReq = logServer_request.beginInfo((w) => w(`${req.method} request`, {url: req.url }));
+        const endReq = logServer_request.beginInfo((w) => w(`${req.req_method} request`, {url: req.req_url }));
 
         try {
             let res: Response;
@@ -859,7 +859,7 @@ export class CoreWebSiteImpl implements CoreWebSite {
     }
 
     async return404(req: JopiRequest): Promise<Response> {
-        const accept = req.headers.get("accept");
+        const accept = req.req_headers.get("accept");
         if (!accept || !accept.startsWith("text/html")) return new Response("", {status: 404});
 
         if (this._on404_NotFound) {
@@ -879,7 +879,7 @@ export class CoreWebSiteImpl implements CoreWebSite {
     }
 
     async return500(req: JopiRequest, error?: any|string): Promise<Response> {
-        const accept = req.headers.get("accept");
+        const accept = req.req_headers.get("accept");
         if (!accept || !accept.startsWith("text/html")) return new Response("", {status: 500});
 
         if (this._on500_Error) {
@@ -917,7 +917,7 @@ export class CoreWebSiteImpl implements CoreWebSite {
             }
         }
 
-        if (req.method!=="GET") {
+        if (req.req_method!=="GET") {
             return new Response(error ? error.toString() : "", {status: 401});
         }
 

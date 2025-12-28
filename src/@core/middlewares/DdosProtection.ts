@@ -96,7 +96,7 @@ export default function(options?: DdosProtectionOptions): JopiMiddleware {
 
         // > Check how many-time this request has reached the server recently.
 
-        const clientIP = req.requestIP?.address;
+        const clientIP = req.req_callerIP?.address;
 
         if (clientIP) {
             const currentConnections = (mapConnectionsPerIP.get(clientIP) || 0) + 1;

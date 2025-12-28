@@ -313,11 +313,11 @@ export class ServerFetch<T> {
      * Allow directly proxy a request as if we were directly asking the target server.
      */
     async directProxy(req: JopiRequest): Promise<Response> {
-        return this.doFetch(req.method, req.urlInfos.href, req.body, req.headers);
+        return this.doFetch(req.req_method, req.req_urlInfos.href, req.req_body, req.req_headers);
     }
 
     async fetchWith(req: JopiRequest) {
-        return this.doFetch(req.method, req.urlInfos.href, req.body, req.headers);
+        return this.doFetch(req.req_method, req.req_urlInfos.href, req.req_body, req.req_headers);
     }
 
     async fetch(method: string, url: URL, body?: SendingBody, headers?: Headers) {

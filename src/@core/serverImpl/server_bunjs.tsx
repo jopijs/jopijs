@@ -9,6 +9,7 @@ import * as jk_fs from "jopi-toolkit/jk_fs";
 import {getBundleDirPath} from "../bundler/index.ts";
 import {hasJopiDevUiFlag} from "jopijs/loader-client";
 import {addBrowserCacheControlHeaders, type TryReturnFileParams} from "../browserCacheControl.ts";
+import {type JopiRequest, JopiRequestImpl} from "../jopiRequest";
 
 //region SSE Events
 
@@ -173,7 +174,7 @@ export class BunJsServerInstanceBuilder implements ServerInstanceBuilder {
         }
 
         routeInfos.handler = async (req) => {
-            return await req.react_fromPage(pageKey, reactComponent);
+            return await (req as JopiRequestImpl).react_fromPage(pageKey, reactComponent);
         };
 
         routeInfos.handler = this.webSite.applyMiddlewares("GET", path, routeInfos.handler, true);

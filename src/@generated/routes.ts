@@ -1,5 +1,5 @@
 import React from "react";
-import {type HttpMethod, JopiRequest, CoreWebSiteImpl, type WebSiteRouteInfos} from "jopijs";
+import {type HttpMethod, JopiRequest, CoreWebSiteImpl, type WebSiteRouteInfos, JopiRequestImpl} from "jopijs";
 import * as jk_crypto from "jopi-toolkit/jk_crypto";
 import * as jk_events from "jopi-toolkit/jk_events";
 import {PriorityLevel} from "jopi-toolkit/jk_tools";
@@ -58,7 +58,7 @@ export async function routeBindPage(webSite: CoreWebSiteImpl, reactComponent: Re
                 case "/error404":
                     specialPageHandler = () => {
                         webSite.on404_NotFound(async (req) => {
-                            return req.react_fromPage(pageKey, reactComponent);
+                            return (req as JopiRequestImpl).react_fromPage(pageKey, reactComponent);
                         });
                     }
 
@@ -67,7 +67,7 @@ export async function routeBindPage(webSite: CoreWebSiteImpl, reactComponent: Re
                 case "/error500":
                     specialPageHandler = () => {
                         webSite.on500_Error(async (req) => {
-                            return req.react_fromPage(pageKey, reactComponent);
+                            return (req as JopiRequestImpl).react_fromPage(pageKey, reactComponent);
                         });
                     }
 
@@ -76,7 +76,7 @@ export async function routeBindPage(webSite: CoreWebSiteImpl, reactComponent: Re
                 case "/error401":
                     specialPageHandler = () => {
                         webSite.on401_Unauthorized(async (req) => {
-                            return req.react_fromPage(pageKey, reactComponent);
+                            return (req as JopiRequestImpl).react_fromPage(pageKey, reactComponent);
                         });
                     }
 
@@ -102,8 +102,8 @@ export async function routeBindPage(webSite: CoreWebSiteImpl, reactComponent: Re
                     // It's why the redirection is done internally.
                     //
                     webSite.onGET(params.route + "/", async (req) => {
-                        req.urlInfos.pathname = req.urlInfos.pathname.slice(0, -1);
-                        return Response.redirect(req.urlInfos.href, REDIRECT_CODE);
+                        req.req_urlInfos.pathname = req.req_urlInfos.pathname.slice(0, -1);
+                        return Response.redirect(req.req_urlInfos.href, REDIRECT_CODE);
                     });
                 } else {
                     infos = webSite.onPage(params.route + "/", pageKey, reactComponent);
@@ -112,8 +112,8 @@ export async function routeBindPage(webSite: CoreWebSiteImpl, reactComponent: Re
                     // It's why the redirection is done internally.
                     //
                     webSite.onGET(params.route, async (req) => {
-                        req.urlInfos.pathname += "/";
-                        return Response.redirect(req.urlInfos.href, REDIRECT_CODE);
+                        req.req_urlInfos.pathname += "/";
+                        return Response.redirect(req.req_urlInfos.href, REDIRECT_CODE);
                     });
                 }
             }

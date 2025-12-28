@@ -10,7 +10,7 @@ export function installBundleServer(webSite: CoreWebSite) {
     const virtualRoutes = getVirtualUrlMap();
 
     webSite.onGET("/_bundle/**", async (req) => {
-        req.urlInfos.pathname = req.urlInfos.pathname.substring("/_bundle".length);
+        req.req_urlInfos.pathname = req.req_urlInfos.pathname.substring("/_bundle".length);
         return req.file_serveFromDir(gDirToServe!);
     });
 

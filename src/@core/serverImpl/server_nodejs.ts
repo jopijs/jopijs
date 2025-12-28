@@ -24,6 +24,7 @@ import {SBPE_MustReturnWithoutResponseException} from "../jopiCoreWebSite.tsx";
 import type {ServerInstanceBuilder} from "../serverInstanceBuilder.ts";
 import {addRoute, createRouter, findRoute, type RouterContext} from "rou3";
 import React from "react";
+import {JopiRequestImpl} from "../jopiRequest";
 
 class NodeServerInstance implements CoreServer {
     private readonly server: http.Server<typeof http.IncomingMessage, typeof http.ServerResponse>;
@@ -253,7 +254,7 @@ export class NodeJsServerInstanceBuilder implements ServerInstanceBuilder {
         const mustRemoveTrailingSlashes = this.webSite.mustRemoveTrailingSlashes;
 
         routeInfos.handler = async (req) => {
-            let path = req.urlInfos.pathname;
+            let path = req.req_urlInfos.pathname;
 
             if (path!=="/") {
                 // Node.js router don't distinguish url ending with / and without.
@@ -261,20 +262,20 @@ export class NodeJsServerInstanceBuilder implements ServerInstanceBuilder {
                 //
                 if (mustRemoveTrailingSlashes) {
                     if (path.endsWith("/")) {
-                        req.urlInfos.pathname = req.urlInfos.pathname.slice(0, -1);
-                        let redirectUrl = req.urlInfos.href;
+                        req.req_urlInfos.pathname = req.req_urlInfos.pathname.slice(0, -1);
+                        let redirectUrl = req.req_urlInfos.href;
                         return Response.redirect(redirectUrl, 302);
                     }
                 } else {
                     if (!path.endsWith("/")) {
-                        req.urlInfos.pathname += "/";
-                        let redirectUrl = req.urlInfos.href;
+                        req.req_urlInfos.pathname += "/";
+                        let redirectUrl = req.req_urlInfos.href;
                         return Response.redirect(redirectUrl, 302);
                     }
                 }
             }
 
-            return req.react_fromPage(pageKey, reactComponent);
+            return (req as JopiRequestImpl).react_fromPage(pageKey, reactComponent);
         };
 
         routeInfos.handler = this.webSite.applyMiddlewares("GET", path, routeInfos.handler, true);

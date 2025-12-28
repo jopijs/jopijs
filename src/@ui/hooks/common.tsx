@@ -96,9 +96,9 @@ export interface UsePageDataResponse extends PageDataProviderData {
  * Is a subset of JopiRequest, with only browser-side compatible items.
  */
 export interface ServerRequestInstance {
-    urlParts?: Record<string, any>;
-    urlInfos: URL;
-    headers: Headers;
+    req_urlParts?: Record<string, any>;
+    req_urlInfos: URL;
+    req_headers: Headers;
 
     user_getUserInfos(): UiUserInfos | undefined;
     role_getUserRoles(): string[];
