@@ -3,7 +3,7 @@ import * as jk_fs from "jopi-toolkit/jk_fs";
 import * as jk_crypto from "jopi-toolkit/jk_crypto";
 import {getBrowserInstallScript} from "jopijs/linker";
 import {getBrowserRefreshScript, isBrowserRefreshEnabled, isSinglePageMode, isReactHMR} from "jopijs/loader-client";
-import {getGlobalCssFileContent} from "jopijs/postcss";
+import {getMergedGlobalCssFileContent} from "jopijs/postcss";
 import type {CreateBundleParams} from "./index.ts";
 
 // *********************************************************************************************************************
@@ -67,12 +67,12 @@ async function rebuildPages(p: CreateBundleParams) {
 
         if (isReactHMR()) {
             // The uncompiled version of tailwind.
-            txt = txt.replace("__EXTRA_IMPORTS__", 'import "./tailwind-hmr.css";');
+            txt = txt.replace("__EXTRA_IMPORTS__", 'import "./global-hmr.css";');
         } else {
             if (isSinglePageMode()) {
-                txt = txt.replace("__EXTRA_IMPORTS__", `import "./${pageKey}/tailwind.css";`);
+                txt = txt.replace("__EXTRA_IMPORTS__", `import "./${pageKey}/global.css";`);
             } else {
-                txt = txt.replace("__EXTRA_IMPORTS__", 'import "./tailwind.css";');
+                txt = txt.replace("__EXTRA_IMPORTS__", 'import "./global.css";');
             }
         }
 
@@ -96,8 +96,8 @@ async function rebuildPages(p: CreateBundleParams) {
     const installScript = getBrowserInstallScript();
 
     if (isReactHMR()) {
-        let globalCss = await getGlobalCssFileContent();
-        await jk_fs.writeTextToFile(jk_fs.join(p.genDir, "tailwind-hmr.css"), globalCss);
+        let globalCss = await getMergedGlobalCssFileContent();
+        await jk_fs.writeTextToFile(jk_fs.join(p.genDir, "global-hmr.css"), globalCss);
     }
 
     if (p.singlePageMode) {

@@ -51,7 +51,7 @@ export async function createBundle(webSite: CoreWebSite): Promise<void> {
 
     const cssToImport = [...getExtraCssToBundle()];
 
-    if (requireTailwind) cssToImport.push("./tailwind.css");
+    if (requireTailwind) cssToImport.push("./global.css");
 
     // Bun has his own bundler system of development.
     const config = getBundlerConfig();

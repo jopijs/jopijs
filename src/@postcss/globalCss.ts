@@ -8,7 +8,11 @@ import path from "node:path";
 import type {CreateBundleParams} from "jopijs";
 import {getTailwindPlugin} from "./tailwinPlugin.ts";
 
-export async function createFileTailwindCss(params: CreateBundleParams): Promise<void> {
+/**
+ * Use Tailwind to compile the file global.css from the bundler dir
+ * and save the result into the out dir.
+ */
+export async function tailwindTransformGlobalCss(params: CreateBundleParams): Promise<void> {
     function append(text: string) {
         return fs.appendFile(outFilePath, "\n" + text + "\n", "utf-8");
     }
@@ -21,7 +25,7 @@ export async function createFileTailwindCss(params: CreateBundleParams): Promise
         genDir = jk_fs.join(genDir, params.pageKey!);
     }
 
-    const outFilePath = path.resolve(genDir, "tailwind.css");
+    const outFilePath = path.resolve(genDir, "global.css");
     await jk_fs.unlink(outFilePath);
 
     // Assure the file exists.
@@ -29,35 +33,15 @@ export async function createFileTailwindCss(params: CreateBundleParams): Promise
 
     if (!params.config.tailwind.disable) {
         const tailwindPlugin = getTailwindPlugin();
-        let postCss = await compileGlobalCss(tailwindPlugin, params.outputDir);
+        let postCss = await mergeGlobalCssFileContent(tailwindPlugin, params.outputDir);
         if (postCss) await append(postCss);
     }
 }
 
 /**
- * Generate Tailwind CSS file a list of source files and returns the CSS or undefined.
+ * Merge all global.css files into one file.
  */
-async function compileGlobalCss(tailwindPlugin: postcss.AcceptedPlugin, fromDir: string): Promise<string|undefined> {
-    let plugins: postcss.AcceptedPlugin[] = [tailwindPlugin];
-    let globalCssContent = await getGlobalCssFileContent();
-
-    try {
-        const processor = postcss(plugins);
-
-        const result = await processor.process(globalCssContent, {
-            // Setting 'from' allows resolving correctly the node_modules resolving.
-            from: fromDir
-        });
-
-        return result.css;
-    }
-    catch (e: any) {
-        console.error("Error while compiling for Tailwind:", e);
-        return undefined;
-    }
-}
-
-export async function getGlobalCssFileContent(): Promise<string> {
+export async function getMergedGlobalCssFileContent(): Promise<string> {
     if (gGlobalCssContent) return gGlobalCssContent;
 
     let rootDir = jk_fs.dirname(jk_app.findPackageJson());
@@ -127,4 +111,27 @@ function removeImportDoublon(globalCss: string, content: string): string {
     }
 
     return lines.join("\n");
+}
+
+/**
+ * Generate Tailwind CSS file a list of source files and returns the CSS or undefined.
+ */
+async function mergeGlobalCssFileContent(tailwindPlugin: postcss.AcceptedPlugin, fromDir: string): Promise<string|undefined> {
+    let plugins: postcss.AcceptedPlugin[] = [tailwindPlugin];
+    let globalCssContent = await getMergedGlobalCssFileContent();
+
+    try {
+        const processor = postcss(plugins);
+
+        const result = await processor.process(globalCssContent, {
+            // Setting 'from' allows resolving correctly the node_modules resolving.
+            from: fromDir
+        });
+
+        return result.css;
+    }
+    catch (e: any) {
+        console.error("Error while compiling for Tailwind:", e);
+        return undefined;
+    }
 }
