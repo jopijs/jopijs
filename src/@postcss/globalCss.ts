@@ -7,7 +7,7 @@ import * as jk_fs from "jopi-toolkit/jk_fs";
 import path from "node:path";
 import type {CreateBundleParams} from "jopijs";
 import {getTailwindPlugin} from "./tailwinPlugin.ts";
-import {execConsoleMuted} from "./tools";
+import {execConsoleMuted} from "./tools.ts";
 import * as jk_term from "jopi-toolkit/jk_term";
 
 /**

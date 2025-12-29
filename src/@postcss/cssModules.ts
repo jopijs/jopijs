@@ -9,7 +9,7 @@ import * as jk_term from "jopi-toolkit/jk_term";
 import path from "node:path";
 import {getTailwindPlugin} from "./tailwinPlugin.ts";
 import {execConsoleMuted} from "./tools.ts";
-import {getGlobalCssFilePath} from "./globalCss";
+import {getGlobalCssFilePath} from "./globalCss.ts";
 
 /**
  * Compile a CSS or SCSS file to a JavaScript file.
