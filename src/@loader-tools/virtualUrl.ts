@@ -1,7 +1,7 @@
-import {getPackageJsonConfig} from "./config.js";
 import path from "node:path";
 import * as jk_events from "jopi-toolkit/jk_events";
 import * as jk_crypto from "jopi-toolkit/jk_crypto";
+import {getWebSiteConfig} from "jopijs/coreconfig";
 
 export interface VirtualUrlEntry {
     url: string;
@@ -29,7 +29,7 @@ export function getVirtualUrlForFile(filePath: string): VirtualUrlEntry|undefine
         return existing;
     }
 
-    const config = getPackageJsonConfig();
+    const config = getWebSiteConfig();
 
     let route = path.relative(process.cwd(), filePath);
     route = config.webResourcesRoot_SSR + jk_crypto.md5(route) + path.extname(filePath);

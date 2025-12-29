@@ -4,8 +4,8 @@ import path from "node:path";
 import fs from "node:fs/promises";
 
 import * as jk_fs from "jopi-toolkit/jk_fs";
-import {getPackageJsonConfig, INLINE_MAX_SIZE_KO} from "./config.ts";
 import {getVirtualUrlForFile} from "./virtualUrl.ts";
+import {getWebSiteConfig} from "jopijs/coreconfig";
 
 export interface TransformResult {
     text: string;
@@ -111,8 +111,8 @@ async function canInline(filePath: string): Promise<boolean> {
     let ext = filePath.substring(idx);
     if (!gCanInlineExtensions.includes(ext)) return false;
 
-    const config = getPackageJsonConfig();
-    let maxSize = config ? config.inlineMaxSize_ko : INLINE_MAX_SIZE_KO;
+    const config = getWebSiteConfig();
+    let maxSize = config.inlineMaxSize_ko;
 
     let fileSize = Math.trunc(await jk_fs.getFileSize(filePath) / 1024);
     return fileSize <= maxSize;

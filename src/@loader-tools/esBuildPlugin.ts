@@ -1,10 +1,11 @@
 import {compileCssModule} from "jopijs/postcss";
 import {transformFile} from "./transform.ts";
-import {getPackageJsonConfig} from "./config.ts";
+import {getWebSiteConfig} from "jopijs/coreconfig";
 import path from "node:path";
 import fs from "node:fs";
 import * as jk_app from "jopi-toolkit/jk_app";
 import * as jk_fs from "jopi-toolkit/jk_fs";
+import {jopiTempDir} from "jopijs/coreconfig";
 
 // Note: Bun.js plugins are partially compatible with EsBuild modules.
 
@@ -72,8 +73,8 @@ function createJopiRawFile(targetFilePath: string, processType: string): any {
     //
     // Also, there are strange behaviors that we avoid when using this strategy.
 
-    let options = getPackageJsonConfig();
-    let tempDir = options?.bundlerOutputDir || path.join(jk_app.getTempDir(), "bunjs");
+    let options = getWebSiteConfig();
+    let tempDir = options?.bundlerOutputDir || path.join(jopiTempDir, "bunjs");
     fs.mkdirSync(tempDir, {recursive: true});
 
     let fileName = path.resolve(tempDir, (gNextTempFileName++) + ".jopiraw");
@@ -87,7 +88,7 @@ function createJopiRawFile(targetFilePath: string, processType: string): any {
 }
 
 export function installEsBuildPlugins(build: Bun.PluginBuilder, who: string) {
-    const isEsBuild = who=="esbuild";
+    const _isEsBuild = who=="esbuild";
     const isBun_default = who=="bun";
     const isBun_ReactHMR = who=="bun-react-hmr";
     const isBun = isBun_default || isBun_ReactHMR;
@@ -110,7 +111,7 @@ export function installEsBuildPlugins(build: Bun.PluginBuilder, who: string) {
 
     if (!isBun) {
         build.onResolve({filter: /\.(css|scss)$/}, (args) => {
-            let [filePath, option] = args.path.split('?');
+            let [filePath, _option] = args.path.split('?');
             const result = resolveAndCheckPath(filePath, path.dirname(args.importer));
 
             if (result.error) {

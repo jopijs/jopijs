@@ -97,6 +97,10 @@
       "bun": "./src/@generated/index.ts",
       "default": "./dist/@generated/index.js"
     },
+    "./coreconfig": {
+      "bun": "./src/@coreconfig/index.ts",
+      "default": "./dist/@coreconfig/index.js"
+    },
     "./loader": {
       "bun": "./src/@loader/index.ts",
       "default": "./dist/@loader/index.js"

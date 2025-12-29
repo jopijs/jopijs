@@ -36,7 +36,7 @@ export interface CreateBundleParams {
 }
 
 export async function createBundle(webSite: CoreWebSite): Promise<void> {
-    const genDir = getBundleDirPath(webSite);
+    const genDir = getBundleDirPath();
     const outputDir = jk_fs.join(genDir, "out");
 
     // Reset the dir.

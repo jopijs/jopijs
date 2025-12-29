@@ -1,11 +1,8 @@
-import path from "node:path";
-import * as jk_fs from "jopi-toolkit/jk_fs";
 import * as jk_app from "jopi-toolkit/jk_app";
+import * as jk_fs from "jopi-toolkit/jk_fs";
+import path from "node:path";
 
-/**
- * The value of the "jopi" entry in package.json
- */
-export interface PackageJson_jopi {
+export interface WebSiteConfig {
     /**
      * When importing a file, if this option is set, then
      * we will not return a file path on the filesystem
@@ -13,7 +10,7 @@ export interface PackageJson_jopi {
      *
      * The value here must be the PUBLIC url.
      */
-    webSiteUrl?: string;
+    webSiteUrl: string;
 
     /**
      * It's the url on which the website listens to if we don't use
@@ -23,14 +20,14 @@ export interface PackageJson_jopi {
      *
      * If not defined, take the value of webSiteUrl.
      */
-    webSiteListeningUrl?: string;
+    webSiteListeningUrl: string;
 
     /**
      * Is similar to 'webResourcesRoot' but for the server side resources.
      * The server will redirect the resources from this url to the final
      * url resolved once bundled.
      */
-    webResourcesRoot_SSR?: string;
+    webResourcesRoot_SSR: string;
 
     /**
      * Is used with `webSiteUrl` to known where
@@ -55,11 +52,13 @@ export interface PackageJson_jopi {
     bundlerOutputDir: string;
 }
 
-export const INLINE_MAX_SIZE_KO = 3;
+export function getWebSiteConfig(): WebSiteConfig {
+    if (gWebSiteConfig) return gWebSiteConfig;
+    gWebSiteConfig = calcWebSiteConfig();
+    return gWebSiteConfig!;
+}
 
-let gTransformConfig: PackageJson_jopi|undefined;
-
-export function getPackageJsonConfig(): PackageJson_jopi {
+function calcWebSiteConfig(): WebSiteConfig {
     function urlToPath(url: string) {
         let urlInfos = new URL(url);
         let port = urlInfos.port;
@@ -68,16 +67,17 @@ export function getPackageJsonConfig(): PackageJson_jopi {
         return (urlInfos.hostname + port).replaceAll(".", "_").replaceAll(":", "_");
     }
 
-    if (gTransformConfig!==undefined) return gTransformConfig;
     let pkgJsonFilePath = jk_app.findPackageJson();
 
-    let bundlerOutputDir = "./temp/.reactHydrateCache";
+    let bundlerOutputDir = jopiTempDir;
 
-    gTransformConfig =  {
-        webResourcesRoot: "_bundle",
-        inlineMaxSize_ko: INLINE_MAX_SIZE_KO,
-        bundlerOutputDir: ""
-    }
+    let conf_webResourcesRoot = "_bundle";
+    let conf_inlineMaxSize_ko = INLINE_MAX_SIZE_KO;
+
+    let conf_bundlerOutputDir: string|undefined;
+    let conf_webSiteUrl: string|undefined;
+    let conf_webSiteListeningUrl: string|undefined;
+    let conf_webResourcesRoot_SSR: string|undefined;
 
     if (pkgJsonFilePath) {
         try {
@@ -88,22 +88,22 @@ export function getPackageJsonConfig(): PackageJson_jopi {
                 let webSiteUrl = jopi.webSiteUrl;
                 if (webSiteUrl && !webSiteUrl.endsWith("/")) webSiteUrl += '/';
                 //
-                gTransformConfig.webSiteUrl = webSiteUrl;
+                conf_webSiteUrl = webSiteUrl;
 
                 let webSiteListeningUrl = jopi.webSiteListeningUrl;
                 if (webSiteListeningUrl && !webSiteListeningUrl.endsWith("/")) webSiteListeningUrl += '/';
                 //
-                gTransformConfig.webSiteListeningUrl = webSiteListeningUrl;
+                conf_webSiteListeningUrl = webSiteListeningUrl;
 
                 let webResourcesRoot = jopi.webResourcesRoot || "_bundle";
                 if (webResourcesRoot[0]==='/') webResourcesRoot = webResourcesRoot.substring(1);
                 if (!webResourcesRoot.endsWith("/")) webResourcesRoot += "/";
                 //
-                gTransformConfig.webResourcesRoot = webResourcesRoot;
-                gTransformConfig.webResourcesRoot_SSR = webResourcesRoot.slice(0, -1) + "_s/";
+                conf_webResourcesRoot = webResourcesRoot;
+                conf_webResourcesRoot_SSR = webResourcesRoot.slice(0, -1) + "_s/";
 
                 if (typeof(jopi.inlineMaxSize_ko)=="number") {
-                    gTransformConfig.inlineMaxSize_ko = jopi.inlineMaxSize_ko || INLINE_MAX_SIZE_KO;
+                    conf_inlineMaxSize_ko = jopi.inlineMaxSize_ko || INLINE_MAX_SIZE_KO;
                 }
 
                 if (webResourcesRoot.bundlerOutputDir) {
@@ -115,28 +115,41 @@ export function getPackageJsonConfig(): PackageJson_jopi {
     }
 
     if (process.env.JOPI_WEBSITE_URL) {
-        gTransformConfig.webSiteUrl = process.env.JOPI_WEBSITE_URL;
+        conf_webSiteUrl = process.env.JOPI_WEBSITE_URL;
     }
 
     if (process.env.JOPI_WEBSITE_LISTENING_URL) {
-        gTransformConfig.webSiteListeningUrl = process.env.JOPI_WEBSITE_LISTENING_URL;
+        conf_webSiteListeningUrl = process.env.JOPI_WEBSITE_LISTENING_URL;
     }
 
-    if (!gTransformConfig.webSiteListeningUrl) {
-        gTransformConfig.webSiteListeningUrl = gTransformConfig.webSiteUrl;
-    } else if (!gTransformConfig.webSiteUrl) {
-        gTransformConfig.webSiteUrl = gTransformConfig.webSiteListeningUrl;
+    if (!conf_webSiteListeningUrl) {
+        conf_webSiteListeningUrl = conf_webSiteUrl;
+    } else if (!conf_webSiteUrl) {
+        conf_webSiteUrl = conf_webSiteListeningUrl;
     }
 
-    if (bundlerOutputDir && gTransformConfig.webSiteUrl) {
+    if (bundlerOutputDir && conf_webSiteUrl) {
         if (path.sep !== "/") {
             bundlerOutputDir = bundlerOutputDir.replaceAll("/", path.sep);
         }
 
         bundlerOutputDir = path.resolve(bundlerOutputDir);
-        bundlerOutputDir = path.join(bundlerOutputDir, urlToPath(gTransformConfig.webSiteUrl));
-        gTransformConfig.bundlerOutputDir = bundlerOutputDir;
+        bundlerOutputDir = path.join(bundlerOutputDir, urlToPath(conf_webSiteUrl));
+        conf_bundlerOutputDir = bundlerOutputDir;
     }
 
-    return gTransformConfig!;
+    return {
+        webResourcesRoot: conf_webResourcesRoot,
+        inlineMaxSize_ko: conf_inlineMaxSize_ko,
+        bundlerOutputDir: conf_bundlerOutputDir!,
+        webSiteUrl: conf_webSiteUrl!,
+        webSiteListeningUrl: conf_webSiteListeningUrl!,
+        webResourcesRoot_SSR: conf_webResourcesRoot_SSR!,
+    }
 }
+
+jk_app.setTempDir(jk_fs.join(process.cwd(), ".jopijs"));
+
+const INLINE_MAX_SIZE_KO = 3;
+let gWebSiteConfig: WebSiteConfig|undefined;
+export const jopiTempDir = jk_app.getTempDir();

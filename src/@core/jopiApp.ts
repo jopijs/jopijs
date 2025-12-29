@@ -29,13 +29,13 @@ import {
 
 import type {PageCache} from "./caches/cache.ts";
 import {getServer, type SseEvent} from "./jopiServer.ts";
-import {getPackageJsonConfig} from "jopijs/loader-tools";
 import {initLinker} from "./linker.ts";
 import {addStaticEvent as linker_addStaticEvent} from "jopijs/linker";
 import {logServer_startApp} from "./_logs.ts";
 import type {LoggerGroupCallback} from "jopi-toolkit/jk_logs";
 import {setHttpProxyReadPause} from "./dataSources.ts";
 import {isDevelopment} from "jopi-toolkit/jk_process";
+import {getWebSiteConfig} from "jopijs/coreconfig";
 
 class JopiApp {
     private _isStartAppSet: boolean = false;
@@ -64,7 +64,7 @@ class JopiApp {
     }
 
     private getDefaultUrl(): string {
-        let config = getPackageJsonConfig();
+        let config = getWebSiteConfig();
 
         if (config.webSiteListeningUrl) return config.webSiteListeningUrl;
         if (config.webSiteUrl) return config.webSiteUrl;

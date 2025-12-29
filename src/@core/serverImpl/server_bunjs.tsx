@@ -190,7 +190,7 @@ export class BunJsServerInstanceBuilder implements ServerInstanceBuilder {
     }
 
     async buildPage(path: string, pageKey: string): Promise<void> {
-        const genDir = getBundleDirPath(this.webSite);
+        const genDir = getBundleDirPath();
         const htmlFilePath = jk_fs.join(genDir, pageKey + ".html");
 
         if (!this.serverRoutes[path]) this.serverRoutes[path] = {};

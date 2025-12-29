@@ -19,7 +19,6 @@ export * from "./jopiServer.ts";
 export * from "./browserCacheControl.ts";
 
 export * from "./dataSources.ts";
-
 export * from "./bundler/config.ts";
-export {type CreateBundleParams} from "./bundler/index.ts";
-export {type BundlerConfig} from "./bundler/index.ts";
+
+export {type CreateBundleParams, type BundlerConfig} from "./bundler/index.ts";
