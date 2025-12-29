@@ -2,6 +2,7 @@
 
 # <p align="center">JopiJS</p>
 
+
 <p align="center">
   <strong>The Next.js clone built for speed and simplicity.</strong><br />
   A Bun-native framework with full <strong>Node.js compatibility</strong> for high-performance React applications.
