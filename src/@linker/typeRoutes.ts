@@ -13,6 +13,7 @@ import type {RouteAttributes, RouteBindPageParams, RouteBindVerbParams} from "jo
 import {normalizeNeedRoleConditionName} from "./common.ts";
 import type {HttpMethod} from "jopijs";
 import {isBrowser} from "jopi-toolkit/jk_what";
+import {collector_declareUiComponent} from "./dataCollector.ts";
 
 export default class TypeRoutes extends AliasType {
     private sourceCode_header = `import {routeBindPage, routeBindVerb} from "jopijs/generated";`;
@@ -26,8 +27,17 @@ export default class TypeRoutes extends AliasType {
     private pageData: Record<string, RouteAttributes> = {};
 
     async beginGeneratingCode(writer: CodeGenWriter): Promise<void> {
-        await this.genCode_AliasRoutes(writer);
+        await this.genCode_RouterFile(writer);
         await this.genCode_DeclareServerRoutes(writer);
+        this.genCode_DeclarePages();
+    }
+
+    private genCode_DeclarePages() {
+        for (let item of Object.values(this.registry)) {
+            if (item.verb==="PAGE") {
+                collector_declareUiComponent(item.filePath);
+            }
+        }
     }
 
     private async genCode_DeclareServerRoutes(writer: CodeGenWriter) {
@@ -95,8 +105,9 @@ export default class TypeRoutes extends AliasType {
 
     /**
      * Generate the file _jopiLinkerGen/routes/index.ts
+     * which allows knowing which route is handled by which component.
      */
-    private async genCode_AliasRoutes(writer: CodeGenWriter) {
+    private async genCode_RouterFile(writer: CodeGenWriter) {
         const myDir = jk_fs.join(writer.dir.output_src, "routes");
 
         const generateRoutes = (sources: { header: string, body: string }, browserSide: boolean, forJavaScript: boolean) => {

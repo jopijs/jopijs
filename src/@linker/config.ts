@@ -10,6 +10,7 @@ import {TypeVariants} from "./typeVariants.ts";
 import ModPackageJson from "./modPackageJson.ts";
 import {TypeTranslation} from "./typeTranslation.ts";
 import {TypeLib} from "./typeLib.ts";
+import {TypeUI} from "./typeUI";
 
 // Here it's ASYNC.
 let gServerInstallFileTemplate = `__AI_INSTRUCTIONS
@@ -38,11 +39,11 @@ export function getDefaultLinkerConfig(): LinkerConfig {
         aliasTypes: [
             new TypeRoutes("routes", "root"),
 
-            new TypeInDirChunk("ui"),
             new TypeInDirChunk("schemes"),
             new TypeInDirChunk("hooks"),
             new TypeInDirChunk("res"),
             //
+            new TypeUI("ui"),
             new TypeLib("lib"),
             new TypeUiComposite("uiComposites"),
             new TypeEvents("events"),

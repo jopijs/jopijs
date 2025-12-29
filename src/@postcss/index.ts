@@ -8,10 +8,10 @@ import * as jk_fs from "jopi-toolkit/jk_fs";
 import path from "node:path";
 import tailwindPostcss from "@tailwindcss/postcss";
 import type {CreateBundleParams} from "jopijs";
+import {getModulesList} from "jopijs/modules";
+import * as jk_events from "jopi-toolkit/jk_events";
 
-let gGlobalCssContent: string | undefined;
-
-//region Tailwind
+//region global.css
 
 /**
  * Remove '@import' already found into globalCss
@@ -65,17 +65,17 @@ export async function getGlobalCssFileContent(): Promise<string> {
         globalCss += "\n\n/* --- Compiled from ./src/global.css --- */\n\n" + content;
     }
 
-    for (let item of dirItems) {
-        if (!item.isDirectory) continue;
-        if (!item.name.startsWith("mod_")) continue;
-        let globalCssPath = jk_fs.join(item.fullPath, "global.css");
+    let modulesList = await getModulesList();
+
+    for (let mod of Object.values(modulesList)) {
+        let globalCssPath = jk_fs.join(mod.fullPath, "global.css");
 
         let content = await jk_fs.readTextFromFile(globalCssPath);
 
         if (content) {
             content = removeImportDoublon(globalCss, content);
 
-            globalCss += `\n\n/* --- Compiled from ./src/${item.name}/global.css --- */`
+            globalCss += `\n\n/* --- Compiled from ./src/${mod.modName}/global.css --- */`
             globalCss += "\n" + content;
         }
     }
@@ -141,6 +141,8 @@ async function compileGlobalCss(tailwindPlugin: postcss.AcceptedPlugin, fromDir:
     }
 }
 
+let gGlobalCssContent: string | undefined;
+
 //endregion
 
 //region CSS Modules
@@ -158,6 +160,8 @@ export async function compileCssModule(filePath: string): Promise<string> {
         if (!source) throw new Error(`Source not found for file not found: ${filePath}`);
         filePath = source;
     }
+
+    let tailwindFilesToScan = gCreateBundleParams?.entryPoints || [];
 
     const ext = path.extname(filePath).toLowerCase();
 
@@ -209,3 +213,9 @@ function scssToCss(filePath: string): any {
 }
 
 //endregion
+
+jk_events.addListener("@jopi.bundler.createBundle", jk_events.EventPriority.veryLow, async (params: CreateBundleParams) => {
+    gCreateBundleParams = params;
+});
+
+let gCreateBundleParams: CreateBundleParams|undefined;

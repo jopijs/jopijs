@@ -242,13 +242,19 @@ export class TypeList extends AliasType {
         distCode += toAdd;
 
         let fileName = key.substring(key.indexOf("!") + 1);
+        const fileInnerPath = jk_fs.join(outDir_innerPath, fileName);
 
         await writer.writeCodeFile({
-            fileInnerPath: jk_fs.join(outDir_innerPath, fileName),
+            fileInnerPath,
             declarationFile: this.codeGen_createDeclarationTypes(),
             srcFileContent: srcCode,
             distFileContent: distCode
         });
+
+        this.onSourceFileAdded(fileInnerPath);
+    }
+
+    protected onSourceFileAdded(fileInnerPath: string) {
     }
 
     protected codeGen_generateImports() {
@@ -335,12 +341,18 @@ export class TypeInDirChunk extends AliasType {
         let entryPoint = jk_fs.getRelativePath(outDir, item.entryPoint);
 
         const theImports = this.generateImport(writer, entryPoint);
+        const fileInnerPath = jk_fs.join(this.getGenOutputDir(item), targetName);
 
         await writer.writeCodeFile({
-            fileInnerPath: jk_fs.join(this.getGenOutputDir(item), targetName),
+            fileInnerPath,
             srcFileContent: theImports.ts,
             distFileContent: theImports.js
         });
+
+        this.onSourceFileAdded(fileInnerPath);
+    }
+
+    protected onSourceFileAdded(fileInnerPath: string) {
     }
 
     protected generateImport(writer: CodeGenWriter, entryPoint: string): {ts: string, js: string} {

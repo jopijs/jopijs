@@ -7,6 +7,7 @@ import * as jk_app from "jopi-toolkit/jk_app";
 import {PriorityLevel} from "jopi-toolkit/jk_tools";
 import {getModulesList, setModulesSourceDir} from "jopijs/modules";
 import {JopiModuleInfo} from "../@modules/index.ts";
+import {collector_begin, collector_end} from "./dataCollector.ts";
 export {PriorityLevel} from "jopi-toolkit/jk_tools";
 
 const LOG = false;
@@ -870,6 +871,10 @@ export function getServerInstallScript() {
     return jk_fs.join(gDir_outputDst, "installServer.js");
 }
 
+export function innerPathToAbsolutePath_src(innerPath: string): string {
+    return jk_fs.join(gDir_outputSrc, innerPath);
+}
+
 /**
  * Allows detecting if the project is a TypeScript-only project.
  * Which means:
@@ -907,6 +912,8 @@ export async function compile(importMeta: any, config: LinkerConfig, isRefresh =
 
         return undefined;
     }
+
+    collector_begin();
 
     gIsTypeScriptOnly = detectIfTypeScriptOnly(importMeta);
 
@@ -963,6 +970,8 @@ export async function compile(importMeta: any, config: LinkerConfig, isRefresh =
     }
 
     await processProject();
+
+    await collector_end(gCodeGenWriter);
 }
 
 export interface LinkerConfig {
