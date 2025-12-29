@@ -3,7 +3,7 @@ import * as jk_fs from "jopi-toolkit/jk_fs";
 import * as n_what from "jopi-toolkit/jk_what";
 import type {CreateBundleParams} from "jopijs";
 import {jopiReplaceText, jopiLoaderPlugin, jopiDetectRebuild} from "./plugins.ts";
-import {applyTailwindProcessor} from "jopijs/postcss";
+import {createFileTailwindCss} from "jopijs/postcss";
 
 export interface EsBuildParams extends CreateBundleParams {
     metaDataFilePath: string;
@@ -86,7 +86,7 @@ export async function esBuildBundle(params: EsBuildParams) {
         buildOptions.plugins?.push(jopiDetectRebuild(params));
     }
 
-    await applyTailwindProcessor(params);
+    await createFileTailwindCss(params);
 
     const context = await esbuild.context(buildOptions);
     let result: BuildResult = await context.rebuild();

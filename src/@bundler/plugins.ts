@@ -1,7 +1,7 @@
 import {type Plugin} from "esbuild";
 import fs from "node:fs/promises";
 import path from "node:path";
-import {applyTailwindProcessor} from "jopijs/postcss";
+import {createFileTailwindCss} from "jopijs/postcss";
 import * as jk_events from "jopi-toolkit/jk_events";
 import type {EsBuildParams} from "./esbuild.ts";
 import {installEsBuildPlugins} from "jopijs/loader-tools";
@@ -149,7 +149,7 @@ export function jopiDetectRebuild(params: EsBuildParams): Plugin {
                 // - Global mode: never occurs.
                 //
                 if (params.requireTailwind) {
-                    await applyTailwindProcessor(params);
+                    await createFileTailwindCss(params);
                 }
 
                 if (params.singlePageMode) {
