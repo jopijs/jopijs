@@ -75,6 +75,8 @@ export default class TypeRoutes extends AliasType {
 
             for (let route of Object.keys(this.pageData)) {
                 let routeAttributes = this.pageData[route];
+                let srcFilePath = jk_fs.getRelativePath(this.cwdDir, routeAttributes.pageData!);
+
                 let relPath = jk_fs.getRelativePath(writer.dir.output_dir, routeAttributes.pageData!);
                 relPath = writer.toPathForImport(relPath, false);
 
@@ -88,7 +90,7 @@ export default class TypeRoutes extends AliasType {
                 if (allRoles) allRoles.forEach(r => { if (!roles.includes(r)) roles.push(r) });
 
                 this.sourceCode_header += `\nimport pageData${count} from "${relPath}";`;
-                this.sourceCode_body += `\n    setPageDataProvider(webSite, ${JSON.stringify(route)}, ${roles.length ? JSON.stringify(roles) : "undefined"}, pageData${count}, ${JSON.stringify(routeAttributes.pageData)});`;
+                this.sourceCode_body += `\n    setPageDataProvider(webSite, ${JSON.stringify(route)}, ${roles.length ? JSON.stringify(roles) : "undefined"}, pageData${count}, ${JSON.stringify(srcFilePath)});`;
 
                 count++;
             }
@@ -278,10 +280,6 @@ export function error401() {
         let routeId = "r" + (this.routeCount++);
         let srcFilePath = jk_fs.getRelativePath(this.cwdDir, filePath);
 
-        filePath = jk_app.getCompiledFilePathFor(filePath);
-        let distFilePath = jk_fs.getRelativePath(this.outputDir, filePath);
-        distFilePath = writer.toPathForImport(distFilePath, false);
-
         const routeBindingParams: RouteBindPageParams = {
             route,
             filePath: srcFilePath,
@@ -291,24 +289,30 @@ export function error401() {
             }
         };
 
+        filePath = jk_app.getCompiledFilePathFor(filePath);
+        let distFilePath = jk_fs.getRelativePath(this.outputDir, filePath);
+        distFilePath = writer.toPathForImport(distFilePath, false);
+
         this.sourceCode_header += `\nimport c_${routeId} from "${distFilePath}";`;
         this.sourceCode_body += `\n    await routeBindPage(webSite, c_${routeId}, ${JSON.stringify(routeBindingParams)});`
     }
 
     private bindVerb(writer: CodeGenWriter, verb: string, route: string, filePath: string, attributes: RouteAttributes) {
-        let routeId = "r" + (this.routeCount++);
-        let relPath = jk_fs.getRelativePath(this.outputDir, filePath);
-        relPath = writer.toPathForImport(relPath, false);
+        let srcFilePath = jk_fs.getRelativePath(this.cwdDir, filePath);
 
         const routeBindingParams: RouteBindVerbParams = {
             verb: verb as HttpMethod,
             route,
-            filePath,
+            filePath: srcFilePath,
             attributes: {
                 needRoles: attributes.needRoles,
                 disableCache: attributes.disableCache
             }
         };
+
+        let routeId = "r" + (this.routeCount++);
+        let relPath = jk_fs.getRelativePath(this.outputDir, filePath);
+        relPath = writer.toPathForImport(relPath, false);
 
         this.sourceCode_header += `\nimport f_${routeId} from "${relPath}";`;
         this.sourceCode_body += `\n    await routeBindVerb(webSite, f_${routeId}, ${JSON.stringify(routeBindingParams)});`
