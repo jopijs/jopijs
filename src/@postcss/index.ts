@@ -47,8 +47,6 @@ export async function getGlobalCssFileContent(): Promise<string> {
     if (gGlobalCssContent) return gGlobalCssContent;
 
     let rootDir = jk_fs.dirname(jk_app.findPackageJson());
-    let dirItems = await jk_fs.listDir(jk_fs.join(rootDir, "src"));
-
     let globalCss = `/* Warning: generated file */`;
 
     let coreGlobalCssPath = jk_fs.join(rootDir, "global.css");

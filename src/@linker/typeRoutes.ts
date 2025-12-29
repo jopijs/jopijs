@@ -104,7 +104,7 @@ export default class TypeRoutes extends AliasType {
     }
 
     /**
-     * Generate the file _jopiLinkerGen/routes/index.ts
+     * Generate the file .jopi-codegen/routes/index.ts
      * which allows knowing which route is handled by which component.
      */
     private async genCode_RouterFile(writer: CodeGenWriter) {

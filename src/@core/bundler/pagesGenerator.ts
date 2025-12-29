@@ -96,7 +96,7 @@ async function rebuildPages(p: CreateBundleParams) {
     const installScript = getBrowserInstallScript();
 
     if (isReactHMR()) {
-        let globalCss = await getGlobalCssFileContent(p.config);
+        let globalCss = await getGlobalCssFileContent();
         await jk_fs.writeTextToFile(jk_fs.join(p.genDir, "tailwind-hmr.css"), globalCss);
     }
 

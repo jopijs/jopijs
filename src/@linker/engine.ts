@@ -194,19 +194,19 @@ async function generateAll() {
 
 interface WriteCodeFileParams {
     /**
-     * The path into the directory _jopiLinkerGen
+     * The path into the directory .jopi-codegen
      */
     fileInnerPath: string;
 
     /**
      * What to write into this file.
-     * Here it's: src/_jopiLinkerGen/fileInnerPath
+     * Here it's: src/.jopi-codegen/fileInnerPath
      */
     srcFileContent: string;
 
     /**
      * What to write into this file.
-     * Here it's: dist/_jopiLinkerGen/fileInnerPath
+     * Here it's: dist/.jopi-codegen/fileInnerPath
      */
     distFileContent?: string;
 
@@ -242,8 +242,8 @@ export class CodeGenWriter {
     async writeCodeFile(params: WriteCodeFileParams) {
         // The file must:
         // - Be a JavaScript file.
-        // - Be written into ./src/_jopiLinkerGen
-        // - Be written into ./dst/_jopiLinkerGen  (only with Node.js)
+        // - Be written into ./src/.jopi-codegen
+        // - Be written into ./dst/.jopi-codegen  (only with Node.js)
 
         await writeTextToFileIfMismatch(jk_fs.join(gDir_outputSrc, params.fileInnerPath + ".ts"), params.srcFileContent);
 
@@ -924,8 +924,8 @@ export async function compile(importMeta: any, config: LinkerConfig, isRefresh =
     gDir_ProjectSrc = jk_fs.join(gDir_ProjectRoot, "src");
     gDir_ProjectDist = jk_fs.join(gDir_ProjectRoot, "dist");
 
-    gDir_outputSrc = jk_fs.join(gDir_ProjectSrc, "_jopiLinkerGen");
-    gDir_outputDst = jk_fs.join(gDir_ProjectDist, "_jopiLinkerGen");
+    gDir_outputSrc = jk_fs.join(gDir_ProjectSrc, ".jopi-codegen");
+    gDir_outputDst = jk_fs.join(gDir_ProjectDist, ".jopi-codegen");
 
     gCodeGenWriter = new CodeGenWriter({
         project: gDir_ProjectRoot,

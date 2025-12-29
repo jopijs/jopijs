@@ -312,7 +312,7 @@ export async function jopiLauncherTool(jsEngine: string) {
 
         const watcher = new SourceChangesWatcher({
             watchDirs: [path.join(process.cwd(), "src")],
-            excludeDir: [path.join(process.cwd(), "src", "_jopiLinkerGen")],
+            excludeDir: [path.join(process.cwd(), "src", ".jopi-codegen")],
             isDev: true, env, cmd, args, mustLog: mustLog,
             jsEngine
         });
