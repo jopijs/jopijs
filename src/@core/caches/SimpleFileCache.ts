@@ -136,13 +136,7 @@ export class SimpleFileCache implements PageCache {
 
     getCacheEntryIterator() {
         function getCacheEntryFrom(filePath: string): CacheEntry|undefined {
-            try {
-                return JSON.parse(jk_fs.readTextFromFileSync(filePath));
-            }
-            catch {
-                // We are here if the file doesn't exist.
-                return undefined;
-            }
+            return jk_fs.readJsonFromFileSync<CacheEntry>(filePath);
         }
 
         const rootDir = this.rootDir;
