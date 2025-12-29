@@ -9,7 +9,7 @@ import {SourceChangesWatcher} from "./sourceChangesWatcher.ts";
 
 // *************************
 const FORCE_LOG = false;
-const VERSION = "20251118a";
+const VERSION = "20251229";
 // *************************
 
 let mustLog = false; // Set env var JOPI_LOG to 1 to enable.
@@ -100,48 +100,6 @@ export async function jopiLauncherTool(jsEngine: string) {
         // Nothing to do. Keep for future usages.
     }
 
-    function addKnownPackages(toPreload: string[], toSearch: string[]) {
-        if (!toSearch) return;
-
-        for (const key in toSearch) {
-            if (knowPackagesToPreload.includes(key)) {
-                toPreload.push(key);
-            }
-        }
-    }
-
-    function getPreloadModules() {
-        const packageJsonPath = jk_app.findPackageJson();
-
-        if (!packageJsonPath) {
-            return [];
-        }
-
-        try {
-            const packageContent = fs.readFileSync(packageJsonPath, 'utf8');
-            const packageData = JSON.parse(packageContent);
-
-            let toPreload: string[] = [];
-
-            let jopi = packageData.jopi;
-
-            if (jopi && jopi.preload) {
-                if (Array.isArray(jopi.preload)) {
-                    toPreload = [...toPreload, ...jopi.preload];
-                }
-            }
-
-            addKnownPackages(toPreload, packageData["devDependencies"]);
-            addKnownPackages(toPreload, packageData["dependencies"]);
-
-            return toPreload;
-
-        } catch {
-            // Ignore parsing errors and continue without preload modules.
-            return [];
-        }
-    }
-
     async function getConfiguration(): Promise<WatchInfos> {
         let res: WatchInfos = {
             needHot: false,
@@ -152,7 +110,7 @@ export async function jopiLauncherTool(jsEngine: string) {
         let pckJson = jk_app.findPackageJson();
 
         if (pckJson) {
-            if (mustLog) console.log("JopiN - package.json file found at", pckJson);
+            if (mustLog) console.log("JopiJS - package.json file found at", pckJson);
 
             res.packageJsonFilePath = pckJson;
 
@@ -184,7 +142,7 @@ export async function jopiLauncherTool(jsEngine: string) {
                 console.error(e);
             }
         } else if (process.env.NODE_ENV !== 'production') {
-            console.warn("JopiN - package.json not found, can't enable file watching");
+            console.warn("JopiJS - package.json not found, can't enable file watching");
         }
 
         let watch = process.env.WATCH;
@@ -212,16 +170,14 @@ export async function jopiLauncherTool(jsEngine: string) {
     mustLog = process.env.JOPI_LOG==="1" || FORCE_LOG;
 
     if (mustLog) {
-        console.log("JopiN Lib Version:", VERSION, " - engine:", jsEngine);
+        console.log("JopiJS Lib Version:", VERSION, " - engine:", jsEngine);
     }
-
-    const knowPackagesToPreload = ["jopijs"];
 
     // Here first is node.js, second is jopi. (it's du to shebang usage).
     let argv = process.argv.slice(2);
 
     if (!argv.length) {
-        console.log("jopi-loader "+ VERSION +" installed at ", import.meta.dirname);
+        console.log("JopiJS loader v"+ VERSION +" installed at ", import.meta.dirname);
         return;
     }
 
@@ -243,23 +199,20 @@ export async function jopiLauncherTool(jsEngine: string) {
         return arg !== "--watch-path";
     });
 
-    let toPreload = getPreloadModules();
-    toPreload = ["jopijs/loader", ...toPreload];
-
-    let preloadArgs: string[] = [];
-
-    toPreload.forEach(pkg => {
-        preloadArgs.push(importFlag);
-        preloadArgs.push(pkg);
-    });
+    const preloadArgs: string[] = [importFlag, "jopijs/loader"];
 
     if (jsEngine==="node") {
+        // Some things don't work with the new loader system.
+        // It's why we use a mix old/next system.
+        //
         preloadArgs.push("--loader", "jopijs/loader/loader.mjs");
+
+        // Avoid some warning.
         preloadArgs.push("--no-warnings");
     }
 
     let cmd = jk_os.whichSync(jsEngine, jsEngine)!;
-    if (mustLog) console.log("jopiN - Using " + jsEngine + " from:", cmd);
+    if (mustLog) console.log("JopiJS - Loader using " + jsEngine + " from:", cmd);
     let args = [...preloadArgs, ...argv];
 
     let config = await getConfiguration();
@@ -269,7 +222,6 @@ export async function jopiLauncherTool(jsEngine: string) {
     let enableFileWatcher = false;
 
     if (config.needWatch || config.needUiWatch) {
-        env["JOPIN_BROWSER_REFRESH_ENABLED"] = "1";
         if (config.needWatch) env["JOPI_DEV"] = "1";
         if (config.needUiWatch) env["JOPI_DEV_UI"] = "1";
 
@@ -280,10 +232,9 @@ export async function jopiLauncherTool(jsEngine: string) {
                 toPrepend.push("--hot");
             }
             else {
-                //toPrepend.push("--watch");
                 enableFileWatcher = true;
                 env["JOPI_CUSTOM_WATCHER"] = "1";
-                jk_term.logBlue("JopiN - Source watching enabled.");
+                jk_term.logBlue("JopiJS - Source watching enabled.");
             }
 
             args = [...toPrepend, ...args];
@@ -291,8 +242,8 @@ export async function jopiLauncherTool(jsEngine: string) {
     }
 
     if (mustLog) {
-        console.log("jopiN - Use current working dir:", cwd);
-        console.log("jopiN - Executing:", cmd, ...args);
+        console.log("JopiJS - Use current working dir:", cwd);
+        console.log("JopiJS - Executing:", cmd, ...args);
     }
 
     // If dev-mode, then execute the scripts
@@ -364,9 +315,9 @@ function killAll(signalName: NodeJS.Signals) {
 function spawnChild(params: SpawnParams): void {
     let useShell = params.cmd.endsWith('.cmd') || params.cmd.endsWith('.bat') || params.cmd.endsWith('.sh');
 
-    if (mustLog) {
+    /*if (mustLog) {
         console.log("spawnChild", {cmd: params.cmd, args: params.args, cwd: process.cwd(), useShell})
-    }
+    }*/
 
     const child = spawn(params.cmd, params.args, {
         stdio: "inherit", shell: useShell,
