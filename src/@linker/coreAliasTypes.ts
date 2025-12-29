@@ -8,7 +8,7 @@ import {
     PriorityLevel,
     type RegistryItem,
     AliasType,
-    CodeGenWriter, priorityNameToLevel
+    CodeGenWriter, priorityNameToLevel, type ScanDirItemsParams
 } from "./engine.ts";
 
 //region TypeList
@@ -293,7 +293,7 @@ export class TypeInDirChunk extends AliasType {
     }
 
     async processDir(p: { moduleDir: string; typeDir: string; genDir: string; }) {
-        await this.dir_recurseOnDir({
+        const rules = this.hookProcessDirRules({
             dirToScan: p.typeDir,
             expectFsType: "dir",
 
@@ -304,13 +304,13 @@ export class TypeInDirChunk extends AliasType {
                 requirePriority: true,
 
                 filesToResolve: {
-                    //"info": ["info.json"],
                     "entryPoint": ["index.tsx", "index.ts"]
                 },
 
                 transform: async (props) => {
                     if (!props.resolved?.entryPoint) {
-                        throw this.declareError("No 'index.ts' or 'index.tsx' file found", props.itemPath);
+                        let expected = rules.rules!.filesToResolve!["entryPoint"].join("' or '")
+                        throw this.declareError(`No '${expected}' file found`, props.itemPath);
                     }
 
                     const chunk: TypeInDirChunk_Item = {
@@ -333,6 +333,8 @@ export class TypeInDirChunk extends AliasType {
                 }
             }
         });
+
+        await this.dir_recurseOnDir(rules);
     }
 
     async generateCodeForItem(writer: CodeGenWriter, key: string, item: TypeInDirChunk_Item) {
@@ -363,6 +365,10 @@ export class TypeInDirChunk extends AliasType {
 
     protected getGenOutputDir(_chunk: TypeInDirChunk_Item) {
         return this.typeName;
+    }
+
+    protected hookProcessDirRules(rules: ScanDirItemsParams) {
+        return rules;
     }
 }
 
