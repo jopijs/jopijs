@@ -7,6 +7,8 @@ import * as jk_fs from "jopi-toolkit/jk_fs";
 import path from "node:path";
 import type {CreateBundleParams} from "jopijs";
 import {getTailwindPlugin} from "./tailwinPlugin.ts";
+import {execConsoleMuted} from "./tools";
+import * as jk_term from "jopi-toolkit/jk_term";
 
 /**
  * Use Tailwind to compile the file global.css from the bundler dir
@@ -32,8 +34,8 @@ export async function tailwindTransformGlobalCss(params: CreateBundleParams): Pr
     await jk_fs.writeTextToFile(outFilePath, "");
 
     if (!params.config.tailwind.disable) {
-        const tailwindPlugin = getTailwindPlugin();
-        let postCss = await mergeGlobalCssFileContent(tailwindPlugin, params.outputDir);
+        const tailwindPlugin = getTailwindPlugin(true);
+        let postCss = await tailwindCompile(tailwindPlugin, params.outputDir);
         if (postCss) await append(postCss);
     }
 }
@@ -44,7 +46,7 @@ export async function tailwindTransformGlobalCss(params: CreateBundleParams): Pr
 export async function getMergedGlobalCssFileContent(): Promise<string> {
     if (gGlobalCssContent) return gGlobalCssContent;
 
-    let rootDir = jk_fs.dirname(jk_app.findPackageJson());
+    const rootDir = jk_fs.dirname(jk_app.findPackageJson());
     let globalCss = `/* Warning: generated file */`;
 
     let coreGlobalCssPath = jk_fs.join(rootDir, "global.css");
@@ -76,12 +78,23 @@ export async function getMergedGlobalCssFileContent(): Promise<string> {
         }
     }
 
-    await jk_fs.writeTextToFile(jk_fs.join(rootDir, "global.compiled.css"), globalCss);
+    gGlobalCssFilePath = jk_fs.join(rootDir, "global.compiled.css");
+    await jk_fs.writeTextToFile(gGlobalCssFilePath, globalCss);
 
     return gGlobalCssContent = globalCss;
 }
 //
 let gGlobalCssContent: string | undefined;
+
+export function getGlobalCssFilePath() {
+    if (!gGlobalCssFilePath) {
+        gGlobalCssFilePath = jk_fs.join(jk_fs.dirname(jk_app.findPackageJson()), "global.compiled.css");
+    }
+
+    return gGlobalCssFilePath;
+}
+//
+let gGlobalCssFilePath: string | undefined;
 
 /**
  * Remove '@import' already found into globalCss
@@ -113,25 +126,33 @@ function removeImportDoublon(globalCss: string, content: string): string {
     return lines.join("\n");
 }
 
-/**
- * Generate Tailwind CSS file a list of source files and returns the CSS or undefined.
- */
-async function mergeGlobalCssFileContent(tailwindPlugin: postcss.AcceptedPlugin, fromDir: string): Promise<string|undefined> {
+async function tailwindCompile(tailwindPlugin: postcss.AcceptedPlugin, fromDir: string): Promise<string|undefined> {
     let plugins: postcss.AcceptedPlugin[] = [tailwindPlugin];
     let globalCssContent = await getMergedGlobalCssFileContent();
+    const processor = postcss(plugins);
 
     try {
-        const processor = postcss(plugins);
+        let css = "";
 
-        const result = await processor.process(globalCssContent, {
-            // Setting 'from' allows resolving correctly the node_modules resolving.
-            from: fromDir
+        await execConsoleMuted(async () => {
+            const result = await processor.process(globalCssContent, {
+                // Setting 'from' allows resolving correctly the node_modules resolving.
+                from: fromDir
+            });
+
+            css = result.css;
         });
 
-        return result.css;
+        return css;
     }
     catch (e: any) {
-        console.error("Error while compiling for Tailwind:", e);
+        console.log(jk_term.textBgRed("JopiJS - Failed compiling global.css file"));
+        console.log("> File: " + jk_fs.pathToFileURL(getGlobalCssFilePath()));
+
+        if (e.name==="CssSyntaxError") {
+            console.log("> Tailwind say " + jk_term.textRed(e.reason));
+        }
+
         return undefined;
     }
 }
