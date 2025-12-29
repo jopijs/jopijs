@@ -58,6 +58,14 @@ export function getWebSiteConfig(): WebSiteConfig {
     return gWebSiteConfig!;
 }
 
+export function getCodeGenSourceDir() {
+    if (!gCodeGenSourceDir) {
+        gCodeGenSourceDir = jk_fs.join(process.cwd(), "src", ".jopi-codegen");
+    }
+
+    return gCodeGenSourceDir;
+}
+
 function calcWebSiteConfig(): WebSiteConfig {
     function urlToPath(url: string) {
         let urlInfos = new URL(url);
@@ -81,7 +89,7 @@ function calcWebSiteConfig(): WebSiteConfig {
 
     if (pkgJsonFilePath) {
         try {
-            let json = JSON.parse(jk_fs.readTextFromFileSync(pkgJsonFilePath));
+            let json = jk_fs.readJsonFromFileSync(pkgJsonFilePath);
             let jopi = json.jopi;
 
             if (jopi) {
@@ -148,8 +156,9 @@ function calcWebSiteConfig(): WebSiteConfig {
     }
 }
 
-jk_app.setTempDir(jk_fs.join(process.cwd(), ".jopijs"));
+export const jopiTempDir = jk_fs.join(process.cwd(), ".jopijs");
+jk_app.setTempDir(jopiTempDir);
 
 const INLINE_MAX_SIZE_KO = 3;
 let gWebSiteConfig: WebSiteConfig|undefined;
-export const jopiTempDir = jk_app.getTempDir();
+let gCodeGenSourceDir: string|undefined;
