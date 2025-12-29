@@ -7,13 +7,13 @@ import * as jk_timer from "jopi-toolkit/jk_timer";
 import * as jk_term from "jopi-toolkit/jk_term";
 import * as jk_events from "jopi-toolkit/jk_events";
 
-import {type FetchOptions, type ServerDownResult, ServerFetch, type ServerFetchOptions} from "./serverFetch.ts";
-import {getLetsEncryptCertificate, type LetsEncryptParams, type OnTimeoutError} from "./letsEncrypt.ts";
-import {type UserInfos_WithLoginPassword, UserStore_WithLoginPassword} from "./userStores.ts";
-import {getBundlerConfig, type PostCssInitializer} from "./bundler/index.ts";
-import {getInMemoryCache, initMemoryCache, type InMemoryCacheOptions} from "./caches/InMemoryCache.ts";
-import {SimpleFileCache} from "./caches/SimpleFileCache.ts";
-import {JopiRequest} from "./jopiRequest.ts";
+import { type FetchOptions, type ServerDownResult, ServerFetch, type ServerFetchOptions } from "./serverFetch.ts";
+import { getLetsEncryptCertificate, type LetsEncryptParams, type OnTimeoutError } from "./letsEncrypt.ts";
+import { type UserInfos_WithLoginPassword, UserStore_WithLoginPassword } from "./userStores.ts";
+import { getBundlerConfig, type PostCssInitializer } from "./bundler/index.ts";
+import { getInMemoryCache, initMemoryCache, type InMemoryCacheOptions } from "./caches/InMemoryCache.ts";
+import { SimpleFileCache } from "./caches/SimpleFileCache.ts";
+import { JopiRequest } from "./jopiRequest.ts";
 
 import {
     type CacheRules,
@@ -27,20 +27,38 @@ import {
     WebSiteOptions
 } from "./jopiCoreWebSite.tsx";
 
-import type {PageCache} from "./caches/cache.ts";
-import {getServer, type SseEvent} from "./jopiServer.ts";
-import {initLinker} from "./linker.ts";
-import {addStaticEvent as linker_addStaticEvent} from "jopijs/linker";
-import {logServer_startApp} from "./_logs.ts";
-import type {LoggerGroupCallback} from "jopi-toolkit/jk_logs";
-import {setHttpProxyReadPause} from "./dataSources.ts";
-import {isDevelopment} from "jopi-toolkit/jk_process";
-import {getWebSiteConfig} from "jopijs/coreconfig";
+import type { PageCache } from "./caches/cache.ts";
+import { getServer, type SseEvent } from "./jopiServer.ts";
+import { initLinker } from "./linker.ts";
+import { addStaticEvent as linker_addStaticEvent } from "jopijs/linker";
+import { logServer_startApp } from "./_logs.ts";
+import type { LoggerGroupCallback } from "jopi-toolkit/jk_logs";
+import { setHttpProxyReadPause } from "./dataSources.ts";
+import { isDevelopment } from "jopi-toolkit/jk_process";
+import { getWebSiteConfig } from "jopijs/coreconfig";
 
+/**
+ * The main application class for JopiJS.
+ * Responsible for initializing the environment and starting the web server.
+ */
 class JopiApp {
     private _isStartAppSet: boolean = false;
 
-    startApp(importMeta: any, f: (webSite: JopiWebSiteBuilder) => void|Promise<void>): void {
+    /**
+     * Initializes and starts the JopiJS application.
+     * 
+     * @param importMeta The `import.meta` of the main application file.
+     * @param f A configuration function that receives a `JopiWebSiteBuilder`.
+     * @throws {Error} if called more than once.
+     * 
+     * @example
+     * ```ts
+     * jopiApp.startApp(import.meta, (app) => {
+     *   app.add_specialPageHandler().on_404_NotFound(req => req.res_textResponse("Oops!", 404));
+     * });
+     * ```
+     */
+    startApp(importMeta: any, f: (webSite: JopiWebSiteBuilder) => void | Promise<void>): void {
         const doStart = async () => {
             await jk_app.waitServerSideReady();
             await jk_app.declareAppStarted();
@@ -75,10 +93,17 @@ class JopiApp {
 
 let gMetricsOnWebsiteStarted: LoggerGroupCallback = logServer_startApp.beginInfo("Starting Application");
 
+/**
+ * Singleton instance of the JopiJS Application.
+ */
 export const jopiApp = new JopiApp();
 
 //region CreateServerFetch
 
+/**
+ * Fluent builder for creating internal server-to-server fetch configurations.
+ * Used for load-balancing and proxying to backend data sources.
+ */
 class CreateServerFetch<T, R extends CreateServerFetch_NextStep<T>> {
     protected options?: ServerFetchOptions<T>;
 
@@ -87,9 +112,12 @@ class CreateServerFetch<T, R extends CreateServerFetch_NextStep<T>> {
     }
 
     /**
-     * The server will be call with his IP and not his hostname
-     * which will only be set in the headers. It's required when
-     * the DNS doesn't pinpoint to the god server.
+     * Resolves the server by his IP address but sets the correct Host header.
+     * Essential when DNS isn't pointing to the target server yet or for internal networking.
+     * 
+     * @param serverOrigin The targeted public origin (e.g., https://myserver.com).
+     * @param ip The real IP address or internal hostname to connect to.
+     * @param options Additional fetch configuration.
      */
     useIp(serverOrigin: string, ip: string, options?: ServerFetchOptions<T>): R {
         let rOptions = ServerFetch.getOptionsFor_useIP<T>(serverOrigin, ip, options);
@@ -97,6 +125,11 @@ class CreateServerFetch<T, R extends CreateServerFetch_NextStep<T>> {
         return this.createNextStep(rOptions);
     }
 
+    /**
+     * Connects to the server using its standard public hostname.
+     * @param serverOrigin The public origin of the server.
+     * @param options Additional fetch configuration.
+     */
     useOrigin(serverOrigin: string, options?: ServerFetchOptions<T>): R {
         let rOptions = ServerFetch.getOptionsFor_useOrigin<T>(serverOrigin, options);
         this.options = rOptions;
@@ -108,6 +141,12 @@ class CreateServerFetch_NextStep<T> {
     constructor(protected options: ServerFetchOptions<T>) {
     }
 
+    /**
+     * Sets the priority weight of this server in the load-balancer.
+     * - 1 (default): Standard active server.
+     * - > 1: Increases priority/traffic share.
+     * - 0: Backup server (only used if other servers are down).
+     */
     set_weight(weight: number): this {
         this.options.weight = weight;
         return this;
@@ -121,14 +160,16 @@ class CreateServerFetch_NextStep<T> {
         return this.set_weight(0);
     }
 
-    on_beforeRequesting(handler: (url: string, fetchOptions: FetchOptions, data: T)=>void|Promise<void>): this {
+    /** Registers a hook called before the fetch request is sent. */
+    on_beforeRequesting(handler: (url: string, fetchOptions: FetchOptions, data: T) => void | Promise<void>): this {
         this.options.beforeRequesting = handler;
         return this;
     }
 
-    on_ifServerIsDown(handler: (builder: IfServerDownBuilder<T>)=>void|Promise<void>): this {
+    /** Registers a failover handler if the server is unresponsive. */
+    on_ifServerIsDown(handler: (builder: IfServerDownBuilder<T>) => void | Promise<void>): this {
         this.options.ifServerIsDown = async (_fetcher, data) => {
-            const {builder, getResult} = IfServerDownBuilder.newBuilder<T>(data);
+            const { builder, getResult } = IfServerDownBuilder.newBuilder<T>(data);
 
             let r = handler(builder);
             if (r instanceof Promise) await r;
@@ -168,7 +209,7 @@ class IfServerDownBuilder<T> extends CreateServerFetch<T, CreateServerFetch_Next
 
     static newBuilder<T>(data: T) {
         const b = new IfServerDownBuilder<T>(data);
-        return {builder: b, getResult: () => b.options};
+        return { builder: b, getResult: () => b.options };
     }
 }
 
@@ -176,20 +217,30 @@ class IfServerDownBuilder<T> extends CreateServerFetch<T, CreateServerFetch_Next
 
 //region WebSite
 
+/**
+ * Options for the default internal static file server.
+ */
 export interface FileServerOptions {
+    /** Root directory relative to the project (default: "public"). */
     rootDir: string;
+    /** Whether to automatically serve index.html for directory requests (default: true). */
     replaceIndexHtml: boolean,
-    onNotFound: (req: JopiRequest) => Response|Promise<Response>
+    /** Custom handler when a file is not found. */
+    onNotFound: (req: JopiRequest) => Response | Promise<Response>
 }
 
+/**
+ * Main logic for configuring a JopiJS website.
+ * Follows a fluent/builder pattern to setup caching, security, auth, and data sources.
+ */
 export class JopiWebSiteBuilder {
     protected readonly origin: string;
     protected readonly hostName: string;
     private webSite?: CoreWebSite;
     protected readonly options: WebSiteOptions = {};
 
-    protected readonly afterHook: ((webSite: CoreWebSite)=>(Promise<void>))[] = [];
-    protected readonly beforeHook: (()=>Promise<void>)[] = [];
+    protected readonly afterHook: ((webSite: CoreWebSite) => (Promise<void>))[] = [];
+    protected readonly beforeHook: (() => Promise<void>)[] = [];
 
     protected readonly internals: WebSiteInternal;
     protected _isWebSiteReady: boolean = false;
@@ -250,7 +301,7 @@ export class JopiWebSiteBuilder {
     }
 
     private async initWebSiteInstance(): Promise<void> {
-        const onWebSiteCreate = (h: (webSite: CoreWebSite) => void|Promise<void>) => {
+        const onWebSiteCreate = (h: (webSite: CoreWebSite) => void | Promise<void>) => {
             this.internals.afterHook.push(h);
         }
 
@@ -297,38 +348,49 @@ export class JopiWebSiteBuilder {
         }
     }
 
+    /** Registers a callback hook to customize the `CoreWebSite` instance directly. */
     hook_webSite(hook: (webSite: CoreWebSite) => void): this {
         this.internals.onHookWebSite = hook;
         return this;
     }
 
+    /** Ends the website configuration and returns the main application instance. */
     DONE_createWebSite(): JopiApp {
         return jopiApp;
     }
 
+    /** Configures TLS/SSL certificates for HTTPS. */
     add_httpCertificate(): CertificateBuilder {
         return new CertificateBuilder(this, this.internals);
     }
 
+    /** 
+     * Quickly configures the static file server.
+     * @param options Configuration options.
+     */
     fastConfigure_fileServer(options: FileServerOptions): JopiWebSiteBuilder {
         this.fileServerOptions = options;
         return this;
     }
 
+    /** Starts the fluent configuration for the static file server. */
     configure_fileServer() {
         const parent = this;
 
         const me = {
+            /** Sets the root directory for static files. */
             set_rootDir: (rootDir: string) => {
                 this.fileServerOptions.rootDir = rootDir;
                 return me;
             },
 
-            set_onNotFound: (handler: (req: JopiRequest) => Response|Promise<Response>) => {
+            /** Sets the 404 handler for missing files. */
+            set_onNotFound: (handler: (req: JopiRequest) => Response | Promise<Response>) => {
                 this.fileServerOptions.onNotFound = handler;
                 return me;
             },
 
+            /** Completes the file server configuration. */
             DONE_configure_fileServer: (): JopiWebSiteBuilder => {
                 return parent;
             }
@@ -337,6 +399,7 @@ export class JopiWebSiteBuilder {
         return me;
     }
 
+    /** Starts the fluent configuration for JWT authentication. */
     configure_jwtTokenAuth(): JWT_BEGIN {
         const builder = new JwtTokenAuth_Builder(this, this.internals);
 
@@ -345,6 +408,11 @@ export class JopiWebSiteBuilder {
         }
     }
 
+    /** 
+     * Quickly configures JWT authentication with a simple user store or custom handler.
+     * @param privateKey The secret key used for signing tokens.
+     * @param store Either an array of hardcoded users or a custom authentication function.
+     */
     fastConfigure_jwtTokenAuth<T>(privateKey: string, store: any[] | UserAuthentificationFunction<T>): JopiWebSiteBuilder {
         const builder = new JwtTokenAuth_Builder(this, this.internals);
         let config = builder.setPrivateKey_STEP(privateKey).step_setUserStore();
@@ -359,6 +427,11 @@ export class JopiWebSiteBuilder {
         return this;
     }
 
+    /** 
+     * Adds a Server-Sent Events (SSE) endpoint to the website.
+     * @param path The URL path for the SSE endpoint.
+     * @param handler The SSE logic handler.
+     */
     add_SseEvent(path: string, handler: SseEvent): JopiWebSiteBuilder {
         this.internals.afterHook.push((webSite) => {
             webSite.addSseEVent(path, handler);
@@ -368,18 +441,20 @@ export class JopiWebSiteBuilder {
     }
 
     /**
-     * Allows the linker to generate an event entry.
-     * Will allow to do `import myEvent from "@/events/myEventName`
+     * Registers a static event name that can be imported by the client.
+     * Useful for type-safe event communication between client and server.
      */
     add_staticEvent(name: string): JopiWebSiteBuilder {
         linker_addStaticEvent(name);
         return this;
     }
 
+    /** Fluent configuration for PostCSS and CSS bundling. */
     configure_postCss() {
         const parent: JopiWebSiteBuilder = this;
 
         const me = {
+            /** Custom initializer for PostCSS plugins. */
             setPlugin: (handler: PostCssInitializer) => {
                 getBundlerConfig().postCss.initializer = handler;
                 return me;
@@ -393,10 +468,15 @@ export class JopiWebSiteBuilder {
         return me;
     }
 
+    /** Fluent configuration for global website behaviors. */
     configure_behaviors(): WebSite_ConfigureBehaviors {
         const parent: JopiWebSiteBuilder = this;
 
         const me: WebSite_ConfigureBehaviors = {
+            /** 
+             * If true, keeps trailing slashes in URLs. 
+             * By default, JopiJS removes them for canonicalization.
+             */
             enableTrailingSlashes(value: boolean = true) {
                 parent.options.removeTrailingSlash = !value;
                 return me;
@@ -410,10 +490,15 @@ export class JopiWebSiteBuilder {
         return me;
     }
 
+    /** Fluent configuration for development-only behaviors. */
     configure_devBehaviors(): WebSite_ConfigureDevBehaviors {
         const parent: JopiWebSiteBuilder = this;
 
         const me: WebSite_ConfigureDevBehaviors = {
+            /** 
+             * Simulates network latency for DataSource requests.
+             * Useful for testing loading states in the UI.
+             */
             slowDownHttpDataSources(pauseMs: number) {
                 if (isDevelopment) {
                     setHttpProxyReadPause(pauseMs);
@@ -429,23 +514,28 @@ export class JopiWebSiteBuilder {
         return me;
     }
 
+    /** Configuration for the page/API cache engine. */
     configure_cache(): WebSite_CacheBuilder {
         return new WebSite_CacheBuilder(this, this.internals);
     }
 
+    /** Configuration for global middlewares (hooks executed on every request). */
     configure_middlewares(): WebSite_MiddlewareBuilder {
         return new WebSite_MiddlewareBuilder(this, this.internals);
     }
 
+    /** Configuration for the client-side bundler (Vite). */
     configure_bundler() {
         const parent: JopiWebSiteBuilder = this;
 
         const me = {
+            /** Optimization: Tells the bundler to not embed React and React-Dom in the bundle (assuming they are provided globally or via CDN). */
             dontEmbed_ReactJS: () => {
                 me.dontEmbedThis("react", "react-dom");
                 return me;
             },
 
+            /** Optimization: Prevents specific packages from being bundled into the client scripts. */
             dontEmbedThis: (...packages: string[]) => {
                 let config = getBundlerConfig();
                 if (!config.embed.dontEmbedThis) config.embed.dontEmbedThis = [];
@@ -461,10 +551,12 @@ export class JopiWebSiteBuilder {
         return me;
     }
 
+    /** Configuration for the Tailwind CSS processor. */
     configure_tailwindProcessor() {
         const parent: JopiWebSiteBuilder = this;
 
         const me = {
+            /** Completely disables Tailwind CSS processing. */
             disableTailwind: () => {
                 getBundlerConfig().tailwind.disable = true;
                 return me;
@@ -478,14 +570,17 @@ export class JopiWebSiteBuilder {
         return me;
     }
 
+    /** Registers a backend server source (for load-balancing or proxying). */
     add_sourceServer<T>(): WebSite_AddSourceServerBuilder<T> {
         return new WebSite_AddSourceServerBuilder<T>(this, this.internals);
     }
 
+    /** Registers custom handlers for standard HTTP error pages (404, 500, etc.). */
     add_specialPageHandler(): WebSite_AddSpecialPageHandler {
         return new WebSite_AddSpecialPageHandler(this, this.internals);
     }
 
+    /** Executes a listener once the website instance is fully initialized. */
     on_webSiteReady(listener: () => void) {
         if (this._isWebSiteReady) {
             listener();
@@ -496,10 +591,15 @@ export class JopiWebSiteBuilder {
         return this;
     }
 
+    /** Configuration for Cross-Origin Resource Sharing (CORS). */
     configure_cors() {
         return new WebSite_ConfigureCors(this);
     }
 
+    /** 
+     * Quickly configures CORS for specific hostnames.
+     * @param allowedHosts List of allowed origins (e.g. ["https://myfrontend.com"]).
+     */
     fastConfigure_cors(allowedHosts?: string[]): JopiWebSiteBuilder {
         const b = new WebSite_ConfigureCors(this);
 
@@ -516,7 +616,7 @@ interface WebSiteInternal {
     hostName: string;
     options: WebSiteOptions;
 
-    afterHook: ((webSite: CoreWebSite) => void|Promise<void>)[];
+    afterHook: ((webSite: CoreWebSite) => void | Promise<void>)[];
     beforeHook: (() => Promise<void>)[];
 
     onHookWebSite?: (webSite: CoreWebSite) => void;
@@ -532,10 +632,15 @@ class WebSite_ExposePrivate extends JopiWebSiteBuilder {
     }
 }
 
+/** Configuration builder for CORS policies. */
 class WebSite_ConfigureCors {
     constructor(private readonly webSite: JopiWebSiteBuilder) {
     }
 
+    /** 
+     * Whitelists a specific hostname for cross-origin requests.
+     * @param hostName The URL string (e.g. https://domain.com).
+     */
     add_allowedHost(hostName: string) {
         try {
             let url = new URL(hostName);
@@ -548,6 +653,7 @@ class WebSite_ConfigureCors {
         return this;
     }
 
+    /** Completely disables CORS protection (allows all origins). */
     disable_cors() {
         giIsCorsDisabled = true;
         return this;
@@ -558,6 +664,7 @@ class WebSite_ConfigureCors {
     }
 }
 
+/** Configuration builder for standard HTTP error handlers. */
 class WebSite_AddSpecialPageHandler {
     constructor(private readonly webSite: JopiWebSiteBuilder, private readonly internals: WebSiteInternal) {
     }
@@ -566,6 +673,7 @@ class WebSite_AddSpecialPageHandler {
         return this.webSite;
     }
 
+    /** Custom handler for 404 Not Found errors. */
     on_404_NotFound(handler: (req: JopiRequest) => Promise<Response>): this {
         this.internals.afterHook.push(async webSite => {
             webSite.on404_NotFound(handler);
@@ -574,6 +682,7 @@ class WebSite_AddSpecialPageHandler {
         return this;
     }
 
+    /** Custom handler for 500 Internal Server Errors. */
     on_500_Error(handler: (req: JopiRequest) => Promise<Response>): this {
         this.internals.afterHook.push(async webSite => {
             webSite.on500_Error(handler);
@@ -582,6 +691,7 @@ class WebSite_AddSpecialPageHandler {
         return this;
     }
 
+    /** Custom handler for 401 Unauthorized errors. */
     on_401_Unauthorized(handler: (req: JopiRequest) => Promise<Response>): this {
         this.internals.afterHook.push(async webSite => {
             webSite.on401_Unauthorized(handler);
@@ -635,11 +745,18 @@ class WebSite_AddSourceServerBuilder_NextStep<T> extends CreateServerFetch_NextS
     }
 }
 
+/** Configuration builder for global middlewares. */
 class WebSite_MiddlewareBuilder {
     constructor(private readonly webSite: JopiWebSiteBuilder, private readonly internals: WebSiteInternal) {
     }
 
-    add_middleware(method: HttpMethod|undefined, middleware: JopiMiddleware, options?: MiddlewareOptions): WebSite_MiddlewareBuilder {
+    /** 
+     * Adds a middleware that executes BEFORE the request handler. 
+     * @param method HTTP method filter (null = all).
+     * @param middleware Middleware function.
+     * @param options Execution options (priority, etc.).
+     */
+    add_middleware(method: HttpMethod | undefined, middleware: JopiMiddleware, options?: MiddlewareOptions): WebSite_MiddlewareBuilder {
         this.internals.afterHook.push(async webSite => {
             webSite.addGlobalMiddleware(method, middleware, options);
         });
@@ -647,7 +764,13 @@ class WebSite_MiddlewareBuilder {
         return this;
     }
 
-    add_postMiddleware(method: HttpMethod|undefined, middleware: JopiPostMiddleware, options?: MiddlewareOptions): WebSite_MiddlewareBuilder {
+    /** 
+     * Adds a middleware that executes AFTER the request handler (post-process).
+     * @param method HTTP method filter.
+     * @param middleware Post-middleware function.
+     * @param options Execution options.
+     */
+    add_postMiddleware(method: HttpMethod | undefined, middleware: JopiPostMiddleware, options?: MiddlewareOptions): WebSite_MiddlewareBuilder {
         this.internals.afterHook.push(async webSite => {
             webSite.addGlobalPostMiddleware(method, middleware, options);
         });
@@ -660,6 +783,7 @@ class WebSite_MiddlewareBuilder {
     }
 }
 
+/** Configuration builder for the page and API cache system. */
 class WebSite_CacheBuilder {
     private cache?: PageCache;
     private readonly rules: CacheRules[] = [];
@@ -674,6 +798,7 @@ class WebSite_CacheBuilder {
         });
     }
 
+    /** Use a standard RAM-based cache. */
     use_inMemoryCache(options?: InMemoryCacheOptions): WebSite_CacheBuilder {
         if (options) initMemoryCache(options);
         this.cache = getInMemoryCache();
@@ -681,11 +806,13 @@ class WebSite_CacheBuilder {
         return this;
     }
 
+    /** Use a disk-based cache stored in a specific directory. */
     use_fileSystemCache(rootDir: string): WebSite_CacheBuilder {
         this.cache = new SimpleFileCache(rootDir);
         return this;
     }
 
+    /** Defines custom rules for what should or shouldn't be cached. */
     add_cacheRules(rules: CacheRules): WebSite_CacheBuilder {
         this.rules.push(rules);
         return this;
@@ -701,7 +828,7 @@ interface WebSite_ConfigureBehaviors {
      * Allows adding trailing slash at end of the urls.
      * The default behavior is to remove them.
      */
-    enableTrailingSlashes(value: boolean|undefined): WebSite_ConfigureBehaviors;
+    enableTrailingSlashes(value: boolean | undefined): WebSite_ConfigureBehaviors;
 
     DONE_configure_behaviors(): JopiWebSiteBuilder;
 }
@@ -743,7 +870,7 @@ let gIsSslCertificateDefined = false;
 function useCertificateStore(dirPath: string, hostName: string) {
     dirPath = path.join(dirPath, hostName);
 
-    let cert:string = "";
+    let cert: string = "";
     let key: string = "";
 
     try {
@@ -760,13 +887,19 @@ function useCertificateStore(dirPath: string, hostName: string) {
         console.error("Certificat key file not found: ", key);
     }
 
-    return {key, cert};
+    return { key, cert };
 }
 
+/** Configuration builder for TLS/SSL certificates. */
 class CertificateBuilder {
     constructor(private readonly parent: JopiWebSiteBuilder, private readonly internals: WebSiteInternal) {
     }
 
+    /** 
+     * Generates a local self-signed certificate using mkcert.
+     * Essential for local HTTPS development.
+     * @param saveInDir Directory to store the certificates (default: "certs").
+     */
     generate_localDevCert(saveInDir: string = "certs") {
         gIsSslCertificateDefined = true;
 
@@ -784,16 +917,24 @@ class CertificateBuilder {
         }
     }
 
+    /** 
+     * Uses pre-existing certificate files from a directory.
+     * The directory should contain `certificate.crt` and `certificate.key`.
+     */
     use_dirStore(dirPath: string) {
         gIsSslCertificateDefined = true;
         this.internals.options.certificate = useCertificateStore(dirPath, this.internals.hostName);
         return { DONE_add_httpCertificate: () => this.parent }
     }
 
+    /** 
+     * Configures automatic certificate generation via Let's Encrypt (ACME). 
+     * @param email Contact email for Let's Encrypt.
+     */
     generate_letsEncryptCert(email: string) {
         gIsSslCertificateDefined = true;
 
-        const params: LetsEncryptParams = {email};
+        const params: LetsEncryptParams = { email };
 
         this.internals.afterHook.push(async webSite => {
             await getLetsEncryptCertificate(webSite, params);
@@ -807,6 +948,7 @@ class CertificateBuilder {
 
 //region LetsEncryptCertificateBuilder
 
+/** Configuration builder for Let's Encrypt certificates. */
 class LetsEncryptCertificateBuilder {
     constructor(private readonly parent: JopiWebSiteBuilder, private readonly params: LetsEncryptParams) {
     }
@@ -815,31 +957,37 @@ class LetsEncryptCertificateBuilder {
         return this.parent;
     }
 
+    /** Enables production mode for Let's Encrypt. If false, uses Staging/Testing servers. */
     enable_production(value: boolean = true) {
         this.params.isProduction = value;
         return this;
     }
 
+    /** Disables logging for the ACME challenge process. */
     disable_log() {
         this.params.log = false;
         return this;
     }
 
+    /** Directory where certificates will be saved. */
     set_certificateDir(dirPath: string) {
         this.params.certificateDir = dirPath;
         return this;
     }
 
+    /** Forces certificate renewal if it expires in less than X days. */
     force_expireAfter_days(dayCount: number) {
         this.params.expireAfter_days = dayCount;
         return this;
     }
 
+    /** Sets the challenge timeout. */
     force_timout_sec(value: number) {
         this.params.timout_sec = value;
         return this;
     }
 
+    /** Handler called if the certificate challenge times out. */
     if_timeOutError(handler: OnTimeoutError) {
         this.params.onTimeoutError = handler;
         return this;
@@ -854,46 +1002,62 @@ class LetsEncryptCertificateBuilder {
 
 //region Interfaces
 
+/** Step 1: Provide the secret key for JWT signing. */
 interface JWT_BEGIN {
     step_setPrivateKey(privateKey: string): JWT_StepBegin_SetUserStore;
 }
 
+/** Final step: Return to main website builder. */
 interface JWT_FINISH {
     DONE_configure_jwtTokenAuth(): JopiWebSiteBuilder;
 }
 
+/** Step 2: Transition to user store selection. */
 interface JWT_StepBegin_SetUserStore {
     step_setUserStore(): JWT_Step_SetUserStore;
 }
 
+/** Step 3: Choose a user store (simple login/password or custom). */
 interface JWT_Step_SetUserStore {
+    /** Use a built-in store for static logins and passwords. */
     use_simpleLoginPassword(): JWT_UseSimpleLoginPassword;
 
+    /** Use a custom function to validate users (e.g. from a database). */
     use_customStore<T>(store: UserAuthentificationFunction<T>): JWT_UseCustomStore;
 }
 
+/** Configuration for custom auth handler. */
 interface JWT_UseCustomStore {
     DONE_use_customStore(): JWT_StepBegin_Configure;
 }
 
+/** Configuration for the simple login/password store. */
 interface JWT_UseSimpleLoginPassword {
+    /** Adds a single user to the store. */
     addOne(login: string, password: string, userInfos: UserInfos): JWT_UseSimpleLoginPassword;
+    /** Adds multiple users from an array. */
     addMany(users: UserInfos_WithLoginPassword[]): JWT_UseSimpleLoginPassword;
     DONE_use_simpleLoginPassword(): JWT_StepBegin_Configure;
 }
 
+/** Step 4: Finalize or further configure the JWT settings. */
 interface JWT_StepBegin_Configure {
+    /** Proceed to advanced configuration (tokens, cookies, etc.). */
     stepConfigure(): JWT_Step_Configure;
+    /** Finish with default settings. */
     DONE_setUserStore(): JWT_FINISH;
 }
 
+/** Advanced JWT configuration. */
 interface JWT_Step_Configure {
+    /** Sets the duration of the authorization cookie in hours. */
     set_cookieDuration(expirationDuration_hours: number): JWT_Step_Configure;
     DONE_stepConfigure(): JWT_FINISH;
 }
 
 //endregion
 
+/** Internal builder class for the JWT authentication fluent API. */
 class JwtTokenAuth_Builder {
     constructor(private readonly parent: JopiWebSiteBuilder, private readonly internals: WebSiteInternal) {
     }
@@ -906,6 +1070,7 @@ class JwtTokenAuth_Builder {
 
     //region setPrivateKey_STEP (BEGIN / root)
 
+    /** Entry point: sets the signing key. */
     setPrivateKey_STEP(privateKey: string): JWT_StepBegin_SetUserStore {
         this.internals.afterHook.push(async webSite => {
             webSite.setJwtSecret(privateKey);
@@ -922,6 +1087,7 @@ class JwtTokenAuth_Builder {
 
     private loginPasswordStore?: UserStore_WithLoginPassword;
 
+    /** Transitions to choosing a user store. */
     setUserStore_STEP(): JWT_Step_SetUserStore {
         const self = this;
 
@@ -955,7 +1121,7 @@ class JwtTokenAuth_Builder {
         })
 
         return {
-            DONE_use_customStore : () => this.useCustomStore_DONE()
+            DONE_use_customStore: () => this.useCustomStore_DONE()
         }
     }
 
@@ -984,7 +1150,7 @@ class JwtTokenAuth_Builder {
     }
 
     useSimpleLoginPassword_addOne(login: string, password: string, userInfos: UserInfos): JWT_UseSimpleLoginPassword {
-        this.loginPasswordStore!.add({login, password, userInfos});
+        this.loginPasswordStore!.add({ login, password, userInfos });
 
         return this._useSimpleLoginPassword_REPEAT();
     }
@@ -1007,10 +1173,11 @@ class JwtTokenAuth_Builder {
         }
     }
 
+    /** Configures automatic authorization cookie handling. */
     setTokenStore_useCookie(expirationDuration_hours: number = 3600) {
         this.internals.afterHook.push(async webSite => {
             webSite.setJwtTokenStore((_token, cookieValue, req) => {
-                req.cookie_addCookieToRes("authorization", cookieValue, {maxAge: jk_timer.ONE_HOUR * expirationDuration_hours})
+                req.cookie_addCookieToRes("authorization", cookieValue, { maxAge: jk_timer.ONE_HOUR * expirationDuration_hours })
             });
         });
 
@@ -1024,7 +1191,9 @@ class JwtTokenAuth_Builder {
 
 //region Config
 
+/** List of allowed origins for CORS. */
 let gCorsConstraints: string[] = [];
+/** If true, the CORS middleware will be completely disabled. */
 let giIsCorsDisabled = false;
 
 //endregion

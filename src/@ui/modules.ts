@@ -2,16 +2,16 @@
 
 import React from "react";
 import * as jk_events from "jopi-toolkit/jk_events";
-import {type UiUserInfos} from "./user.ts";
-import {isServerSide} from "jopi-toolkit/jk_what";
-import {type IsObjectRegistry} from "./objectRegistry.ts";
-import {getDefaultPageController} from "./pageController.ts";
+import { type UiUserInfos } from "./user.ts";
+import { isServerSide } from "jopi-toolkit/jk_what";
+import { type IsObjectRegistry } from "./objectRegistry.ts";
+import { getDefaultPageController } from "./pageController.ts";
 
 export interface JopiUiApplication_Host {
     objectRegistry: IsObjectRegistry;
 
     getCurrentURL(): URL;
-    getUserInfos(): UiUserInfos|undefined;
+    getUserInfos(): UiUserInfos | undefined;
     mustRemoveTrailingSlashes: boolean;
 
     events: jk_events.EventGroup;
@@ -38,7 +38,7 @@ export class JopiUiApplication {
     public readonly isBrowserSide: boolean = !isServerSide;
     protected readonly host: JopiUiApplication_Host;
 
-    constructor(host?: JopiUiApplication_Host, extra?: ExtraPageParams|undefined) {
+    constructor(host?: JopiUiApplication_Host, extra?: ExtraPageParams | undefined) {
         gDefaultJopiUiApplication = this;
 
         if (!host) host = getDefaultPageController();
@@ -72,13 +72,13 @@ export class JopiUiApplication {
         return this.host.getCurrentURL();
     }
 
-    addUiInitializer(priority: UiInitializer|jk_events.EventPriority, initializer?: UiInitializer|undefined) {
+    addUiInitializer(priority: UiInitializer | jk_events.EventPriority, initializer?: UiInitializer | undefined) {
         this.events.addListener("app.init.ui", priority, initializer);
     }
 
     //region Users & Roles
 
-    getUserInfos(): UiUserInfos|undefined {
+    getUserInfos(): UiUserInfos | undefined {
         return this.host.getUserInfos();
     }
 
@@ -149,8 +149,8 @@ export class JopiUiApplication {
         this.iconResolvers.push(f);
     }
 
-    getIconFromName(iconName: string): React.FC|undefined {
-        if (this.iconMap!==undefined) {
+    getIconFromName(iconName: string): React.FC | undefined {
+        if (this.iconMap !== undefined) {
             let f = this.iconMap[iconName];
             if (f) return f;
         }
@@ -171,7 +171,7 @@ export class JopiUiApplication {
     //endregion
 }
 
-export type Name2ReactFcResolver = (iconName: string) => React.FC|undefined;
+export type Name2ReactFcResolver = (iconName: string) => React.FC | undefined;
 
 export interface ExtraPageParams {
     menuEntries: MenuItemForExtraPageParams[]
