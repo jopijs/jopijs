@@ -115,7 +115,10 @@
       "default": "./dist/@loader/index.js"
     },
     "./loader/loader.mjs": "./src/@loader/loader.mjs",
-    "./bun-hmr": "./src/@loader/bunHMR.mjs",
+    
+    "./bun-hmr-plugin": "./src/@loader/bunHmrPlugin.mjs",
+    "./bun-loader-plugin": "./src/@loader/bunLoaderPlugin.mjs",
+
     "./loader-tools": {
       "types": "./src/@loader-tools/index.ts",
       "bun": "./src/@loader-tools/index.ts",

@@ -1,10 +1,21 @@
 import type {CookieOptions} from "./interfaces.ts";
 
 export function setCookie(name: string, value: string, options?: CookieOptions) {
-    let cookieStr = `${name}=${value}; path=/`;
+    let cookieStr = `${name}=${value}`;
 
-    if (options?.maxAge !== undefined) {
-        cookieStr += `; max-age=${options.maxAge}`;
+    if (options) {
+        if (options.maxAge !== undefined) cookieStr += `; max-age=${options.maxAge}`;
+        if (options.expires) cookieStr += `; expires=${options.expires.toUTCString()}`;
+        
+        if (options.path) cookieStr += `; path=${options.path}`;
+        else cookieStr += "; path=/";
+        
+        if (options.domain) cookieStr += `; domain=${options.domain}`;
+        if (options.secure) cookieStr += `; secure`;
+        if (options.sameSite) cookieStr += `; samesite=${options.sameSite}`;
+        if (options.priority) cookieStr += `; priority=${options.priority}`;
+    } else {
+        cookieStr += "; path=/";
     }
 
     document.cookie = cookieStr;

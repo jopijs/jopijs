@@ -1138,9 +1138,14 @@ export class JopiRequest {
         let cookie = `${cookieName}=${cookieValue};`;
 
         if (options) {
-            if (options.maxAge) {
-                cookie += ` Max-Age=${options.maxAge};`;
-            }
+            if (options.maxAge) cookie += ` Max-Age=${options.maxAge};`;
+            if (options.expires) cookie += ` Expires=${options.expires.toUTCString()};`;
+            if (options.path) cookie += ` Path=${options.path};`;
+            if (options.domain) cookie += ` Domain=${options.domain};`;
+            if (options.secure) cookie += ` Secure;`;
+            if (options.httpOnly) cookie += ` HttpOnly;`;
+            if (options.sameSite) cookie += ` SameSite=${options.sameSite};`;
+            if (options.priority) cookie += ` Priority=${options.priority};`;
         }
 
         if (!this.postProcess) this.postProcess = [];
