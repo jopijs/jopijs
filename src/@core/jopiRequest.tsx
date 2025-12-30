@@ -60,11 +60,11 @@ export class JopiRequest {
     private cookies?: { [name: string]: string };
     private _req_headers: Headers;
 
-    constructor(public readonly webSite: CoreWebSite,
+    constructor(private readonly webSite: CoreWebSite,
         private _urlInfos: URL | undefined,
-        public coreRequest: Request,
-        public readonly coreServer: CoreServer,
-        public readonly routeInfos: WebSiteRouteInfos) {
+        private coreRequest: Request,
+        private readonly coreServer: CoreServer,
+        private readonly routeInfos: WebSiteRouteInfos) {
         this.cache = webSite.mainCache;
         this.mainCache = this.cache;
         this._req_headers = this.coreRequest.headers;
@@ -1136,6 +1136,10 @@ export class JopiRequest {
      */
     cookie_addCookieToRes(cookieName: string, cookieValue: string, options?: CookieOptions) {
         let cookie = `${cookieName}=${cookieValue};`;
+
+        if (this.webSite.cookieDefaults) {
+            options = { ...this.webSite.cookieDefaults, ...options };
+        }
 
         if (options) {
             if (options.maxAge) cookie += ` Max-Age=${options.maxAge};`;

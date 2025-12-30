@@ -91,6 +91,7 @@ export class CoreWebSite {
     public readonly loadBalancer = new LoadBalancer();
     public readonly events: EventGroup = jk_events.defaultEventGroup;
     public readonly mustRemoveTrailingSlashes: boolean;
+    public readonly cookieDefaults?: CookieOptions;
 
     private globalMiddlewares: Record<string, {value: JopiMiddleware, priority: PriorityLevel, regExp?: RegExp}[]> = {};
     private globalPostMiddlewares: Record<string, {value: JopiPostMiddleware, priority: PriorityLevel, regExp?: RegExp}[]> = {};
@@ -121,6 +122,7 @@ export class CoreWebSite {
         this.mainCache = options.cache || getInMemoryCache();
         this.serverInstanceBuilder = getNewServerInstanceBuilder(this);
         this.mustRemoveTrailingSlashes = options.removeTrailingSlash !== false;
+        this.cookieDefaults = options.cookieDefaults;
 
         this._onWebSiteReady = options.onWebSiteReady;
 
@@ -556,7 +558,10 @@ export class CoreWebSite {
             this.jwtTokenStore(req.user_getJwtToken()!, "jwt " + token, req);
         } else {
             // Note: here we don't set the "Authorization" header, since it's an input-only header.
-            req.cookie_addCookieToRes("authorization", "jwt " + token, {maxAge: ONE_DAY * 7});
+            // User authorization must stay as long as possible (High priority)
+            // in case of browser cookies eviction conflict.
+            //
+            req.cookie_addCookieToRes("authorization", "jwt " + token, {maxAge: ONE_DAY * 7, priority: "High"});
         }
     }
 
@@ -861,6 +866,11 @@ export class WebSiteOptions {
      * The default is true.
      */
     removeTrailingSlash?: boolean;
+
+    /**
+     * Default options for cookies.
+     */
+    cookieDefaults?: CookieOptions;
 }
 
 export interface WebSiteRouteInfos {
@@ -1003,14 +1013,77 @@ export class ServerAlreadyStartedError extends Error {
     }
 }
 
+/**
+ * Options for configuring a cookie.
+ * 
+ * @example
+ * ```typescript
+ * req.cookie_addCookieToRes("theme", "dark", {
+ *     maxAge: jk_timer.ONE_DAY * 7,
+ *     httpOnly: true,
+ *     secure: true,
+ *     sameSite: "Lax"
+ * });
+ * ```
+ */
 export interface CookieOptions {
+    /**
+     * Number of seconds until the cookie expires. 
+     * Takes precedence over `expires`.
+     */
     maxAge?: number;
+
+    /**
+     * The absolute expiration date for the cookie.
+     */
     expires?: Date;
+
+    /**
+     * The URL path that must exist in the requested URL for the browser to send the Cookie header.
+     * Default is usually the current path.
+     */
     path?: string;
+
+    /**
+     * The domain that the cookie is valid for.
+     */
     domain?: string;
+
+    /**
+     * If true, the cookie is only sent to the server when a request is made with the https: scheme.
+     */
     secure?: boolean;
+
+    /**
+     * If true, prevents client-side scripts from accessing the cookie.
+     */
     httpOnly?: boolean;
+
+    /**
+     * Controls whether the cookie is sent with cross-site requests.
+     * - `Strict`: Sent only in a first-party context.
+     * - `Lax`: Sent with safe top-level navigations (default in modern browsers).
+     * - `None`: Sent with all requests (requires `Secure` to be true).
+     */
     sameSite?: "Strict" | "Lax" | "None";
+
+    /**
+     * Suggests a relative priority for cookies with the same name.
+     * Used by some browsers (e.g., Chrome) to decide which cookies to evict first
+     * when the maximum number of cookies for a domain is reached.
+     * 
+     * - `Low`: Evicted first.
+     * - `Medium`: Default priority.
+     * - `High`: Evicted last.
+     * 
+     * @example
+     * // CONFLICT: A website has reached the limit (e.g., 180 cookies).
+     * // To add a new cookie, the browser must delete others.
+     * 
+     * // RESOLUTION:
+     * req.cookie_addCookieToRes("important_session", id, { priority: "High" }); // Kept
+     * req.cookie_addCookieToRes("non_essential_ux_pref", "val", { priority: "Low" }); // Deleted first
+     */
     priority?: "Low" | "Medium" | "High";
 }
 

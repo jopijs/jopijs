@@ -24,7 +24,8 @@ import {
     type UserAuthentificationFunction,
     type UserInfos,
     CoreWebSite,
-    WebSiteOptions
+    WebSiteOptions,
+    type CookieOptions
 } from "./jopiCoreWebSite.tsx";
 
 import type { PageCache } from "./caches/cache.ts";
@@ -482,6 +483,15 @@ export class JopiWebSiteBuilder {
                 return me;
             },
 
+            /** 
+             * Defines default options for all cookies created on the server side. 
+             * These defaults are merged with specific options passed to `cookie_addCookieToRes`.
+             */
+            setCookieDefaults(options: CookieOptions) {
+                parent.options.cookieDefaults = options;
+                return me;
+            },
+
             DONE_configure_behaviors(): JopiWebSiteBuilder {
                 return parent;
             }
@@ -830,6 +840,14 @@ interface WebSite_ConfigureBehaviors {
      */
     enableTrailingSlashes(value: boolean | undefined): WebSite_ConfigureBehaviors;
 
+
+
+    /**
+     * Defines default options for all cookies created on the server side. 
+     * These defaults are merged with specific options passed to `cookie_addCookieToRes`.
+     */
+    setCookieDefaults(options: CookieOptions): WebSite_ConfigureBehaviors;
+
     DONE_configure_behaviors(): JopiWebSiteBuilder;
 }
 
@@ -1177,7 +1195,10 @@ class JwtTokenAuth_Builder {
     setTokenStore_useCookie(expirationDuration_hours: number = 3600) {
         this.internals.afterHook.push(async webSite => {
             webSite.setJwtTokenStore((_token, cookieValue, req) => {
-                req.cookie_addCookieToRes("authorization", cookieValue, { maxAge: jk_timer.ONE_HOUR * expirationDuration_hours })
+                // User authorization must stay as long as possible (High priority)
+                // in case of browser cookies eviction conflict.
+                //
+                req.cookie_addCookieToRes("authorization", cookieValue, { maxAge: jk_timer.ONE_HOUR * expirationDuration_hours, priority: "High" })
             });
         });
 
