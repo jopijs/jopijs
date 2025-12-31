@@ -1,6 +1,6 @@
 {
   "name": "jopijs",
-  "version": "3.1.1",
+  "version": "3.1.3",
   "publishedDate": "12/31/2025",
   "publicPublishedDate": "12/20/2025",
   "license": "MIT",
@@ -30,21 +30,20 @@
     "jopin": "bin/jopin.js"
   },
   "scripts": {
-    "build": "tsc",
-    "untrack": "git rm -r --cached -- ./dist/**;",
     "jopiLink": "npx jopi-mono link-add",
+    "dev:build": "tsc",
     "dev:tsc-watch": "tsc --watch",
     "dev:tsc-check": "tsc --noEmit"
   },
   "devDependencies": {
+  },
+  "dependencies": {
     "@types/bun": "latest",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/postcss-url": "^10.0.4",
     "@types/react": "^19.1.10",
     "@types/react-dom": "^19.1.7",
-    "@types/ws": "^8.18.1"
-  },
-  "dependencies": {
+    "@types/ws": "^8.18.1",
     "@tailwindcss/postcss": "^4.1.12",
     "@tanstack/react-query": "^5.90.12",
     "@tanstack/react-table": "^8.21.3",
