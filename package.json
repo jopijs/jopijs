@@ -33,7 +33,7 @@
     "build": "tsc",
     "untrack": "git rm -r --cached -- ./dist/**;",
     "jopiLink": "npx jopi-mono link-add",
-    "dev:tsc": "tsc --watch",
+    "dev:tsc-watch": "tsc --watch",
     "dev:tsc-check": "tsc --noEmit"
   },
   "devDependencies": {
