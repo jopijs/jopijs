@@ -60,11 +60,11 @@ export class JopiRequest {
     private cookies?: { [name: string]: string };
     private _req_headers: Headers;
 
-    constructor(private readonly webSite: CoreWebSite,
+    constructor(protected readonly webSite: CoreWebSite,
         private _urlInfos: URL | undefined,
-        private coreRequest: Request,
-        private readonly coreServer: CoreServer,
-        private readonly routeInfos: WebSiteRouteInfos) {
+        public coreRequest: Request,
+        protected readonly coreServer: CoreServer,
+        public readonly routeInfos: WebSiteRouteInfos) {
         this.cache = webSite.mainCache;
         this.mainCache = this.cache;
         this._req_headers = this.coreRequest.headers;
@@ -1611,6 +1611,7 @@ export class JopiRequestImpl extends JopiRequest {
     public _cache_ignoreDefaultBehaviors = false;
     public _cache_ignoreCacheRead = false;
     public _cache_ignoreCacheWrite = false;
+
 
     /**
      * Applies any registered post-process hooks to the response.

@@ -289,7 +289,7 @@ export class CoreWebSite {
 
 
         return async (req: JopiRequest) => {
-            const routeInfos = req.routeInfos;
+            const routeInfos = (req as JopiRequestImpl).routeInfos;
 
             const routeRawMiddlewares = routeInfos ? routeInfos.middlewares : undefined;
             const routeRawPostMiddlewares = routeInfos ? routeInfos.postMiddlewares : undefined;
@@ -326,13 +326,15 @@ export class CoreWebSite {
             const mustUseAutoCache = this.mustUseAutomaticCache && routeInfos && (routeInfos.mustEnableAutomaticCache === true)
             const extraMiddlewares: JopiMiddleware[] = [];
 
-            if (req.routeInfos.requiredRoles) {
-                const roles = req.routeInfos.requiredRoles;
+            if ((req as JopiRequestImpl).routeInfos.requiredRoles) {
+                const roles = (req as JopiRequestImpl).routeInfos.requiredRoles;
 
-                extraMiddlewares.push((req: JopiRequest) => {
-                    req.role_assertUserHasOneOfThisRoles(roles);
-                    return null;
-                });
+                if (roles) {
+                    extraMiddlewares.push((req: JopiRequest) => {
+                        req.role_assertUserHasOneOfThisRoles(roles);
+                        return null;
+                    });
+                }
             }
 
             if (mustUseAutoCache) {
