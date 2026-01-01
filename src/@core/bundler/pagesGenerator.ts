@@ -1,27 +1,29 @@
 import * as jk_events from "jopi-toolkit/jk_events";
 import * as jk_fs from "jopi-toolkit/jk_fs";
 import * as jk_crypto from "jopi-toolkit/jk_crypto";
-import {getBrowserInstallScript} from "jopijs/linker";
-import {getBrowserRefreshScript, isBrowserRefreshEnabled, isSinglePageMode, isReactHMR} from "jopijs/loader-client";
-import {getMergedGlobalCssFileContent} from "jopijs/postcss";
-import type {CreateBundleParams} from "./index.ts";
+import { getBrowserInstallScript } from "jopijs/linker";
+import { getBrowserRefreshScript, isBrowserRefreshEnabled, isSinglePageMode, isReactHMR } from "jopijs/loader-client";
+import { getMergedGlobalCssFileContent } from "jopijs/postcss";
+import type { CreateBundleParams } from "./index.ts";
+import type { RouteBindPageParams } from "jopijs/generated";
 
 // *********************************************************************************************************************
 // The goal of this file is to generate the individual pages required for each page found in the root (page.tsx).
 // *********************************************************************************************************************
 
+type RouteInfos = RouteBindPageParams;
 
 // This event is called when a new page is found.
 // Here we will fill a map "page file path" --> route.
 //
-jk_events.addListener("@jopi.route.newPage", async ({route, filePath}: {route: string, filePath: string}) => {
+jk_events.addListener("@jopi.route.newPage", async (p: RouteInfos) => {
     // filePath is the path to the source file.
-    filePath = jk_fs.resolve(filePath);
-    gPageSourceFileToRoute[filePath] = route;
+    p.filePath = jk_fs.resolve(p.filePath);
+    gPageSourceFileToRoute[p.filePath] = p;
 
-    let pageKey = "page_" + jk_crypto.fastHash(route);
-    gPageKeyToRoute[pageKey] = route;
-    gPageKeyToSourceFile[pageKey] = filePath;
+    let pageKey = "page_" + jk_crypto.fastHash(p.route);
+    gPageKeyToRoute[pageKey] = p;
+    gPageKeyToSourceFile[pageKey] = p.filePath;
 });
 
 // This event is called when creating the bundled is creating.
@@ -36,20 +38,20 @@ jk_events.addListener("@jopi.bundler.beforeCreateBundle", rebuildPages);
 jk_events.addListener("@jopi.bundler.beforeCreateBundleForPage", rebuildPages);
 
 async function rebuildPages(p: CreateBundleParams) {
-    async function buildPage(sourceFilePath: string, route: string, pageKey: string) {
+    async function buildPage(sourceFilePath: string, routeInfos: RouteInfos, pageKey: string) {
         function convertPath(filePath: string): string {
             let relPath = jk_fs.getRelativePath(p.genDir, filePath);
             return jk_fs.win32ToLinuxPath(relPath);
         }
 
         // Here we save the name without extension.
-        gRouteToPageKey[route] = pageKey;
+        gRouteToPageKey[routeInfos.route] = pageKey;
 
         let txt = REACT_TEMPLATE;
         txt = txt.replace("__PATH__", convertPath(sourceFilePath));
-        txt = txt.replace("__INSTALL__",convertPath(installScript));
-        txt = txt.replace("__ROUTE__", JSON.stringify(route));
-        txt = txt.replace("__OPTIONS__", JSON.stringify({removeTrailingSlashes: p.webSite.mustRemoveTrailingSlashes}));
+        txt = txt.replace("__INSTALL__", convertPath(installScript));
+        txt = txt.replace("__ROUTE__", JSON.stringify({ route: routeInfos.route, catchAll: routeInfos.attributes.catchAllSlug }));
+        txt = txt.replace("__OPTIONS__", JSON.stringify({ removeTrailingSlashes: p.webSite.mustRemoveTrailingSlashes }));
 
         txt = txt.replace("__PAGE_EXTRA_PARAMS__", JSON.stringify(p.pageExtraParams));
 
@@ -101,15 +103,15 @@ async function rebuildPages(p: CreateBundleParams) {
     }
 
     if (p.singlePageMode) {
-        let route = gPageKeyToRoute[p.pageKey!]
+        let routeInfos = gPageKeyToRoute[p.pageKey!]
         let sourceFilePath = gPageKeyToSourceFile[p.pageKey!];
-        await buildPage(sourceFilePath, route, p.pageKey!);
+        await buildPage(sourceFilePath, routeInfos, p.pageKey!);
     } else {
         for (let sourceFilePath in gPageSourceFileToRoute) {
-            const route = gPageSourceFileToRoute[sourceFilePath];
-            const pageKey = "page_" + jk_crypto.fastHash(route);
+            const routeInfos = gPageSourceFileToRoute[sourceFilePath];
+            const pageKey = "page_" + jk_crypto.fastHash(routeInfos.route);
 
-            let outFilePath = await buildPage(sourceFilePath, route, pageKey);
+            let outFilePath = await buildPage(sourceFilePath, routeInfos, pageKey);
             p.entryPoints.push(outFilePath);
         }
 
@@ -199,12 +201,12 @@ if (document.readyState === "loading") {
 /**
  * Allow knowing the route from the page file path.
  */
-let gPageSourceFileToRoute: Record<string, string> = {};
+let gPageSourceFileToRoute: Record<string, RouteInfos> = {};
 
 /**
  * Allow knowing the route from the page key.
  */
-let gPageKeyToRoute: Record<string, string> = {};
+let gPageKeyToRoute: Record<string, RouteInfos> = {};
 
 /**
  * Allow knowing the source file from the page key.

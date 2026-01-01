@@ -1,6 +1,6 @@
 // noinspection JSUnusedGlobalSymbols
 
-import React, {useEffect} from "react";
+import React, { useEffect } from "react";
 import * as jk_events from "jopi-toolkit/jk_events";
 import {
     type PageDataProviderData,
@@ -10,25 +10,27 @@ import {
 } from "./common.tsx";
 
 export function useParams(): any {
-    if (gPageParams===undefined) {
-        let pathname = new URL(window.location.href).pathname;
-        let route = ((window as any)["__JOPI_ROUTE__"]) as string;
-        if (!route) return gPageParams = {};
+    if (gPageParams === undefined) {
+        const pathname = new URL(window.location.href).pathname;
+        const routeInfos = ((window as any)["__JOPI_ROUTE__"]) as { route: string, catchAll?: string };
+        if (!routeInfos) return gPageParams = {};
 
-        let pRoute = route.split("/");
-        let pPathname = pathname.split("/");
+        const route = routeInfos.route;
+        const pRoute = route.split("/");
+        const pPathname = pathname.split("/");
         gPageParams = {};
 
         for (let i = 0; i < pRoute.length; i++) {
             let p = pRoute[i];
-            if (p[0]===":") gPageParams[p.substring(1)] = pPathname[i];
+            if (p[0] === ":") gPageParams[p.substring(1)] = pPathname[i];
+            else if (p[0] === "*") gPageParams[routeInfos.catchAll!] = "/" + pPathname.slice(i).join("/");
         }
     }
 
     return gPageParams;
 }
 
-let gPageParams: any|undefined;
+let gPageParams: any | undefined;
 
 /**
  * useStaticEffect is the same as React.useEffect, but is executed even on the server side.
@@ -36,16 +38,16 @@ let gPageParams: any|undefined;
  * !! Using it is not recommended since most of the pages are put in cache.
  */
 export function useStaticEffect(effect: React.EffectCallback,
-                                deps?: React.DependencyList) {
+    deps?: React.DependencyList) {
     useEffect(effect, deps);
 }
 
 export function useServerEffect(effect: React.EffectCallback,
-                                deps?: React.DependencyList) {
+    deps?: React.DependencyList) {
 }
 
 export function useBrowserEffect(effect: React.EffectCallback,
-                                 deps?: React.DependencyList) {
+    deps?: React.DependencyList) {
     useEffect(effect, deps);
 }
 
@@ -53,7 +55,7 @@ export function useBrowserEffect(effect: React.EffectCallback,
  * Allows listening to an event, and automatically
  * unregister when the component unmount.
  */
-export function useEvent(evenName: string|string[], listener: (data: any) => void) {
+export function useEvent(evenName: string | string[], listener: (data: any) => void) {
     useEffect(() => {
         if (evenName instanceof Array) {
             evenName.forEach(e => {
@@ -164,7 +166,7 @@ async function refreshPageData(url: string): Promise<void> {
                 let oldId = old[itemKey];
 
                 if (id === oldId) {
-                    item = {...old, ...item};
+                    item = { ...old, ...item };
                     break;
                 }
             }
@@ -210,7 +212,7 @@ async function refreshPageData(url: string): Promise<void> {
 
     let res = await fetch(url, {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'},
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(gPageDataState!.data!.seed)
     });
 
@@ -238,6 +240,6 @@ interface PageDataState {
     isError: boolean
 }
 
-let gPageDataState: PageDataState|undefined;
+let gPageDataState: PageDataState | undefined;
 
 //endregion
