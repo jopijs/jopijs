@@ -48,17 +48,20 @@ export async function getMergedGlobalCssFileContent(): Promise<string> {
 
     const rootDir = jk_fs.dirname(jk_app.findPackageJson());
     let globalCss = `/* Warning: generated file */`;
+    let isEmpty = true;
 
     let coreGlobalCssPath = jk_fs.join(rootDir, "global.css");
-
+    //
     if (await jk_fs.isFile(coreGlobalCssPath)) {
+        isEmpty = false;
         let content = await jk_fs.readTextFromFile(coreGlobalCssPath);
         globalCss += "\n\n/* --- Compiled from ./global.css --- */\n\n" + content;
     }
 
-    coreGlobalCssPath = jk_fs.join(rootDir, "src/global.css");
-
+    coreGlobalCssPath = jk_fs.join(rootDir, "src", "global.css");
+    //
     if (await jk_fs.isFile(coreGlobalCssPath)) {
+        isEmpty = false;
         let content = await jk_fs.readTextFromFile(coreGlobalCssPath);
         globalCss += "\n\n/* --- Compiled from ./src/global.css --- */\n\n" + content;
     }
@@ -75,7 +78,12 @@ export async function getMergedGlobalCssFileContent(): Promise<string> {
 
             globalCss += `\n\n/* --- Compiled from ./src/${mod.modName}/global.css --- */`
             globalCss += "\n" + content;
+            isEmpty = false;
         }
+    }
+
+    if (isEmpty) {
+        globalCss += `\n\n/* Not global.css found, automatically added minimal Tailwind import */\n@import "tailwindcss";`;
     }
 
     gGlobalCssFilePath = jk_fs.join(rootDir, "global.compiled.css");
