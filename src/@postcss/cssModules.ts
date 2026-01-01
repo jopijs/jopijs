@@ -9,7 +9,7 @@ import * as jk_term from "jopi-toolkit/jk_term";
 import path from "node:path";
 import {getTailwindPlugin} from "./tailwinPlugin.ts";
 import {execConsoleMuted} from "./tools.ts";
-import {getGlobalCssFilePath} from "./globalCss.ts";
+import {getGlobalCssFilePath_createIfDontExists} from "./globalCss.ts";
 
 /**
  * Compile a CSS or SCSS file to a JavaScript file.
@@ -46,7 +46,7 @@ export async function compileCssModule(filePath: string): Promise<string> {
     // Must use Tailwind preprocessor.
     if (css.includes("@apply")) {
         let tailwindPlugin = getTailwindPlugin(false);
-        let refHeader = getGlobalCssFilePath();
+        let refHeader = await getGlobalCssFilePath_createIfDontExists();
         refHeader = "@reference " + JSON.stringify(refHeader) + ";";
         css = refHeader + "\n\n" + css;
 

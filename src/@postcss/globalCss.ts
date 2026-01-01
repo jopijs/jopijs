@@ -86,6 +86,28 @@ export async function getMergedGlobalCssFileContent(): Promise<string> {
 //
 let gGlobalCssContent: string | undefined;
 
+/**
+ * Returns the path to the global compiled CSS file.
+ * Will create the file if it doesn't exist.
+ */
+export async function getGlobalCssFilePath_createIfDontExists() {
+    let filePath = getGlobalCssFilePath();
+    if (g_globalCssFileExist) return filePath;
+
+    if (!jk_fs.isFile(filePath)) {
+        let fileContent = await getMergedGlobalCssFileContent();
+        await jk_fs.writeTextToFile(filePath, fileContent);
+        g_globalCssFileExist = true;
+    }
+
+    return filePath;
+}
+//
+let g_globalCssFileExist = false; 
+
+/**
+ * Returns the path to the global compiled CSS file.
+ */
 export function getGlobalCssFilePath() {
     if (!gGlobalCssFilePath) {
         gGlobalCssFilePath = jk_fs.join(jk_fs.dirname(jk_app.findPackageJson()), "global.compiled.css");
