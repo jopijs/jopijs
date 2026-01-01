@@ -59,7 +59,7 @@ export class JopiRequest {
     private readonly mainCache: PageCache;
     private cookies?: { [name: string]: string };
     private _req_headers: Headers;
-    private _req_urlParts?: Record<string, string>;
+    private _req_urlParts?: Record<string, string | string[]>;
     private _req_urlParts_done: boolean;
 
     constructor(protected readonly webSite: CoreWebSite,
@@ -67,7 +67,7 @@ export class JopiRequest {
         public coreRequest: Request,
         protected readonly coreServer: CoreServer,
         public readonly routeInfos: WebSiteRouteInfos,
-        req_urlParts: Record<string, string> | undefined,
+        req_urlParts: Record<string, string | string[]> | undefined,
     ) {
         this.cache = webSite.mainCache;
         this.mainCache = this.cache;
@@ -176,7 +176,7 @@ export class JopiRequest {
      * - URL: `/products/electronics/123`
      * - Result: `{ category: "electronics", id: "123" }`
      */
-    get req_urlParts(): Record<string, string> {
+    get req_urlParts(): Record<string, string | string[]> {
         if (this._req_urlParts_done) {
             return this._req_urlParts!;
         }
@@ -196,7 +196,7 @@ export class JopiRequest {
 
             urlParts[routeInfos.catchAllSlug] = value;*/
 
-            urlParts[routeInfos.catchAllSlug] = "/" + urlParts["_"];
+            urlParts[routeInfos.catchAllSlug] = (urlParts["_"] as string).split("/");
         }
 
         this._req_urlParts_done = true;

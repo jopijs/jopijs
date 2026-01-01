@@ -23,7 +23,7 @@ export function useParams(): any {
         for (let i = 0; i < pRoute.length; i++) {
             let p = pRoute[i];
             if (p[0] === ":") gPageParams[p.substring(1)] = pPathname[i];
-            else if (p[0] === "*") gPageParams[routeInfos.catchAll!] = "/" + pPathname.slice(i).join("/");
+            else if (p[0] === "*") gPageParams[routeInfos.catchAll!] = pPathname.slice(i);
         }
     }
 
