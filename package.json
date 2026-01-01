@@ -35,18 +35,16 @@
     "dev:tsc-watch": "tsc --watch",
     "dev:tsc-check": "tsc --noEmit"
   },
-  "devDependencies": {
-  },
   "dependencies": {
+    "@tailwindcss/postcss": "^4.1.12",
+    "@tanstack/react-query": "^5.90.12",
+    "@tanstack/react-table": "^8.21.3",
     "@types/bun": "latest",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/postcss-url": "^10.0.4",
     "@types/react": "^19.1.10",
     "@types/react-dom": "^19.1.7",
     "@types/ws": "^8.18.1",
-    "@tailwindcss/postcss": "^4.1.12",
-    "@tanstack/react-query": "^5.90.12",
-    "@tanstack/react-table": "^8.21.3",
     "acme-client": "^5.4.0",
     "cheerio": "^1.1.2",
     "chokidar": "^4.0.3",
