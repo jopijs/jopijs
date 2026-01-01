@@ -1,9 +1,9 @@
 import React from "react";
-import {type HttpMethod, JopiRequest, CoreWebSite, type WebSiteRouteInfos, JopiRequestImpl} from "jopijs";
+import { type HttpMethod, JopiRequest, CoreWebSite, type WebSiteRouteInfos, JopiRequestImpl } from "jopijs";
 import * as jk_crypto from "jopi-toolkit/jk_crypto";
 import * as jk_events from "jopi-toolkit/jk_events";
-import {PriorityLevel} from "jopi-toolkit/jk_tools";
-import type {ExtractDirectoryInfosResult} from "../@linker";
+import { PriorityLevel } from "jopi-toolkit/jk_tools";
+import type { ExtractDirectoryInfosResult } from "../@linker";
 
 export interface RouteAttributes {
     needRoles?: Record<string, string[]>;
@@ -38,6 +38,7 @@ export interface RouteBindVerbParams extends RouteBindPageParams {
 interface ApplyAttributesParams {
     needRoles?: Record<string, string[]>;
     disableCache?: boolean;
+    catchAllSlug?: string;
 }
 
 export async function routeBindPage(webSite: CoreWebSite, reactComponent: React.FC<any>, params: RouteBindPageParams) {
@@ -49,8 +50,7 @@ export async function routeBindPage(webSite: CoreWebSite, reactComponent: React.
         infos = webSite.onPage(params.route, pageKey, reactComponent);
         applyAttributes(infos, params.attributes, "PAGE");
     }
-    else
-    {
+    else {
         let specialPageHandler: (() => void) | undefined;
 
         if (params.route.startsWith("/error")) {
@@ -129,7 +129,7 @@ export async function routeBindVerb(webSite: CoreWebSite, handler: RouteHandler,
     let infos = webSite.onVerb(params.verb, params.route, handler);
     applyAttributes(infos, params.attributes, params.verb);
 
-    if (params.route!=="/") {
+    if (params.route !== "/") {
         infos = webSite.onVerb(params.verb, params.route + "/", handler);
         applyAttributes(infos, params.attributes, params.verb);
     }
@@ -149,5 +149,9 @@ function applyAttributes(infos: WebSiteRouteInfos, attributes: ApplyAttributesPa
 
     if (attributes.disableCache) {
         infos.mustEnableAutomaticCache = false;
+    }
+
+    if (attributes.catchAllSlug) {
+        infos.catchAllSlug = attributes.catchAllSlug;
     }
 }

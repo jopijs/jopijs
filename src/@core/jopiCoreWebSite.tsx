@@ -1,12 +1,12 @@
 // noinspection JSUnusedGlobalSymbols
 
-import {JopiRequest, JopiRequestImpl} from "./jopiRequest.tsx";
-import {ServerFetch} from "./serverFetch.ts";
-import {LoadBalancer} from "./loadBalancing.ts";
-import {type CoreServer, type SseEvent, type WebSocketConnectionInfos} from "./jopiServer.ts";
-import {PostMiddlewares} from "./middlewares/index.ts";
+import { JopiRequest, JopiRequestImpl } from "./jopiRequest.tsx";
+import { ServerFetch } from "./serverFetch.ts";
+import { LoadBalancer } from "./loadBalancing.ts";
+import { type CoreServer, type SseEvent, type WebSocketConnectionInfos } from "./jopiServer.ts";
+import { PostMiddlewares } from "./middlewares/index.ts";
 import jwt from "jsonwebtoken";
-import type {SearchParamFilterFunction} from "./searchParamFilter.ts";
+import type { SearchParamFilterFunction } from "./searchParamFilter.ts";
 import React from "react";
 import {
     type MenuItemForExtraPageParams,
@@ -16,23 +16,23 @@ import {
     PageController,
     type UiUserInfos
 } from "jopijs/ui";
-import type {PageCache} from "./caches/cache.ts";
-import {VoidPageCache} from "./caches/cache.ts";
-import {ONE_DAY} from "./publicTools.ts";
+import type { PageCache } from "./caches/cache.ts";
+import { VoidPageCache } from "./caches/cache.ts";
+import { ONE_DAY } from "./publicTools.ts";
 
-import {getInMemoryCache} from "./caches/InMemoryCache.ts";
-import {installBundleServer} from "./bundler/index.ts";
-import {createBundle} from "./bundler/index.ts";
+import { getInMemoryCache } from "./caches/InMemoryCache.ts";
+import { installBundleServer } from "./bundler/index.ts";
+import { createBundle } from "./bundler/index.ts";
 import * as jk_webSocket from "jopi-toolkit/jk_webSocket";
-import type {EventGroup} from "jopi-toolkit/jk_events";
+import type { EventGroup } from "jopi-toolkit/jk_events";
 import * as jk_events from "jopi-toolkit/jk_events";
-import {installBrowserRefreshSseEvent, isBrowserRefreshEnabled} from "jopijs/loader-client";
-import {executeBrowserInstall} from "./linker.ts";
-import {getNewServerInstanceBuilder, type ServerInstanceBuilder} from "./serverInstanceBuilder.ts";
-import {PriorityLevel, sortByPriority, type ValueWithPriority} from "jopi-toolkit/jk_tools";
-import {logCache_notInCache, logServer_request} from "./_logs.ts";
-import type {TryReturnFileParams} from "./browserCacheControl.ts";
-import {installDataSourcesServer, type JopiPageDataProvider} from "./dataSources.ts";
+import { installBrowserRefreshSseEvent, isBrowserRefreshEnabled } from "jopijs/loader-client";
+import { executeBrowserInstall } from "./linker.ts";
+import { getNewServerInstanceBuilder, type ServerInstanceBuilder } from "./serverInstanceBuilder.ts";
+import { PriorityLevel, sortByPriority, type ValueWithPriority } from "jopi-toolkit/jk_tools";
+import { logCache_notInCache, logServer_request } from "./_logs.ts";
+import type { TryReturnFileParams } from "./browserCacheControl.ts";
+import { installDataSourcesServer, type JopiPageDataProvider } from "./dataSources.ts";
 
 export type RouteHandler = (req: JopiRequest) => Promise<Response>;
 
@@ -93,9 +93,9 @@ export class CoreWebSite {
     public readonly mustRemoveTrailingSlashes: boolean;
     public readonly cookieDefaults?: CookieOptions;
 
-    private globalMiddlewares: Record<string, {value: JopiMiddleware, priority: PriorityLevel, regExp?: RegExp}[]> = {};
-    private globalPostMiddlewares: Record<string, {value: JopiPostMiddleware, priority: PriorityLevel, regExp?: RegExp}[]> = {};
-    
+    private globalMiddlewares: Record<string, { value: JopiMiddleware, priority: PriorityLevel, regExp?: RegExp }[]> = {};
+    private globalPostMiddlewares: Record<string, { value: JopiPostMiddleware, priority: PriorityLevel, regExp?: RegExp }[]> = {};
+
     constructor(url: string, options?: WebSiteOptions) {
         if (!options) options = {};
 
@@ -108,7 +108,7 @@ export class CoreWebSite {
         this.welcomeUrl = urlInfos.protocol + "//" + urlInfos.hostname;
 
         if (urlInfos.protocol === "https:") this.isHttps = true;
-        else if (urlInfos.protocol!=="http:") throw new Error("invalid url");
+        else if (urlInfos.protocol !== "http:") throw new Error("invalid url");
 
         if (urlInfos.port) {
             this.port = parseInt(urlInfos.port);
@@ -133,14 +133,14 @@ export class CoreWebSite {
     getWelcomeUrl(): string {
         return this.welcomeUrl;
     }
-    
+
     addSourceServer<T>(serverFetch: ServerFetch<T>, weight?: number) {
         this.loadBalancer.addServer<T>(serverFetch, weight);
     }
-    
+
     getOrCreateHttpRedirectWebsite(): CoreWebSite {
         if (this.http80WebSite) return this.http80WebSite;
-        if (this.port===80) return this;
+        if (this.port === 80) return this;
 
         let urlInfos = new URL(this.welcomeUrl);
         urlInfos.port = "";
@@ -163,11 +163,11 @@ export class CoreWebSite {
         this.certificate = certificate;
         if (this._onRebuildCertificate) this._onRebuildCertificate();
     }
-    
+
     //region Server events
 
     async onBeforeServerStart() {
-        await jk_events.sendAsyncEvent("@jopi.server.before.start", {webSite: this});
+        await jk_events.sendAsyncEvent("@jopi.server.before.start", { webSite: this });
         await createBundle(this);
         installBundleServer(this);
         installDataSourcesServer(this);
@@ -212,45 +212,45 @@ export class CoreWebSite {
 
     //region Middlewares
 
-    addGlobalMiddleware(method: HttpMethod|"*"|undefined, middleware: JopiMiddleware, options?: MiddlewareOptions) {
+    addGlobalMiddleware(method: HttpMethod | "*" | undefined, middleware: JopiMiddleware, options?: MiddlewareOptions) {
         options = options || {};
 
         let m = method ? method : "*";
         if (!this.globalMiddlewares[m]) this.globalMiddlewares[m] = [];
-        this.globalMiddlewares[m].push({priority: options.priority||PriorityLevel.default, value: middleware, regExp: options.regExp});
+        this.globalMiddlewares[m].push({ priority: options.priority || PriorityLevel.default, value: middleware, regExp: options.regExp });
     }
 
-    addGlobalPostMiddleware(method: HttpMethod|"*"|undefined, middleware: JopiPostMiddleware, options?: MiddlewareOptions) {
+    addGlobalPostMiddleware(method: HttpMethod | "*" | undefined, middleware: JopiPostMiddleware, options?: MiddlewareOptions) {
         options = options || {};
 
         let m = method ? method : "*";
         if (!this.globalPostMiddlewares[m]) this.globalPostMiddlewares[m] = [];
-        this.globalPostMiddlewares[m].push({priority: options.priority||PriorityLevel.default, value: middleware, regExp: options.regExp});
+        this.globalPostMiddlewares[m].push({ priority: options.priority || PriorityLevel.default, value: middleware, regExp: options.regExp });
     }
 
     applyMiddlewares(verb: HttpMethod, route: string, handler: JopiRouteHandler, isPage: boolean): JopiRouteHandler {
-        function merge<T>(a: T[]|undefined, b: T[]|undefined): T[]|undefined {
+        function merge<T>(a: T[] | undefined, b: T[] | undefined): T[] | undefined {
             if (!a) return b;
             if (!b) return a;
             return a.concat(b);
         }
 
-        function mergeMiddlewares(allMiddlewares: JopiMiddleware[]): JopiMiddleware|undefined {
-            if (allMiddlewares.length===0) return undefined;
-            if (allMiddlewares.length===1) return allMiddlewares[0];
+        function mergeMiddlewares(allMiddlewares: JopiMiddleware[]): JopiMiddleware | undefined {
+            if (allMiddlewares.length === 0) return undefined;
+            if (allMiddlewares.length === 1) return allMiddlewares[0];
 
             const list = allMiddlewares.reverse();
-            let nextToCall: JopiMiddleware|undefined;
+            let nextToCall: JopiMiddleware | undefined;
 
             for (let m of list) {
                 if (nextToCall) {
                     const toCall = m;
                     const next = nextToCall;
 
-                    nextToCall = async function(req) {
+                    nextToCall = async function (req) {
                         let res = toCall(req);
                         if (res instanceof Promise) res = await res;
-                        if (res!==null) return res;
+                        if (res !== null) return res;
 
                         return next(req);
                     };
@@ -262,19 +262,19 @@ export class CoreWebSite {
             return nextToCall;
         }
 
-        function mergePostMiddlewares(allMiddlewares: JopiPostMiddleware[]): JopiPostMiddleware|undefined {
-            if (allMiddlewares.length===0) return undefined;
-            if (allMiddlewares.length===1) return allMiddlewares[0];
+        function mergePostMiddlewares(allMiddlewares: JopiPostMiddleware[]): JopiPostMiddleware | undefined {
+            if (allMiddlewares.length === 0) return undefined;
+            if (allMiddlewares.length === 1) return allMiddlewares[0];
 
             const list = allMiddlewares.reverse();
-            let nextToCall: JopiPostMiddleware|undefined;
+            let nextToCall: JopiPostMiddleware | undefined;
 
             for (let m of list) {
                 if (nextToCall) {
                     const toCall = m;
                     const next = nextToCall;
 
-                    nextToCall = async function(req, res) {
+                    nextToCall = async function (req, res) {
                         let t = toCall(req, res);
                         if (t instanceof Promise) t = await t;
                         return next(req, t);
@@ -287,10 +287,8 @@ export class CoreWebSite {
             return nextToCall;
         }
 
-
         return async (req: JopiRequest) => {
             const routeInfos = (req as JopiRequestImpl).routeInfos;
-
             const routeRawMiddlewares = routeInfos ? routeInfos.middlewares : undefined;
             const routeRawPostMiddlewares = routeInfos ? routeInfos.postMiddlewares : undefined;
 
@@ -363,7 +361,7 @@ export class CoreWebSite {
                         }
                     }
 
-                    let res: Response|undefined;
+                    let res: Response | undefined;
 
                     if (!(req as JopiRequestImpl)._cache_ignoreCacheRead) {
                         res = await req.cache_getFromCache();
@@ -381,7 +379,7 @@ export class CoreWebSite {
                         }
                     }
 
-                    logCache_notInCache.info(w => w(`${req.req_method} request`, {url: req.req_urlInfos?.href}));
+                    logCache_notInCache.info(w => w(`${req.req_method} request`, { url: req.req_urlInfos?.href }));
 
                     if (ifNotInCache) {
                         ifNotInCache(req, isPage);
@@ -446,7 +444,7 @@ export class CoreWebSite {
 
     enableCors(allows?: string[]) {
         if (!allows) allows = [this.welcomeUrl];
-        this.addGlobalPostMiddleware(undefined, PostMiddlewares.cors({accessControlAllowOrigin: allows}), {priority: PriorityLevel.veryHigh});
+        this.addGlobalPostMiddleware(undefined, PostMiddlewares.cors({ accessControlAllowOrigin: allows }), { priority: PriorityLevel.veryHigh });
     }
 
     //endregion
@@ -477,7 +475,7 @@ export class CoreWebSite {
      * Allow overriding the instance used by modules 'uiInit.tsx' files.
      * @param builder
      */
-    setModuleInitClassInstanceBuilder(builder: (host: JopiUiApplication_Host, extraParams: ExtraPageParams) =>  JopiUiApplication) {
+    setModuleInitClassInstanceBuilder(builder: (host: JopiUiApplication_Host, extraParams: ExtraPageParams) => JopiUiApplication) {
         this.createModuleInitInstance = builder;
     }
 
@@ -563,7 +561,7 @@ export class CoreWebSite {
             // User authorization must stay as long as possible (High priority)
             // in case of browser cookies eviction conflict.
             //
-            req.cookie_addCookieToRes("authorization", "jwt " + token, {maxAge: ONE_DAY * 7, priority: "High"});
+            req.cookie_addCookieToRes("authorization", "jwt " + token, { maxAge: ONE_DAY * 7, priority: "High" });
         }
     }
 
@@ -571,7 +569,7 @@ export class CoreWebSite {
         this.jwtTokenStore = store;
     }
 
-    createJwtToken(data: UserInfos): string|undefined {
+    createJwtToken(data: UserInfos): string | undefined {
         try {
             return jwt.sign(data as object, this.JWT_SECRET!, this.jwtSignInOptions);
         } catch (e) {
@@ -580,7 +578,7 @@ export class CoreWebSite {
         }
     }
 
-    decodeJwtToken(req: JopiRequest, token: string): UserInfos|undefined {
+    decodeJwtToken(req: JopiRequest, token: string): UserInfos | undefined {
         if (!this.JWT_SECRET) return undefined;
 
         try {
@@ -603,7 +601,7 @@ export class CoreWebSite {
             return res;
         }
 
-        return {isOk: false};
+        return { isOk: false };
     }
 
     setAuthHandler<T>(authHandler: UserAuthentificationFunction<T>) {
@@ -626,11 +624,11 @@ export class CoreWebSite {
         this.allRouteInfos[verb + " " + route] = routeInfos;
     }
 
-    getRouteInfos(verb: string, route: string): WebSiteRouteInfos|undefined {
+    getRouteInfos(verb: string, route: string): WebSiteRouteInfos | undefined {
         return this.allRouteInfos[verb + " " + route];
     }
 
-    tryReturnFile(params: TryReturnFileParams): Promise<Response|undefined> {
+    tryReturnFile(params: TryReturnFileParams): Promise<Response | undefined> {
         return this.serverInstanceBuilder.tryReturnFile(params);
     }
 
@@ -638,14 +636,13 @@ export class CoreWebSite {
         this.serverInstanceBuilder.addSseEVent(path, handler);
     }
 
-    async processRequest(handler: RouteHandler|undefined, urlParts: any, routeInfos: WebSiteRouteInfos|undefined, urlInfos: URL|undefined, coreRequest: Request, coreServer: CoreServer): Promise<Response|undefined> {
+    async processRequest(handler: RouteHandler | undefined, urlParts: any, routeInfos: WebSiteRouteInfos | undefined, urlInfos: URL | undefined, coreRequest: Request, coreServer: CoreServer): Promise<Response | undefined> {
         // For security reasons. Without that, an attacker can break a cache.
         if (urlInfos) urlInfos.hash = "";
 
-        const req = new JopiRequestImpl(this, urlInfos, coreRequest, coreServer, routeInfos!);
-        req.req_urlParts = urlParts;
+        const req = new JopiRequestImpl(this, urlInfos, coreRequest, coreServer, routeInfos!, urlParts);
 
-        const endReq = logServer_request.beginInfo((w) => w(`${req.req_method} request`, {url: req.req_url }));
+        const endReq = logServer_request.beginInfo((w) => w(`${req.req_method} request`, { url: req.req_url }));
 
         try {
             let res: Response;
@@ -654,7 +651,7 @@ export class CoreWebSite {
                 res = await handler(req);
                 if (!res) {
                     console.warn(`⚠️ Warning, route ${req.routeInfos.route} forget to return a response.`);
-                    res = new Response("", {status: 500});
+                    res = new Response("", { status: 500 });
                 }
 
                 res = req._applyPostProcess(res);
@@ -662,7 +659,7 @@ export class CoreWebSite {
                 res = await req.res_returnError404_NotFound();
             }
 
-            endReq({status: res.status});
+            endReq({ status: res.status });
             return res;
         } catch (e) {
             if (e instanceof SBPE_ServerByPassException) {
@@ -684,7 +681,7 @@ export class CoreWebSite {
             }
 
             console.error(e);
-            endReq({error: (e as Error).message});
+            endReq({ error: (e as Error).message });
 
             return this.return500(req, e as Error | string);
         }
@@ -695,17 +692,17 @@ export class CoreWebSite {
     onVerb(verb: HttpMethod, path: string, handler: (req: JopiRequest) => Promise<Response>): WebSiteRouteInfos {
         handler = this.applyMiddlewares(verb, path, handler, false);
 
-        const routeInfos: WebSiteRouteInfos = {route: path, handler};
+        const routeInfos: WebSiteRouteInfos = { route: path, handler };
         this.saveRouteInfos(verb, path, routeInfos);
 
         this.serverInstanceBuilder.addRoute(verb, path, routeInfos);
 
-        if (verb==="GET") this.applyCacheRules(routeInfos, path);
+        if (verb === "GET") this.applyCacheRules(routeInfos, path);
         return routeInfos;
     }
 
     onPage(path: string, pageKey: string, reactComponent: React.FC<any>): WebSiteRouteInfos {
-        const routeInfos: WebSiteRouteInfos = {route: path, handler: gVoidRouteHandler};
+        const routeInfos: WebSiteRouteInfos = { route: path, handler: gVoidRouteHandler };
         this.saveRouteInfos("GET", path, routeInfos);
 
         this.serverInstanceBuilder.addPage(path, pageKey, reactComponent, routeInfos);
@@ -762,7 +759,7 @@ export class CoreWebSite {
 
     async return404(req: JopiRequest): Promise<Response> {
         const accept = req.req_headers.get("accept");
-        if (!accept || !accept.startsWith("text/html")) return new Response("", {status: 404});
+        if (!accept || !accept.startsWith("text/html")) return new Response("", { status: 404 });
 
         if (this._on404_NotFound) {
             let res = await this._on404_NotFound(req);
@@ -770,24 +767,24 @@ export class CoreWebSite {
 
             if (res) {
                 if (res.status !== 404) {
-                    return new Response(res.body, {status: 404, headers: res.headers});
+                    return new Response(res.body, { status: 404, headers: res.headers });
                 }
 
                 return res;
             }
         }
 
-        return new Response("", {status: 404});
+        return new Response("", { status: 404 });
     }
 
-    async return500(req: JopiRequest, error?: any|string): Promise<Response> {
+    async return500(req: JopiRequest, error?: any | string): Promise<Response> {
         const accept = req.req_headers.get("accept");
-        if (!accept || !accept.startsWith("text/html")) return new Response("", {status: 500});
+        if (!accept || !accept.startsWith("text/html")) return new Response("", { status: 500 });
 
         if (this._on500_Error) {
             // Avoid recursions.
             req.res_returnError500_ServerError = async () => {
-                return new Response("Internal server error", {status: 500});
+                return new Response("Internal server error", { status: 500 });
             }
 
             let res = this._on500_Error(req, error);
@@ -795,35 +792,35 @@ export class CoreWebSite {
 
             if (res) {
                 if (res.status !== 500) {
-                    return new Response(res.body, {status: 500, headers: res.headers});
+                    return new Response(res.body, { status: 500, headers: res.headers });
                 }
 
                 return res;
             }
         }
 
-        return new Response("", {status: 500});
+        return new Response("", { status: 500 });
     }
 
-    async return401(req: JopiRequest, error?: Error|string): Promise<Response> {
+    async return401(req: JopiRequest, error?: Error | string): Promise<Response> {
         if (this._on401_Unauthorized) {
             let res = this._on401_Unauthorized(req, error);
             if (res instanceof Promise) res = await res;
 
             if (res) {
                 if (res.status !== 401) {
-                    return new Response(res.body, {status: 401, headers: res.headers});
+                    return new Response(res.body, { status: 401, headers: res.headers });
                 }
 
                 return res;
             }
         }
 
-        if (req.req_method!=="GET") {
-            return new Response(error ? error.toString() : "", {status: 401});
+        if (req.req_method !== "GET") {
+            return new Response(error ? error.toString() : "", { status: 401 });
         }
 
-        return new Response("", {status: 401});
+        return new Response("", { status: 401 });
     }
 
     //endregion
@@ -831,7 +828,7 @@ export class CoreWebSite {
     //endregion
 }
 
-const gVoidRouteHandler = () => Promise.resolve(new Response("void", {status: 200}));
+const gVoidRouteHandler = () => Promise.resolve(new Response("void", { status: 200 }));
 
 export interface ServeFileOptions {
     /**
@@ -844,7 +841,7 @@ export interface ServeFileOptions {
      * If the request file is not found, then call this function.
      * If undefined, then will directly return a 404 error.
      */
-    onNotFound?: (req: JopiRequest) => Response|Promise<Response>;
+    onNotFound?: (req: JopiRequest) => Response | Promise<Response>;
 }
 
 export class WebSiteOptions {
@@ -861,7 +858,7 @@ export class WebSiteOptions {
     /**
      * A list of listeners which must be called when the website is fully operational.
      */
-    onWebSiteReady?: (()=>void)[];
+    onWebSiteReady?: (() => void)[];
 
     /**
      * If false, will remove the trailing-slash at the end of the urls.
@@ -881,6 +878,12 @@ export interface WebSiteRouteInfos {
 
     middlewares?: ValueWithPriority<JopiMiddleware>[];
     postMiddlewares?: ValueWithPriority<JopiPostMiddleware>[];
+
+    /**
+     * If defined, then this is a catch-all slug.
+     * Example: for the route /user/[...path] then the slug is "path".
+     */
+    catchAllSlug?: string;
 
     /**
      * Data provider for the page.
@@ -910,7 +913,7 @@ export interface WebSiteRouteInfos {
      * Is executed before checking the cache.
      * If a response is returned/void, then directly returns this response.
      */
-    beforeCheckingCache?: (req: JopiRequest) => Promise<Response|undefined|void>;
+    beforeCheckingCache?: (req: JopiRequest) => Promise<Response | undefined | void>;
 
     /**
      * Is executed if the response is not in the cache.
@@ -921,13 +924,13 @@ export interface WebSiteRouteInfos {
      * Is executed before adding the response to the cache.
      * Returns the response or undefined/void to avoid adding to the cache.
      */
-    beforeAddToCache?: (req: JopiRequest, res: Response) => Promise<Response|undefined|void>;
+    beforeAddToCache?: (req: JopiRequest, res: Response) => Promise<Response | undefined | void>;
 
     /**
      * Is executed after getting the response from the cache.
      * Returns the response or undefined/void to avoid using this cache entry.
      */
-    afterGetFromCache?: (req: JopiRequest, res: Response) => Promise<Response|undefined|void>;
+    afterGetFromCache?: (req: JopiRequest, res: Response) => Promise<Response | undefined | void>;
 }
 
 export class JopiWebSocket {
@@ -938,11 +941,11 @@ export class JopiWebSocket {
         this.webSocket.close();
     }
 
-    onMessage(listener: (msg: string|Buffer) => void): void {
+    onMessage(listener: (msg: string | Buffer) => void): void {
         jk_webSocket.onMessage(this.webSocket, listener);
     }
 
-    sendMessage(msg: string|Buffer|Uint8Array|ArrayBuffer) {
+    sendMessage(msg: string | Buffer | Uint8Array | ArrayBuffer) {
         jk_webSocket.sendMessage(this.webSocket, msg);
     }
 }
@@ -953,19 +956,19 @@ export function newWebSite(url: string, options?: WebSiteOptions): CoreWebSite {
 
 export type JopiRouteHandler = (req: JopiRequest) => Promise<Response>;
 export type JopiWsRouteHandler = (ws: JopiWebSocket, infos: WebSocketConnectionInfos) => void;
-export type JopiErrorHandler = (req: JopiRequest, error?: Error|string) => Response|Promise<Response>;
+export type JopiErrorHandler = (req: JopiRequest, error?: Error | string) => Response | Promise<Response>;
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'HEAD' | 'OPTIONS';
 export type RequestBody = ReadableStream<Uint8Array> | null;
 export type SendingBody = ReadableStream<Uint8Array> | string | FormData | null;
 
-export type ResponseModifier = (res: Response, req: JopiRequest) => Response|Promise<Response>;
-export type TextModifier = (text: string, req: JopiRequest) => string|Promise<string>;
-export type TestCookieValue = (value: string) => boolean|Promise<boolean>;
+export type ResponseModifier = (res: Response, req: JopiRequest) => Response | Promise<Response>;
+export type TextModifier = (text: string, req: JopiRequest) => string | Promise<string>;
+export type TestCookieValue = (value: string) => boolean | Promise<boolean>;
 
 export type JwtTokenStore = (jwtToken: string, cookieValue: string, req: JopiRequest) => void;
-export type UserAuthentificationFunction<T = any> = (loginInfo: T) => AuthResult|Promise<AuthResult>;
+export type UserAuthentificationFunction<T = any> = (loginInfo: T) => AuthResult | Promise<AuthResult>;
 
-export type JopiMiddleware = (req: JopiRequest) => Response | Promise<Response|null> | null;
+export type JopiMiddleware = (req: JopiRequest) => Response | Promise<Response | null> | null;
 export type JopiPostMiddleware = (req: JopiRequest, res: Response) => Response | Promise<Response>;
 
 export class SBPE_ServerByPassException extends Error {
@@ -998,7 +1001,7 @@ export class SBPE_NotAuthorizedException extends SBPE_ServerByPassException {
 }
 
 export class SBPE_DirectSendThisResponseException extends SBPE_ServerByPassException {
-    constructor(public readonly response: Response| JopiRouteHandler) {
+    constructor(public readonly response: Response | JopiRouteHandler) {
         super();
     }
 }

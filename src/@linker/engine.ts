@@ -4,17 +4,17 @@ import * as jk_term from "jopi-toolkit/jk_term";
 import * as jk_what from "jopi-toolkit/jk_what";
 import * as jk_events from "jopi-toolkit/jk_events";
 import * as jk_app from "jopi-toolkit/jk_app";
-import {PriorityLevel} from "jopi-toolkit/jk_tools";
-import {getModulesList, setModulesSourceDir} from "jopijs/modules";
-import {JopiModuleInfo} from "../@modules/index.ts";
-import {collector_begin, collector_end} from "./dataCollector.ts";
-export {PriorityLevel} from "jopi-toolkit/jk_tools";
+import { PriorityLevel } from "jopi-toolkit/jk_tools";
+import { getModulesList, setModulesSourceDir } from "jopijs/modules";
+import { JopiModuleInfo } from "../@modules/index.ts";
+import { collector_begin, collector_end } from "./dataCollector.ts";
+export { PriorityLevel } from "jopi-toolkit/jk_tools";
 
 const LOG = false;
 
 //region Helpers
 
-export async function resolveFile(dirToSearch: string, fileNames: string[]): Promise<string|undefined> {
+export async function resolveFile(dirToSearch: string, fileNames: string[]): Promise<string | undefined> {
     for (let fileName of fileNames) {
         let filePath = jk_fs.join(dirToSearch, fileName);
 
@@ -63,12 +63,12 @@ export async function writeTextToFileIfMismatch(filePath: string, content: strin
     }
 
     const currentContent = await jk_fs.readTextFromFile(filePath);
-    if (currentContent===content) return;
+    if (currentContent === content) return;
 
     await jk_fs.writeTextToFile(filePath, content);
 }
 
-export function priorityNameToLevel(priorityName: string): PriorityLevel|undefined {
+export function priorityNameToLevel(priorityName: string): PriorityLevel | undefined {
     priorityName = priorityName.toLowerCase();
     priorityName = priorityName.replace("-", "");
     priorityName = priorityName.replace("_", "");
@@ -137,7 +137,7 @@ export enum FilePart {
     footer = "footer",
 }
 
-export enum InstallFileType {server, browser, both}
+export enum InstallFileType { server, browser, both }
 
 async function generateAll() {
     function applyTemplate(template: string, header: string, body: string, footer: string): string {
@@ -262,12 +262,12 @@ export class CodeGenWriter {
             group[where] = part + javascriptContent;
         }
 
-        if (who===InstallFileType.both) {
+        if (who === InstallFileType.both) {
             addTo(gServerInstallFile);
             addTo(gBrowserInstallFile);
-        } else if (who===InstallFileType.server) {
+        } else if (who === InstallFileType.server) {
             addTo(gServerInstallFile);
-        } else if (who===InstallFileType.browser) {
+        } else if (who === InstallFileType.browser) {
             addTo(gBrowserInstallFile);
         }
     }
@@ -325,7 +325,7 @@ async function processAllModules() {
 
 async function processThisModule(moduleDir: string) {
     let dirItems = await jk_fs.listDir(moduleDir);
-    let aliasRootDir: jk_fs.DirItem|undefined;
+    let aliasRootDir: jk_fs.DirItem | undefined;
 
     for (let dirItem of dirItems) {
         if (!dirItem.isDirectory) continue;
@@ -337,7 +337,7 @@ async function processThisModule(moduleDir: string) {
         if (!type) throw declareLinkerError("Unknown alias type: " + name, dirItem.fullPath);
 
         if (type.position !== "root") continue;
-        await type.processDir({moduleDir, typeDir: dirItem.fullPath, genDir: gDir_outputSrc});
+        await type.processDir({ moduleDir, typeDir: dirItem.fullPath, genDir: gDir_outputSrc });
     }
 
     if (aliasRootDir) {
@@ -351,7 +351,7 @@ async function processThisModule(moduleDir: string) {
             if (!type) throw declareLinkerError("Unknown alias type: " + name, dirItem.fullPath);
 
             if (type.position === "root") continue;
-            await type.processDir({moduleDir, typeDir: dirItem.fullPath, genDir: gDir_outputSrc});
+            await type.processDir({ moduleDir, typeDir: dirItem.fullPath, genDir: gDir_outputSrc });
         }
     }
 }
@@ -361,7 +361,7 @@ async function processThisModule(moduleDir: string) {
 //region Extensions
 
 export abstract class AliasType {
-    constructor(public readonly typeName: string, public readonly position?: "root"|undefined) {
+    constructor(public readonly typeName: string, public readonly position?: "root" | undefined) {
     }
 
     public initialize(_aliasTypes: Record<string, AliasType>) {
@@ -433,19 +433,19 @@ export abstract class AliasType {
         const thisIsFile = dirItem.isFile;
         const thisFullPath = dirItem.fullPath;
         const thisName = dirItem.name;
-        let thisNameAsUID: string|undefined;
+        let thisNameAsUID: string | undefined;
 
         // The file / folder-name is a UUID4?
         let thisIsUUID = jk_tools.isUUIDv4(thisName);
 
         if (thisIsUUID) {
-            if (p.nameConstraint==="mustNotBeUid") {
+            if (p.nameConstraint === "mustNotBeUid") {
                 throw declareLinkerError("The name must NOT be an UID", thisFullPath);
             }
 
             thisNameAsUID = thisName;
         } else {
-            if (p.nameConstraint==="mustBeUid") {
+            if (p.nameConstraint === "mustBeUid") {
                 throw declareLinkerError("The name MUST be an UID", thisFullPath);
             }
         }
@@ -495,7 +495,7 @@ export abstract class AliasType {
 
         if (myUid) {
             // If itemUid already defined, then must match myUidFile.
-            if (thisNameAsUID && (thisNameAsUID!==myUid)) {
+            if (thisNameAsUID && (thisNameAsUID !== myUid)) {
                 throw declareLinkerError("The UID in the .myuid file is NOT the same as the UID in the folder name", thisFullPath);
             }
 
@@ -527,11 +527,19 @@ export abstract class AliasType {
         return !!(params.resolved && params.resolved.entryPoint);
     }
 
-    protected async onItemAccepted(params: {itemPath: string, features?: Record<string, boolean|undefined>}): Promise<void> {
+    /**
+     * Is called when an item is accepted as an valide item.
+     * Most of the time it's an item added to the registry.
+     */
+    protected async onItemAccepted(params: { itemPath: string, features?: Record<string, boolean | undefined> }): Promise<void> {
         return this.addDefaultFiles(params);
     }
 
-    protected async addDefaultFiles(params: {itemPath: string, features?: Record<string, boolean|undefined>}): Promise<void> {
+    /**
+     * Add default files to the item.
+     * Is currently used to add the default enabled/disables state for features. Exemple: autoCache.enable
+     */
+    protected async addDefaultFiles(params: { itemPath: string, features?: Record<string, boolean | undefined> }): Promise<void> {
         let defaultFeatures = this.getDefaultFeatures();
 
         if (defaultFeatures) {
@@ -598,7 +606,7 @@ export abstract class AliasType {
             if (entry.name[0] === ".") return false;
 
             if (entry.isDirectory) {
-                if (entry.name==="_") {
+                if (entry.name === "_") {
                     let uid = useThisUid || jk_tools.generateUUIDv4();
                     let newPath = jk_fs.join(jk_fs.dirname(entry.fullPath), uid);
                     await jk_fs.rename(entry.fullPath, newPath);
@@ -607,7 +615,7 @@ export abstract class AliasType {
                     entry.fullPath = newPath;
                 }
 
-                if (entry.name[0]== "_") return false;
+                if (entry.name[0] == "_") return false;
             }
             else {
                 if (entry.name === "_.myuid") {
@@ -619,7 +627,7 @@ export abstract class AliasType {
                     await writeTextToFileIfMismatch(entry.fullPath, uid);
                 }
 
-                if (entry.name[0]== "_") return false;
+                if (entry.name[0] == "_") return false;
 
                 if (entry.name.endsWith(".myuid")) {
                     if (result.myUid) {
@@ -634,7 +642,7 @@ export abstract class AliasType {
                         throw declareLinkerError("More than one .priority file found here", entry.fullPath);
                     }
 
-                    if (rules.requirePriority===false) {
+                    if (rules.requirePriority === false) {
                         throw declareLinkerError("A .priority file is NOT expected here", entry.fullPath);
                     }
 
@@ -642,7 +650,7 @@ export abstract class AliasType {
                     result.priority = await decodePriority(entry.name, entry.fullPath);
                 }
                 else if (entry.name.endsWith(".cond")) {
-                    if (rules.allowConditions===false) {
+                    if (rules.allowConditions === false) {
                         throw declareLinkerError("A .cond file is NOT expected here", entry.fullPath);
                     }
 
@@ -665,7 +673,7 @@ export abstract class AliasType {
                     await addNameIntoFile(entry.fullPath);
                 }
                 else if (entry.name.endsWith(".disable")) {
-                    if (rules.allowFeatures===false) {
+                    if (rules.allowFeatures === false) {
                         throw declareLinkerError("A .disable file is NOT expected here", entry.fullPath);
                     }
 
@@ -679,7 +687,7 @@ export abstract class AliasType {
                     await addNameIntoFile(entry.fullPath);
                 }
                 else if (entry.name.endsWith(".enable")) {
-                    if (rules.allowFeatures===false) {
+                    if (rules.allowFeatures === false) {
                         throw declareLinkerError("A .disable file is NOT expected here", entry.fullPath);
                     }
 
@@ -721,15 +729,15 @@ export abstract class AliasType {
         return result;
     }
 
-    protected getDefaultFeatures(): Record<string, boolean>|undefined {
+    protected getDefaultFeatures(): Record<string, boolean> | undefined {
         return undefined;
     }
 
-    protected normalizeConditionName(condName: string, filePath: string, ctx: any|undefined): string|undefined {
+    protected normalizeConditionName(condName: string, filePath: string, ctx: any | undefined): string | undefined {
         return undefined;
     }
 
-    protected onFeatureFileFound(featureName: string): string|undefined {
+    protected onFeatureFileFound(featureName: string): string | undefined {
         return undefined;
     }
 
@@ -754,7 +762,7 @@ export abstract class AliasType {
         }
     }
 
-    registry_getItem<T extends RegistryItem>(key: string, requireType?: AliasType): T|undefined {
+    registry_getItem<T extends RegistryItem>(key: string, requireType?: AliasType): T | undefined {
         const entry = gRegistry[key];
         if (requireType && entry && (entry.type !== requireType)) throw declareLinkerError("The item " + key + " is not of the expected type @" + requireType.typeName);
         return entry as T;
@@ -779,12 +787,12 @@ export interface DirAnalyzingRules {
 
 export interface ScanDirItemsParams {
     dirToScan: string;
-    expectFsType: "file"|"dir"|"fileOrDir";
+    expectFsType: "file" | "dir" | "fileOrDir";
 
     /**
      * If defined, then will be called for each validated entry.
      */
-    handler?: (item: jk_fs.DirItem, rules: ProcessDirItemParams|undefined) => Promise<void>;
+    handler?: (item: jk_fs.DirItem, rules: ProcessDirItemParams | undefined) => Promise<void>;
 
     rules?: ProcessDirItemParams;
 }
@@ -792,7 +800,7 @@ export interface ScanDirItemsParams {
 export interface ProcessDirItemParams extends DirAnalyzingRules {
     rootDirName: string;
     filesToResolve?: Record<string, string[]>;
-    nameConstraint: "canBeUid"|"mustNotBeUid"|"mustBeUid";
+    nameConstraint: "canBeUid" | "mustNotBeUid" | "mustBeUid";
 
     transform: (props: TransformItemParams) => Promise<void>;
 }
@@ -813,7 +821,7 @@ export interface TransformItemParams {
     parentDirName: string;
     priority: PriorityLevel;
 
-    resolved: Record<string, string|undefined>;
+    resolved: Record<string, string | undefined>;
 }
 
 export interface ExtractDirectoryInfosResult {
@@ -901,7 +909,7 @@ export interface Directories {
 }
 
 export async function compile(importMeta: any, config: LinkerConfig, isRefresh = false): Promise<void> {
-    async function searchLinkerScript(): Promise<string|undefined> {
+    async function searchLinkerScript(): Promise<string | undefined> {
         let jopiLinkerScript = jk_fs.join(gDir_ProjectRoot, "dist", "jopi-linker.js");
         if (await jk_fs.isFile(jopiLinkerScript)) return jopiLinkerScript;
 

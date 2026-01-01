@@ -59,15 +59,22 @@ export class JopiRequest {
     private readonly mainCache: PageCache;
     private cookies?: { [name: string]: string };
     private _req_headers: Headers;
+    private _req_urlParts?: Record<string, string>;
+    private _req_urlParts_done: boolean;
 
     constructor(protected readonly webSite: CoreWebSite,
         private _urlInfos: URL | undefined,
         public coreRequest: Request,
         protected readonly coreServer: CoreServer,
-        public readonly routeInfos: WebSiteRouteInfos) {
+        public readonly routeInfos: WebSiteRouteInfos,
+        req_urlParts: Record<string, string> | undefined,
+    ) {
         this.cache = webSite.mainCache;
         this.mainCache = this.cache;
         this._req_headers = this.coreRequest.headers;
+
+        this._req_urlParts = req_urlParts;
+        this._req_urlParts_done = false;
     }
 
     //region Custom data
@@ -132,7 +139,7 @@ export class JopiRequest {
      * Return the Content-Type header of the request.
      * @returns The content type string or null if not present.
      */
-    get req_ContentType(): string | null {
+    get req_contentType(): string | null {
         return this.coreRequest.headers.get("content-type");
     }
 
@@ -169,7 +176,34 @@ export class JopiRequest {
      * - URL: `/products/electronics/123`
      * - Result: `{ category: "electronics", id: "123" }`
      */
-    req_urlParts?: any;
+    get req_urlParts(): Record<string, string> {
+        if (this._req_urlParts_done) {
+            return this._req_urlParts!;
+        }
+
+        const routeInfos = this.routeInfos;
+        let urlParts = this._req_urlParts || {};
+
+        if (routeInfos.catchAllSlug) {
+            /*let routeExtractFromIdx = routeInfos.route.split("/").length - 1;
+            let pathname = this.req_urlInfos.pathname.split("/");
+
+            let value = "";
+
+            for (let i = routeExtractFromIdx; i < pathname.length; i++) {
+                value += "/" + pathname[i];
+            }
+
+            urlParts[routeInfos.catchAllSlug] = value;*/
+
+            urlParts[routeInfos.catchAllSlug] = "/" + urlParts["_"];
+        }
+
+        this._req_urlParts_done = true;
+        this._req_urlParts = urlParts;
+
+        return urlParts;
+    }
 
     /**
      * Returns the URL search parameters as a plain object.
@@ -377,19 +411,19 @@ export class JopiRequest {
     }
 
     get req_isBodyJson(): boolean {
-        const ct = this.req_ContentType;
+        const ct = this.req_contentType;
         if (ct === null) return false;
         return ct.startsWith("application/json");
     }
 
     get req_isBodyFormData(): boolean {
-        const ct = this.req_ContentType;
+        const ct = this.req_contentType;
         if (ct === null) return false;
         return ct.startsWith("multipart/form-data");
     }
 
     get req_isBodyXFormUrlEncoded(): boolean {
-        const ct = this.req_ContentType;
+        const ct = this.req_contentType;
         if (ct === null) return false;
         return ct.startsWith("application/x-www-form-urlencoded");
     }
@@ -1005,7 +1039,7 @@ export class JopiRequest {
         console.log();
         console.log(headerColor(this.req_method, this.req_url));
         console.log(titleColor("|- referer: "), data.reqReferer);
-        console.log(titleColor("|- req_ContentType:"), data.req_ContentType);
+        console.log(titleColor("|- req_contentType:"), data.req_contentType);
         console.log(titleColor("|- reqData:"), data.reqData);
         console.log(titleColor("|- reqCookie:"), data.reqCookies);
         console.log(titleColor("|- resContentType:"), data.resContentType);
@@ -1038,7 +1072,7 @@ export class JopiRequest {
 
             reqUrl: this.req_url,
             reqReferer: this.req_headers.get("referer"),
-            req_ContentType: this.req_ContentType,
+            req_contentType: this.req_contentType,
             reqData: await this.req_getDataInfos(),
             resContentType: res.headers.get("content-type"),
             resContentTypeCat: this.resValue_getContentTypeCategory(res),
@@ -1713,7 +1747,7 @@ export interface JopiRequestSpyData {
 
     reqUrl: string;
     reqReferer: string | null;
-    req_ContentType: string | null;
+    req_contentType: string | null;
     reqData: any;
 
     // Allow avoiding printing the response content.

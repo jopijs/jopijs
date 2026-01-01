@@ -9,11 +9,11 @@ import {
 } from "./engine.ts";
 import * as jk_fs from "jopi-toolkit/jk_fs";
 import * as jk_app from "jopi-toolkit/jk_app";
-import type {RouteAttributes, RouteBindPageParams, RouteBindVerbParams} from "jopijs/generated";
-import {normalizeNeedRoleConditionName} from "./common.ts";
-import type {HttpMethod} from "jopijs";
-import {isBrowser} from "jopi-toolkit/jk_what";
-import {collector_declareUiComponent} from "./dataCollector.ts";
+import type { RouteAttributes, RouteBindPageParams, RouteBindVerbParams } from "jopijs/generated";
+import { normalizeNeedRoleConditionName } from "./common.ts";
+import type { HttpMethod } from "jopijs";
+import { isBrowser } from "jopi-toolkit/jk_what";
+import { collector_declareUiComponent } from "./dataCollector.ts";
 
 export default class TypeRoutes extends AliasType {
     private sourceCode_header = `import {routeBindPage, routeBindVerb} from "jopijs/generated";`;
@@ -34,14 +34,14 @@ export default class TypeRoutes extends AliasType {
 
     private genCode_DeclarePages() {
         for (let item of Object.values(this.registry)) {
-            if (item.verb==="PAGE") {
+            if (item.verb === "PAGE") {
                 collector_declareUiComponent(item.filePath);
             }
         }
     }
 
     private async genCode_DeclareServerRoutes(writer: CodeGenWriter) {
-        if (Object.keys(this.routeConfig).length>0) {
+        if (Object.keys(this.routeConfig).length > 0) {
             this.sourceCode_header += `\nimport {JopiRouteConfig} from "jopijs";`;
 
             let count = 1;
@@ -68,7 +68,7 @@ export default class TypeRoutes extends AliasType {
             }
         }
 
-        if (Object.keys(this.pageData).length>0) {
+        if (Object.keys(this.pageData).length > 0) {
             this.sourceCode_header += `\nimport {setPageDataProvider} from "jopijs/generated";`;
 
             let count = 1;
@@ -125,7 +125,7 @@ export default class TypeRoutes extends AliasType {
             const registryValues = Object.values(this.registry);
 
             for (let item of registryValues) {
-                if (item.verb==="PAGE") {
+                if (item.verb === "PAGE") {
                     count++;
 
                     let relPath = jk_fs.getRelativePath(myDir, item.filePath);
@@ -155,11 +155,11 @@ export default class TypeRoutes extends AliasType {
         //region Common
 
         let commonTS = {
-            header:  writer.AI_INSTRUCTIONS + `import { jsx as _jsx } from "react/jsx-runtime";\n`,
+            header: writer.AI_INSTRUCTIONS + `import { jsx as _jsx } from "react/jsx-runtime";\n`,
             body: ""
         }
-        ;
-        let commonJS = {...commonTS};
+            ;
+        let commonJS = { ...commonTS };
 
         commonTS.body += `function renderRoute(name: string) {
     let F = (routes as any)[name];
@@ -196,8 +196,8 @@ export function error401() {
 }
 `;
 
-            let sourcesTS = {...commonTS};
-            let sourcesJS = {...commonJS};
+            let sourcesTS = { ...commonTS };
+            let sourcesJS = { ...commonJS };
 
             sourcesTS.header += `import { SBPE_ErrorPage } from "jopijs";\n`;
             sourcesJS.header += `import { SBPE_ErrorPage } from "jopijs";\n`;
@@ -235,8 +235,8 @@ export function error401() {
 }
 `;
 
-            let sourcesTS = {...commonTS};
-            let sourcesJS = {...commonJS};
+            let sourcesTS = { ...commonTS };
+            let sourcesJS = { ...commonJS };
 
             sourcesTS.body += exportErrors;
             sourcesJS.body += exportErrors;
@@ -285,7 +285,8 @@ export function error401() {
             filePath: srcFilePath,
             attributes: {
                 needRoles: attributes.needRoles,
-                disableCache: attributes.disableCache
+                disableCache: attributes.disableCache,
+                catchAllSlug: attributes.catchAllSlug,
             }
         };
 
@@ -318,19 +319,19 @@ export function error401() {
         this.sourceCode_body += `\n    await routeBindVerb(webSite, f_${routeId}, ${JSON.stringify(routeBindingParams)});`
     }
 
-    protected getDefaultFeatures(): Record<string, boolean>|undefined {
+    protected getDefaultFeatures(): Record<string, boolean> | undefined {
         return {
             autoCache: true
         };
     }
 
-    protected onFeatureFileFound(feature: string): string|undefined {
-        if (feature==="autocache") return "autoCache";
-        if (feature==="cache") return "autoCache";
+    protected onFeatureFileFound(feature: string): string | undefined {
+        if (feature === "autocache") return "autoCache";
+        if (feature === "cache") return "autoCache";
         return undefined;
     }
 
-    protected normalizeConditionName(condName: string, filePath: string, ctx: any|undefined): string|undefined {
+    protected normalizeConditionName(condName: string, filePath: string, ctx: any | undefined): string | undefined {
         return normalizeNeedRoleConditionName(condName, filePath, ctx,
             ["PAGE", "GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS", "ALL", "PATH"]);
     }
@@ -351,7 +352,7 @@ export function error401() {
         };
 
         if (dirInfos.conditionsContext && Object.values(dirInfos.conditionsContext!).length) {
-            res.needRoles =  dirInfos.conditionsContext;
+            res.needRoles = dirInfos.conditionsContext;
         }
 
         return res;
@@ -369,7 +370,7 @@ export function error401() {
         let newPriority = item.attributes.priority || PriorityLevel.default;
         let currentPriority = current.attributes.priority || PriorityLevel.default;
 
-        if (newPriority>currentPriority) {
+        if (newPriority > currentPriority) {
             this.registry[key] = item;
         }
     }
@@ -385,7 +386,7 @@ export function error401() {
 
             if (dirItem.isDirectory) {
                 let segmentInfos = convertRouteSegment(dirItem.name);
-                let newRoute = route==="/" ? route + segmentInfos.routePart : route + "/" + segmentInfos.routePart;
+                let newRoute = route === "/" ? route + segmentInfos.routePart : route + "/" + segmentInfos.routePart;
                 let dirAttributes = await this.scanAttributes(dirItem.fullPath);
 
                 if (segmentInfos.isCatchAll && segmentInfos.name) {
@@ -412,28 +413,28 @@ export function error401() {
 
                     switch (name) {
                         case "page":
-                            this.addToRegistry({verb: "PAGE", route, filePath: dirItem.fullPath, attributes: attributes});
+                            this.addToRegistry({ verb: "PAGE", route, filePath: dirItem.fullPath, attributes: attributes });
                             break;
                         case "onGET":
-                            this.addToRegistry({verb: "GET", route, filePath: dirItem.fullPath, attributes: attributes});
+                            this.addToRegistry({ verb: "GET", route, filePath: dirItem.fullPath, attributes: attributes });
                             break;
                         case "onPOST":
-                            this.addToRegistry({verb: "POST", route, filePath: dirItem.fullPath, attributes: attributes});
+                            this.addToRegistry({ verb: "POST", route, filePath: dirItem.fullPath, attributes: attributes });
                             break;
                         case "onPUT":
-                            this.addToRegistry({verb: "PUT", route, filePath: dirItem.fullPath, attributes: attributes});
+                            this.addToRegistry({ verb: "PUT", route, filePath: dirItem.fullPath, attributes: attributes });
                             break;
                         case "onDELETE":
-                            this.addToRegistry({verb: "DELETE", route, filePath: dirItem.fullPath, attributes: attributes});
+                            this.addToRegistry({ verb: "DELETE", route, filePath: dirItem.fullPath, attributes: attributes });
                             break;
                         case "onHEAD":
-                            this.addToRegistry({verb: "HEAD", route, filePath: dirItem.fullPath, attributes: attributes});
+                            this.addToRegistry({ verb: "HEAD", route, filePath: dirItem.fullPath, attributes: attributes });
                             break;
                         case "onPATCH":
-                            this.addToRegistry({verb: "PATCH", route, filePath: dirItem.fullPath, attributes: attributes});
+                            this.addToRegistry({ verb: "PATCH", route, filePath: dirItem.fullPath, attributes: attributes });
                             break;
                         case "onOPTIONS":
-                            this.addToRegistry({verb: "OPTIONS", route, filePath: dirItem.fullPath, attributes: attributes});
+                            this.addToRegistry({ verb: "OPTIONS", route, filePath: dirItem.fullPath, attributes: attributes });
                             break;
                         default:
                             isAccepted = false;
@@ -455,7 +456,7 @@ export function error401() {
             const currentPriority = currentItem.priority || PriorityLevel.default;
             const newPriority = dirAttributes.priority || PriorityLevel.default;
 
-            if (newPriority>currentPriority) {
+            if (newPriority > currentPriority) {
                 this.routeConfig[newRoute] = dirAttributes;
             }
 
@@ -471,7 +472,7 @@ export function error401() {
             const currentPriority = currentItem.priority || PriorityLevel.default;
             const newPriority = dirAttributes.priority || PriorityLevel.default;
 
-            if (newPriority>currentPriority) {
+            if (newPriority > currentPriority) {
                 this.pageData[newRoute] = dirAttributes;
             }
 
@@ -488,13 +489,14 @@ interface RegistryItem {
     attributes: RouteAttributes;
 }
 
-function convertRouteSegment(segment: string): {routePart: string, isCatchAll?: boolean, name?: string} {
+function convertRouteSegment(segment: string): { routePart: string, isCatchAll?: boolean, name?: string } {
+    // Allows handling routes of type [...] and [...slug].
     if (segment.startsWith("[") && segment.endsWith("]")) {
         segment = segment.substring(1, segment.length - 1);
 
         if (segment.startsWith("..")) {
             segment = segment.substring(2);
-            while (segment[0]===".") segment=segment.substring(1);
+            while (segment[0] === ".") segment = segment.substring(1);
 
             return {
                 routePart: "**",
