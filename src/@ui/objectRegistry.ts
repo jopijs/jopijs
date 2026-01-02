@@ -16,8 +16,8 @@ export class ObjectRegistry implements IsObjectRegistry {
     private readonly r: Record<string, ObjectRegistryEntry> = {};
     private readonly listeners: Record<string, ValueChangeListener[]> = {};
 
-    getValue<T>(name: string): T | undefined {
-        let entry = this.r[name];
+    getValue<T>(key: string): T | undefined {
+        let entry = this.r[key];
         if (!entry) return undefined;
 
         if (entry.value !== undefined) {
@@ -25,36 +25,36 @@ export class ObjectRegistry implements IsObjectRegistry {
         }
 
         if (entry.builder) {
-            entry.value = entry.builder();
-            return entry.value as T;
+            let v = entry.builder() as T;
+            this.setValue(key, v);
         }
 
         return undefined;
     }
 
-    onValueChange<T>(key: string, listener: ValueChangeListener<T>) {
-        if (!this.listeners[key]) this.listeners[key] = [];
-        this.listeners[key].push(listener);
-    }
-
-    setValue(name: string, instance: any): void {
-        let entry = this.r[name];
-        if (!entry) this.r[name] = entry = {};
+    setValue(key: string, instance: any): void {
+        let entry = this.r[key];
+        if (!entry) this.r[key] = entry = {};
 
         const oldValue = entry.value;
         entry.value = instance;
 
-        const keyListeners = this.listeners[name];
+        const keyListeners = this.listeners[key];
         //
         if (keyListeners) {
             keyListeners.forEach(l => l(instance, oldValue));
         }
     }
 
-    addValueProvider<T>(name: string, builder: () => T): void {
-        let entry = this.r[name];
-        if (!entry) this.r[name] = entry = {};
+    addValueProvider<T>(key: string, builder: () => T): void {
+        let entry = this.r[key];
+        if (!entry) this.r[key] = entry = {};
         entry.builder = builder;
+    }
+
+    onValueChange<T>(key: string, listener: ValueChangeListener<T>) {
+        if (!this.listeners[key]) this.listeners[key] = [];
+        this.listeners[key].push(listener);
     }
 }
 

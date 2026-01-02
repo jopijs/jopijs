@@ -8,7 +8,6 @@ import type { CookieOptions } from "../cookies/index.ts";
 import type { UiUserInfos } from "../user.ts";
 import type { IsObjectRegistry } from "../objectRegistry.ts";
 
-
 /**
  * Allow getting a reference to the PageController.
  * **USING IT MUST BE AVOIDED** since it's a technical item.
