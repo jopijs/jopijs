@@ -30,7 +30,7 @@ class JopiServer {
 
             if (mkCertToolPath) {
                 await fs.mkdir(sslDirPath, { recursive: true });
-                await jk_os.exec(`cd ${sslDirPath}; ${mkCertToolPath} -install; ${mkCertToolPath} --cert-file certificate.crt.key --key-file certificate.key ${hostName} localhost 127.0.0.1 ::1`);
+                await jk_os.exec(`cd "${sslDirPath}"; ${mkCertToolPath} -install; ${mkCertToolPath} --cert-file certificate.crt.key --key-file certificate.key ${hostName} localhost 127.0.0.1 ::1`);
             } else {
                 throw "Can't generate certificate, mkcert tool not found. See here for installation: https://github.com/FiloSottile/mkcert";
             }
