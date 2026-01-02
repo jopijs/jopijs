@@ -1,11 +1,12 @@
 // noinspection JSUnusedGlobalSymbols
 
 import React from "react";
-import {PageContext, PageController} from "../pageController.ts";
-import {CssModule, type UseCssModuleContextProps} from "../cssModules.tsx";
-import {PageModifier} from "../pageModifier.tsx";
-import type {CookieOptions} from "../cookies/index.ts";
-import type {UiUserInfos} from "../user.ts";
+import { PageContext, PageController } from "../pageController.ts";
+import { CssModule, type UseCssModuleContextProps } from "../cssModules.tsx";
+import { PageModifier } from "../pageModifier.tsx";
+import type { CookieOptions } from "../cookies/index.ts";
+import type { UiUserInfos } from "../user.ts";
+import type { IsObjectRegistry } from "../objectRegistry.ts";
 
 
 /**
@@ -22,6 +23,23 @@ export function _usePage<T = any>(): PageController<T> {
     }
 
     return res;
+}
+
+/**
+ * Returns the object registry which role is to save value accross the whole application.
+ */
+export function useRegistry(): IsObjectRegistry {
+    const ctx = React.useContext(PageContext) as PageController;
+    return ctx.objectRegistry;
+}
+
+/**
+ * Get a value from the object registry.
+ */
+export function useRegistryValue<T>(key: string): [T | undefined, (v: T) => void] {
+    const registry = useRegistry();
+
+    return [registry.getValue(key), (v: T) => registry.setValue(key, v)];
 }
 
 /**
@@ -66,7 +84,7 @@ export function useCssModule(cssModule: undefined | Record<string, string>) {
 
         // Will allow inlining the style inside the page.
         //ctx.addToBodyBegin(fileHash, <CssModule key={fileHash} module={cssModule}/>);
-        ctx.addToHeader(fileHash, <CssModule key={fileHash} module={cssModule}/>);
+        ctx.addToHeader(fileHash, <CssModule key={fileHash} module={cssModule} />);
     }
 }
 
@@ -105,7 +123,7 @@ export interface ServerRequestInstance {
     role_userHasOneOfThisRoles(requiredRoles: string[]): boolean;
     role_userHasRole(requiredRole: string): boolean;
 
-    react_getPageData(): PageDataProviderData|undefined;
+    react_getPageData(): PageDataProviderData | undefined;
 
     cache_ignoreCacheWrite(): void;
     get customData(): any;

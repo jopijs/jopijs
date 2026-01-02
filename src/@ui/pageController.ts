@@ -2,13 +2,13 @@
 
 import React from "react";
 import ReactDOM from "react-dom/client";
-import {type ServerRequestInstance} from "./hooks/index.ts";
-import {decodeUserInfosFromCookie, isUserInfoCookieUpdated, type UiUserInfos} from "./user.ts";
-import {deleteCookie} from "./cookies/index.ts";
+import { type ServerRequestInstance } from "./hooks/index.ts";
+import { decodeUserInfosFromCookie, isUserInfoCookieUpdated, type UiUserInfos } from "./user.ts";
+import { deleteCookie } from "./cookies/index.ts";
 import * as jk_events from "jopi-toolkit/jk_events";
-import type {JopiUiApplication_Host} from "./modules.ts";
-import {isServerSide} from "jopi-toolkit/jk_what";
-import {getDefaultObjectRegistry, type IsObjectRegistry, ObjectRegistry} from "./objectRegistry.ts";
+import type { JopiUiApplication_Host } from "./modules.ts";
+import { isServerSide } from "jopi-toolkit/jk_what";
+import { getDefaultObjectRegistry, type IsObjectRegistry, ObjectRegistry } from "./objectRegistry.ts";
 
 export interface PageOptions {
     pageTitle?: string;
@@ -27,10 +27,10 @@ export interface PageOptions {
  */
 export class PageController<T = any> implements JopiUiApplication_Host {
     private readonly isServerSide: boolean = isServerSide;
-    
+
     // @ts-ignore
     private readonly isReactHMR: boolean = "JOPI_BUNDLER_UI_MODE" === "ReactHMR";
-    
+
     private readonly usedKeys = new Set<String>();
 
     protected readonly state: PageOptions;
@@ -43,7 +43,7 @@ export class PageController<T = any> implements JopiUiApplication_Host {
     constructor(public readonly isDetached = false, public readonly mustRemoveTrailingSlashes: boolean = false, options?: PageOptions) {
         options = options || {};
 
-        this.state = {...options};
+        this.state = { ...options };
     }
 
     /**
@@ -66,7 +66,7 @@ export class PageController<T = any> implements JopiUiApplication_Host {
         return new URL(window.location.href);
     }
 
-    public getUserInfos(): UiUserInfos|undefined {
+    public getUserInfos(): UiUserInfos | undefined {
         if (isServerSide) {
             return this.userInfos;
         }
@@ -215,7 +215,7 @@ export class PageController_ExposePrivate<T = any> extends PageController<T> {
     }
 
     setServerRequest(serverRequest: ServerRequestInstance) {
-        this.objectRegistry.registerObject("jopi.serverRequest", serverRequest);
+        this.objectRegistry.setValue("jopi.serverRequest", serverRequest);
 
         this.serverRequest = serverRequest;
         this.userInfos = serverRequest.user_getUserInfos();
@@ -228,12 +228,7 @@ export class PageController_ExposePrivate<T = any> extends PageController<T> {
 
 export type PageHook = (controller: PageController_ExposePrivate<unknown>) => void;
 
-// Use undefined, otherwise the value is common for all requests when doing SSR.
-export const PageContext = React.createContext<PageController<unknown>|undefined>(undefined);
-
-export function getDefaultPageController(): PageController {
-    if (!gDefaultPageController) gDefaultPageController = new PageController();
-    return gDefaultPageController!;
-}
-
-let gDefaultPageController: PageController|undefined;
+// On server-side: the instance is created when rendering the page.
+// On browser-side: the instance is through generated code (see .jopijs/site/page_???.jsx)
+//
+export const PageContext = React.createContext<PageController<unknown> | undefined>(undefined);

@@ -1,38 +1,57 @@
 export interface IsObjectRegistry {
-    getObject<T>(name: string): T|undefined;
-    registerObject(name: string, instance: any): void;
-    addObjectBuilder<T>(name: string, builder: () => T): void;
+    getValue<T>(key: string): T | undefined;
+    setValue(key: string, instance: any): void;
+    addValueProvider<T>(key: string, builder: () => T): void;
+    onValueChange<T>(key: string, listener: (newValue: T, oldValue: T | undefined) => void): void;
 }
 
 interface ObjectRegistryEntry {
     builder?: () => any;
-    instance?: any;
+    value?: any;
 }
+
+type ValueChangeListener<T = any> = (newValue: T, oldValue: T | undefined) => void;
 
 export class ObjectRegistry implements IsObjectRegistry {
     private readonly r: Record<string, ObjectRegistryEntry> = {};
+    private readonly listeners: Record<string, ValueChangeListener[]> = {};
 
-    getObject<T>(name: string): T|undefined {
+    getValue<T>(name: string): T | undefined {
         let entry = this.r[name];
         if (!entry) return undefined;
 
-        if (entry.instance!==undefined) return entry.instance as T;
+        if (entry.value !== undefined) {
+            return entry.value as T;
+        }
 
         if (entry.builder) {
-            entry.instance = entry.builder();
-            return entry.instance as T;
+            entry.value = entry.builder();
+            return entry.value as T;
         }
 
         return undefined;
     }
 
-    registerObject(name: string, instance: any): void {
-        let entry = this.r[name];
-        if (!entry) this.r[name] = entry = {};
-        entry.instance = instance;
+    onValueChange<T>(key: string, listener: ValueChangeListener<T>) {
+        if (!this.listeners[key]) this.listeners[key] = [];
+        this.listeners[key].push(listener);
     }
 
-    addObjectBuilder<T>(name: string, builder: () => T): void {
+    setValue(name: string, instance: any): void {
+        let entry = this.r[name];
+        if (!entry) this.r[name] = entry = {};
+
+        const oldValue = entry.value;
+        entry.value = instance;
+
+        const keyListeners = this.listeners[name];
+        //
+        if (keyListeners) {
+            keyListeners.forEach(l => l(instance, oldValue));
+        }
+    }
+
+    addValueProvider<T>(name: string, builder: () => T): void {
         let entry = this.r[name];
         if (!entry) this.r[name] = entry = {};
         entry.builder = builder;
@@ -47,4 +66,4 @@ export function getDefaultObjectRegistry(): IsObjectRegistry {
     return gObjectRegistry;
 }
 
-let gObjectRegistry: ObjectRegistry|undefined;
+let gObjectRegistry: ObjectRegistry | undefined;

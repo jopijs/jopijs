@@ -5,7 +5,7 @@ import * as jk_events from "jopi-toolkit/jk_events";
 import { type UiUserInfos } from "./user.ts";
 import { isServerSide } from "jopi-toolkit/jk_what";
 import { type IsObjectRegistry } from "./objectRegistry.ts";
-import { getDefaultPageController } from "./pageController.ts";
+import { PageController } from "./pageController.ts";
 
 export interface JopiUiApplication_Host {
     objectRegistry: IsObjectRegistry;
@@ -49,7 +49,7 @@ export class JopiUiApplication {
 
         if (extra) {
             for (let key in extra) {
-                this.objectRegistry.registerObject("jopi.server." + key, (extra as any)[key]);
+                this.objectRegistry.setValue("jopi.server." + key, (extra as any)[key]);
             }
         }
 
@@ -193,4 +193,11 @@ export function getDefaultJopiUiApplication(): JopiUiApplication {
     return gDefaultJopiUiApplication;
 }
 
+// Note: keep it here because it must not be exposed.
+function getDefaultPageController(): PageController {
+    if (!gDefaultPageController) gDefaultPageController = new PageController();
+    return gDefaultPageController!;
+}
+
+let gDefaultPageController: PageController | undefined;
 let gDefaultJopiUiApplication: JopiUiApplication;
