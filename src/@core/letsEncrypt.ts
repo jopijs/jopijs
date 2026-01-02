@@ -3,6 +3,7 @@ import {type SslCertificatePath, CoreWebSite} from "./jopiCoreWebSite.tsx";
 import path from "node:path";
 import * as jk_timer from "jopi-toolkit/jk_timer";
 import * as jk_fs from "jopi-toolkit/jk_fs";
+import * as jk_process from "jopi-toolkit/jk_process";
 
 export type OnTimeoutError = (webSite: CoreWebSite, isRenew: boolean) => void;
 
@@ -21,7 +22,7 @@ export interface LetsEncryptParams {
      * Allow stopping if the certificate isn't renewed after this delay.
      * Will to an error with error.code="TIME_OUT".
      */
-    timout_sec?: number;
+    timeout_sec?: number;
 
     /**
      * Is called if there is an error.
@@ -105,11 +106,10 @@ export async function checkWebSite(httpsWebSite: CoreWebSite, params: LetsEncryp
     // Use 80 and not 90, to have a grace period.
     if (!params.expireAfter_days) params.expireAfter_days = 80;
 
-    if (!params.timout_sec) params.timout_sec = 30;
+    if (!params.timeout_sec) params.timeout_sec = 30;
 
     if (!params.isProduction===undefined) {
-        // Need: NODE_ENV=production node app.js
-        params.isProduction = process.env.NODE_ENV === 'production';
+        params.isProduction = jk_process.isProduction;
     }
 
     if (!params.isProduction) {
@@ -183,10 +183,10 @@ export async function checkWebSite(httpsWebSite: CoreWebSite, params: LetsEncryp
         setTimeout(() => {
             if (isResolved) return;
 
-            const error = new Error(`Let's Encrypt certificate request timed out after ${params.timout_sec} seconds`);
+            const error = new Error(`Let's Encrypt certificate request timed out after ${params.timeout_sec} seconds`);
             (error as any).code = "TIME_OUT";
             reject(error);
-        }, params.timout_sec! * 1000);
+        }, params.timeout_sec! * 1000);
     });
 
     try {

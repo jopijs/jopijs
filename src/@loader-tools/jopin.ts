@@ -1,10 +1,10 @@
-import fs from "node:fs";
 import {type ChildProcess, spawn} from "node:child_process";
 import path from "node:path";
 import * as jk_app from "jopi-toolkit/jk_app";
 import * as jk_fs from "jopi-toolkit/jk_fs";
 import * as jk_os from "jopi-toolkit/jk_os";
 import * as jk_term from "jopi-toolkit/jk_term";
+import * as jk_process from "jopi-toolkit/jk_process";
 import {SourceChangesWatcher} from "./sourceChangesWatcher.ts";
 
 // *************************
@@ -141,7 +141,7 @@ export async function jopiLauncherTool(jsEngine: string) {
             catch (e) {
                 console.error(e);
             }
-        } else if (process.env.NODE_ENV !== 'production') {
+        } else if (jk_process.isDevelopment) {
             console.warn("JopiJS - package.json not found, can't enable file watching");
         }
 

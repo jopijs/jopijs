@@ -1003,7 +1003,7 @@ class LetsEncryptCertificateBuilder {
 
     /** Sets the challenge timeout. */
     force_timout_sec(value: number) {
-        this.params.timout_sec = value;
+        this.params.timeout_sec = value;
         return this;
     }
 
