@@ -9,8 +9,7 @@ import { getModulesList, setModulesSourceDir } from "jopijs/modules";
 import { JopiModuleInfo } from "../@modules/index.ts";
 import { collector_begin, collector_end } from "./dataCollector.ts";
 export { PriorityLevel } from "jopi-toolkit/jk_tools";
-
-const LOG = false;
+import { logLinker_registry } from "./_logs.ts";
 
 //region Helpers
 
@@ -751,15 +750,23 @@ export abstract class AliasType {
         if (gRegistry[itemId]) {
             let currentPriority = gRegistry[itemId]?.priority || PriorityLevel.default;
             let itemPriority = item.priority || PriorityLevel.default;
-            if (currentPriority > itemPriority) return;
+
+            if (currentPriority > itemPriority) {
+                logLinker_registry.spam(w => {
+                    const relPath = jk_fs.getRelativePath(gDir_ProjectSrc, item.itemPath);
+                    w(`Item ${itemId} ignored`, { item: itemId, path: relPath })
+                });
+
+                return;
+            }
         }
+
+        logLinker_registry.info(w => {
+            const relPath = jk_fs.getRelativePath(gDir_ProjectSrc, item.itemPath);
+            w(`Item ${itemId} added`, { item: itemId, path: relPath })
+        });
 
         gRegistry[itemId] = item;
-
-        if (LOG) {
-            const relPath = jk_fs.getRelativePath(gDir_ProjectSrc, item.itemPath);
-            console.log(`Add ${itemId} to registry. Path: ${relPath}`);
-        }
     }
 
     registry_getItem<T extends RegistryItem>(key: string, requireType?: AliasType): T | undefined {

@@ -1,6 +1,6 @@
-import {TypeInDirChunk, type TypeInDirChunk_Item} from "./coreAliasTypes.ts";
+import { TypeInDirChunk, type TypeInDirChunk_Item } from "./coreAliasTypes.ts";
 import * as jk_fs from "jopi-toolkit/jk_fs";
-import {CodeGenWriter, declareLinkerError, useCanonicalFileName} from "./engine.ts";
+import { CodeGenWriter, declareLinkerError, useCanonicalFileName } from "./engine.ts";
 
 enum MergeType {
     DontMerge = 0,
@@ -17,13 +17,13 @@ export class TypeLib extends TypeInDirChunk {
 
     async onChunk(chunk: TypeLibItem, key: string, dirPath: string) {
         async function tryMerge(dirItem: jk_fs.DirItem, newMergeType: MergeType, expectedFileName: string) {
-            if (mergeType!==MergeType.DontMerge) {
+            if (mergeType !== MergeType.DontMerge) {
                 throw declareLinkerError("A merge file is already defined", dirItem.fullPath);
             }
 
             mergeType = newMergeType;
 
-            if (dirItem.name!==expectedFileName) {
+            if (dirItem.name !== expectedFileName) {
                 await useCanonicalFileName(dirItem.fullPath, expectedFileName);
             }
         }
@@ -61,12 +61,12 @@ export class TypeLib extends TypeInDirChunk {
         let overrides = this.allOverrides[key];
 
         // If not override, then generate the code normally.
-        if (overrides.length<=1) return super.generateCodeForItem(writer, key, item);
+        if (overrides.length <= 1) return super.generateCodeForItem(writer, key, item);
 
         let mustMerge = false;
         //
         for (let override of overrides) {
-            if (override.mergeType!==MergeType.DontMerge) {
+            if (override.mergeType !== MergeType.DontMerge) {
                 mustMerge = true;
                 break;
             }
@@ -79,7 +79,7 @@ export class TypeLib extends TypeInDirChunk {
 
         const outDir = jk_fs.join(writer.dir.output_src, this.getGenOutputDir(item));
 
-        let allImports = {ts: writer.AI_INSTRUCTIONS, js: writer.AI_INSTRUCTIONS};
+        let allImports = { ts: writer.AI_INSTRUCTIONS, js: writer.AI_INSTRUCTIONS };
         let body = "";
 
         let i = 0;
