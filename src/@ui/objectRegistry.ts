@@ -1,8 +1,20 @@
 export interface IsObjectRegistry {
     getValue<T>(key: string): T | undefined;
     setValue(key: string, instance: any): void;
+
+    /**
+     * Add a function returning the default value for the object.
+     * Will be called if the value is `undefined`.
+     */
     addValueProvider<T>(key: string, builder: () => T): void;
-    onValueChange<T>(key: string, listener: (newValue: T, oldValue: T | undefined) => void): void;
+
+    /**
+     * Add a value change listener for the object.
+     *
+     * @returns
+     *      Return a function which unregister this listener.
+     */
+    onValueChange<T>(key: string, listener: (newValue: T, oldValue: T | undefined) => void): () => void;
 }
 
 interface ObjectRegistryEntry {
@@ -27,22 +39,25 @@ export class ObjectRegistry implements IsObjectRegistry {
         if (entry.builder) {
             let v = entry.builder() as T;
             this.setValue(key, v);
+            return v;
         }
 
         return undefined;
     }
 
-    setValue(key: string, instance: any): void {
+    setValue(key: string, newValue: any): void {
         let entry = this.r[key];
         if (!entry) this.r[key] = entry = {};
 
         const oldValue = entry.value;
-        entry.value = instance;
+        entry.value = newValue;
 
-        const keyListeners = this.listeners[key];
-        //
-        if (keyListeners) {
-            keyListeners.forEach(l => l(instance, oldValue));
+        if (oldValue !== newValue) {
+            const keyListeners = this.listeners[key];
+            //
+            if (keyListeners) {
+                keyListeners.forEach(l => l(newValue, oldValue));
+            }
         }
     }
 
@@ -52,9 +67,15 @@ export class ObjectRegistry implements IsObjectRegistry {
         entry.builder = builder;
     }
 
-    onValueChange<T>(key: string, listener: ValueChangeListener<T>) {
-        if (!this.listeners[key]) this.listeners[key] = [];
-        this.listeners[key].push(listener);
+    onValueChange<T>(key: string, listener: ValueChangeListener<T>): () => void {
+        let listeners = this.listeners[key];
+        if (!listeners) this.listeners[key] = listeners = [];
+        listeners.push(listener);
+
+        return () => {
+            const idx = listeners.indexOf(listener);
+            if (idx!==-1) listeners.splice(idx, 1);
+        }
     }
 }
 
