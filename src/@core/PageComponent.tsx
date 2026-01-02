@@ -1,9 +1,9 @@
 import React from "react";
-import {PageContext, PageController_ExposePrivate} from "jopijs/ui";
+import {htmlNodesToText, PageContext, PageController_ExposePrivate} from "jopijs/ui";
 import * as ReactServer from "react-dom/server";
 
 export default function({children, controller}: { children: React.ReactNode|React.ReactNode[], controller: PageController_ExposePrivate<unknown> }) {
-    const body = ReactServer.renderToStaticMarkup(
+    let body = ReactServer.renderToStaticMarkup(
         <PageContext.Provider value={controller}>
             {children}
         </PageContext.Provider>
@@ -11,15 +11,22 @@ export default function({children, controller}: { children: React.ReactNode|Reac
 
     const state = controller.getOptions();
 
+    body = "<div>" + body + "</div>";
+    if (state.bodyBegin) {
+        body = htmlNodesToText(state.bodyBegin) + body;
+    }
+
+    if (state.bodyEnd) {
+        body += htmlNodesToText(state.bodyEnd);
+    }
+
+    let headText = htmlNodesToText(state.head);
+    if (state.pageTitle!==undefined) headText += `<title>${state.pageTitle}</title>`;
+
+    // noinspection HtmlRequiredTitleElement
     return <html {...state.htmlProps}>
-        <head {...state.headProps}>
-            {state.head}
-            <title>{state.pageTitle}</title>
+        <head {...state.headProps} dangerouslySetInnerHTML={{__html: headText}}>
         </head>
-        <body {...state.bodyProps}>
-            {state.bodyBegin}
-            <div dangerouslySetInnerHTML={{ __html: body }} />
-            {state.bodyEnd}
-        </body>
+        <body {...state.bodyProps} dangerouslySetInnerHTML={{ __html: body }} />
     </html>
 }

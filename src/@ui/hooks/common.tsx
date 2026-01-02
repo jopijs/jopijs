@@ -1,12 +1,12 @@
 // noinspection JSUnusedGlobalSymbols
 
 import React, {useEffect, useState} from "react";
-import { PageContext, PageController } from "../pageController.ts";
-import { CssModule, type UseCssModuleContextProps } from "../cssModules.tsx";
-import { PageModifier } from "../pageModifier.tsx";
-import type { CookieOptions } from "../cookies/index.ts";
-import type { UiUserInfos } from "../user.ts";
-import type { IsObjectRegistry } from "../objectRegistry.ts";
+import {PageContext, PageController} from "../pageController.ts";
+import {type UseCssModuleContextProps} from "../cssModules.tsx";
+import {PageModifier} from "../pageModifier.tsx";
+import type {CookieOptions} from "../cookies/index.ts";
+import type {UiUserInfos} from "../user.ts";
+import type {IsObjectRegistry} from "../objectRegistry.ts";
 
 /**
  * Allow getting a reference to the PageController.
@@ -41,8 +41,7 @@ export function useRegistryValue<T>(key: string): [T | undefined, (v: T) => void
 
     useEffect(() => {
         const listener = () => { setCount(c => c+ 1) };
-        const unregister = registry.onValueChange(key, listener);
-        return unregister;
+        return registry.onValueChange(key, listener);
     }, []);
 
     return [registry.getValue(key), (v: T) => registry.setValue(key, v)];
@@ -89,8 +88,7 @@ export function useCssModule(cssModule: undefined | Record<string, string>) {
         ctx.data.jopiUseCssModule![fileHash] = true;
 
         // Will allow inlining the style inside the page.
-        //ctx.addToBodyBegin(fileHash, <CssModule key={fileHash} module={cssModule}/>);
-        ctx.addToHeader(fileHash, <CssModule key={fileHash} module={cssModule} />);
+        ctx.addToHeader({tag: "style", key: fileHash, content: cssModule.__CSS__});
     }
 }
 

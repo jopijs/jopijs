@@ -10,6 +10,7 @@ export * from "./hooks/index.ts";
 export * from "./modules.ts";
 export * from "./objectRegistry.ts";
 export * from "./cookies/index.ts";
+export * from "./htmlNode.ts";
 
 export const isBrowserSide = isBrowser;
 export const isServerSide = !isBrowser;

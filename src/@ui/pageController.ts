@@ -1,7 +1,6 @@
 // noinspection JSUnusedGlobalSymbols
 
 import React from "react";
-import ReactDOM from "react-dom/client";
 import { type ServerRequestInstance } from "./hooks/index.ts";
 import { decodeUserInfosFromCookie, isUserInfoCookieUpdated, type UiUserInfos } from "./user.ts";
 import { deleteCookie } from "./cookies/index.ts";
@@ -9,12 +8,13 @@ import * as jk_events from "jopi-toolkit/jk_events";
 import type { JopiUiApplication_Host } from "./modules.ts";
 import { isServerSide } from "jopi-toolkit/jk_what";
 import { getDefaultObjectRegistry, type IsObjectRegistry, ObjectRegistry } from "./objectRegistry.ts";
+import type {HtmlNode} from "./htmlNode.ts";
 
 export interface PageOptions {
     pageTitle?: string;
-    head?: React.ReactNode[];
-    bodyBegin?: React.ReactNode[];
-    bodyEnd?: React.ReactNode[];
+    head?: HtmlNode[];
+    bodyBegin?: HtmlNode[];
+    bodyEnd?: HtmlNode[];
 
     htmlProps?: Record<string, any>;
     bodyProps?: Record<string, any>;
@@ -82,26 +82,30 @@ export class PageController<T = any> implements JopiUiApplication_Host {
 
     //region Page options (header/props/...)
 
-    public addToHeader(key: string, entry: React.ReactNode) {
+    public addToHeader(item: HtmlNode) {
         if (this.isServerSide) {
-            if (!this.checkKey("h" + key)) return this;
-            if (!this.state.head) this.state.head = [entry];
-            else this.state.head.push(entry);
+            if (!this.checkKey("h" + item.key)) return this;
+            if (!this.state.head) this.state.head = [item];
+            else this.state.head.push(item);
         } else if (this.isReactHMR) {
             // >>> With React HMR there is not server pre-rendering.
             //     It's why here we allow injecting items into the header.
 
-            const element = React.isValidElement(entry) ? entry : React.createElement(React.Fragment, null, entry);
             const container = document.createElement('div');
-            container.setAttribute('data-jopi-key', key);
+            container.setAttribute('data-jopi-key', item.key);
 
-            const existingElement = document.querySelector(`[data-jopi-key="${key}"]`);
+            let domNode = document.createElement(item.tag);
+            let copy: any = {...item};
+            delete copy.tag;
+
+            for (let k in copy) {
+                domNode.setAttribute(k, copy[k]);
+            }
+
+            const existingElement = document.querySelector(`[data-jopi-key="${item.key}"]`);
             if (existingElement) existingElement.remove();
 
-            const root = ReactDOM.createRoot(container);
-            root.render(element);
-
-            document.head.appendChild(container);
+            document.head.appendChild(domNode);
         } else {
             // Do nothing, since the server already adds it.
         }
@@ -109,12 +113,12 @@ export class PageController<T = any> implements JopiUiApplication_Host {
         return this;
     }
 
-    public addToBodyBegin(key: string, entry: React.ReactNode) {
+    public addToBodyBegin(node: HtmlNode) {
         if (this.isServerSide) {
-            if (!this.checkKey("bb" + key)) return this;
+            if (!this.checkKey("bb" + node.key)) return this;
 
-            if (!this.state.bodyBegin) this.state.bodyBegin = [entry];
-            else this.state.bodyBegin.push(entry);
+            if (!this.state.bodyBegin) this.state.bodyBegin = [node];
+            else this.state.bodyBegin.push(node);
 
             // Required to trigger a browser-side refresh of the body.
             this.onStateUpdated(this.state);
@@ -123,12 +127,12 @@ export class PageController<T = any> implements JopiUiApplication_Host {
         return this;
     }
 
-    public addToBodyEnd(key: string, entry: React.ReactNode) {
+    public addToBodyEnd(node: HtmlNode) {
         if (this.isServerSide) {
-            if (!this.checkKey("be" + key)) return this;
+            if (!this.checkKey("be" + node.key)) return this;
 
-            if (!this.state.bodyEnd) this.state.bodyEnd = [entry];
-            else this.state.bodyEnd.push(entry);
+            if (!this.state.bodyEnd) this.state.bodyEnd = [node];
+            else this.state.bodyEnd.push(node);
 
             // Required to trigger a browser-side refresh of the body.
             this.onStateUpdated(this.state);

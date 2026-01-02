@@ -1,5 +1,5 @@
 import {PageController} from "./pageController.ts";
-import React from "react";
+import {type HtmlNode} from "./htmlNode.ts";
 
 export class PageModifier {
     constructor(private readonly controller: PageController) {
@@ -17,13 +17,13 @@ export class PageModifier {
      * Add something to the page header.
      * Works on the server-side only.
      */
-    addToHeader(key: string, entry: React.ReactNode) {
-        this.controller.addToHeader(key, entry);
+    private addToHeader(item: HtmlNode) {
+        this.controller.addToHeader(item);
     }
 
-    addLinkToHeader(props: any) {
+    addLinkToHeader(props: Omit<HtmlNode, 'tag' | 'key'>) {
         const key = String(gNextKey++);
-        this.addToHeader(key, <link key={key}{...props} />);
+        this.addToHeader({...props, tag: "link", key});
     }
 
     setFavicon(url: string) {
@@ -35,9 +35,8 @@ export class PageModifier {
      * Will generate a <link rel="stylesheet" href="..."> tag.
      * Works on the server-side only.
      */
-    addCssUrlToHeader(link: string, props?: any) {
-        const key = String(gNextKey++);
-        this.addToHeader(key, <link key={key} rel="stylesheet" href={link} {...props}/>);
+    addCssUrlToHeader(link: string) {
+        this.addLinkToHeader({rel: "stylesheet", href: link});
     }
 
     /**
@@ -45,9 +44,8 @@ export class PageModifier {
      * Will generate a <style type="text/css">...</style> tag.
      * Works on the server-side only.
      */
-    addCssTextToHeader(cssText: string, props?: any) {
-        const key = String(gNextKey++);
-        this.addToHeader(key, <style key={key} type="text/css" {...props}>{cssText}</style>);
+    addCssTextToHeader(cssText: string) {
+        this.addLinkToHeader({type: "text/css", content: cssText});
     }
 
     /**
@@ -55,9 +53,9 @@ export class PageModifier {
      * Will generate a <script type="text/javascript">...</script> tag.
      * Works on the server-side only.
      */
-    addJavascriptTextToHeader(javascript: string, props?: any) {
+    addJavascriptTextToHeader(javascript: string) {
         const key = String(gNextKey++);
-        this.addToHeader(key, <script key={key} type="text/javascript" dangerouslySetInnerHTML={{__html: javascript}} {...props}></script>);
+        this.addToHeader({tag: "script", type: "text/javascript", content: javascript, key});
     }
 
     /**
@@ -65,9 +63,9 @@ export class PageModifier {
      * Will generate a <script type="text/javascript" src="url"></script> tag.
      * Works on the server-side only.
      */
-    addJavascriptUrlToHeader(url: string, props?: any) {
+    addJavascriptUrlToHeader(url: string) {
         const key = String(gNextKey++);
-        this.addToHeader(key, <script key={key} type="text/javascript" src={url} {...props}></script>);
+        this.addToHeader({tag: "script", type: "text/javascript", src: url, key});
     }
 
     /**
@@ -75,9 +73,9 @@ export class PageModifier {
      * Will generate a <meta name="..." content="..."> tag.
      * Works on the server-side only.
      */
-    addMetaToHeader(name: string, value: string, props?: any) {
+    addMetaToHeader(name: string, content: string) {
         const key = String(gNextKey++);
-        this.addToHeader(key, <meta key={key} name={name} content={value} {...props}/>);
+        this.addToHeader({key, tag: "meta", name, content});
     }
 
     /**
@@ -85,9 +83,9 @@ export class PageModifier {
      * Will generate a <meta property="..." content="..."> tag.
      * Works on the server-side only.
      */
-    addMetaPropertyToHeader(prop: string, value: string, props?: any) {
+    addMetaPropertyToHeader(prop: string, content: string) {
         const key = String(gNextKey++);
-        this.addToHeader(key, <meta key={key} property={prop} content={value} {...props}/>);
+        this.addToHeader({key, tag: "meta", property: prop, content});
     }
 
     /**

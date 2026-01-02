@@ -3,7 +3,7 @@
 import type { CoreServer, ServerSocketAddress } from "./jopiServer.ts";
 import { ServerFetch } from "./serverFetch.ts";
 import React, { type ReactNode } from "react";
-import { PageController_ExposePrivate } from "jopijs/ui";
+import {PageController_ExposePrivate, type PageOptions} from "jopijs/ui";
 import * as ReactServer from "react-dom/server";
 import * as cheerio from "cheerio";
 import type { SearchParamFilterFunction } from "./searchParamFilter.ts";
@@ -1678,9 +1678,9 @@ export class JopiRequestImpl extends JopiRequest {
             }
 
             // What we will include in our HTML.
-            const options = {
-                head: [<link key="jopi.mainBundle" rel="stylesheet" type="text/css" href={bundlePath + pageKey + ".css"} />],
-                bodyEnd: [<script key="jopi.mainSript" type="module" src={bundlePath + pageKey + ".js"}></script>]
+            const options: PageOptions = {
+                head: [{tag: "link", key: "jopi.mainBundle", rel: "stylesheet", type:"text/css", href: bundlePath + pageKey + ".css"}],
+                bodyEnd: [{tag: "script", key: "jopi.mainScript", type: "module", src: bundlePath + pageKey + ".js"}]
             };
 
             const pageDataParams = this.routeInfos.pageDataParams;
@@ -1693,10 +1693,7 @@ export class JopiRequestImpl extends JopiRequest {
                     u: pageDataParams.url
                 });
 
-                options.bodyEnd.push(
-                    <script type="text/javascript" key="jopi.pageData"
-                        dangerouslySetInnerHTML={{ __html: html }}></script>
-                );
+                options.bodyEnd!.push({tag: "script", key: "jopi.pageData", content: html, type: "text/javascript"});
             }
 
             // Allow faking the environment of the page.
