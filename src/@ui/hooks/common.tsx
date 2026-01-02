@@ -1,6 +1,6 @@
 // noinspection JSUnusedGlobalSymbols
 
-import React from "react";
+import React, {useEffect, useState} from "react";
 import { PageContext, PageController } from "../pageController.ts";
 import { CssModule, type UseCssModuleContextProps } from "../cssModules.tsx";
 import { PageModifier } from "../pageModifier.tsx";
@@ -37,6 +37,13 @@ export function useRegistry(): IsObjectRegistry {
  */
 export function useRegistryValue<T>(key: string): [T | undefined, (v: T) => void] {
     const registry = useRegistry();
+    const [_, setCount] = useState(0);
+
+    useEffect(() => {
+        const listener = () => { setCount(c => c+ 1) };
+        const unregister = registry.onValueChange(key, listener);
+        return unregister;
+    }, []);
 
     return [registry.getValue(key), (v: T) => registry.setValue(key, v)];
 }

@@ -1,5 +1,6 @@
 import * as jk_app from "jopi-toolkit/jk_app";
 import * as jk_fs from "jopi-toolkit/jk_fs";
+import * as jk_process from "jopi-toolkit/jk_process";
 import path from "node:path";
 
 export interface WebSiteConfig {
@@ -50,6 +51,11 @@ export interface WebSiteConfig {
      * (use linux path format)
      */
     bundlerOutputDir: string;
+
+    /**
+     * Indicate if is in production mode.
+     */
+    isProduction: boolean;
 }
 
 export function getWebSiteConfig(): WebSiteConfig {
@@ -153,6 +159,7 @@ function calcWebSiteConfig(): WebSiteConfig {
         webSiteUrl: conf_webSiteUrl!,
         webSiteListeningUrl: conf_webSiteListeningUrl!,
         webResourcesRoot_SSR: conf_webResourcesRoot_SSR!,
+        isProduction: jk_process.isProduction
     }
 }
 
