@@ -59,7 +59,7 @@ class JopiApp {
      * });
      * ```
      */
-    startApp(importMeta: any, f: (webSite: JopiWebSiteBuilder) => void | Promise<void>): void {
+    startApp(importMeta: any, f?: (webSite: JopiWebSiteBuilder) => void | Promise<void>): void {
         const doStart = async () => {
             await jk_app.waitServerSideReady();
             await jk_app.declareAppStarted();
@@ -67,8 +67,10 @@ class JopiApp {
             const url = this.getDefaultUrl();
             const webSite = new WebSite_ExposePrivate(url);
 
-            let res = f(webSite);
-            if (res instanceof Promise) await res;
+            if (f) {
+                let res = f(webSite);
+                if (res instanceof Promise) await res;
+            }
         }
 
         if (this._isStartAppSet) throw "App is already started";
