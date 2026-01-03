@@ -6,7 +6,7 @@ import {type BundlerConfig, getBundlerConfig} from "./config.ts";
 import {getExtraCssToBundle} from "./extraContent.ts";
 import {configureServer} from "./server.ts";
 import {getVirtualUrlMap, type VirtualUrlEntry} from "jopijs/loader-tools";
-import {isSinglePageMode} from "jopijs/loader-client";
+import {isSinglePageMode} from "jopijs/watcher";
 import {logBundler} from "../_logs.ts";
 
 export interface CreateBundleParams {

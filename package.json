@@ -120,11 +120,6 @@
       "bun": "./src/@loader-tools/index.ts",
       "default": "./dist/@loader-tools/index.js"
     },
-    "./loader-client": {
-      "types": "./src/@loader-client/index.ts",
-      "bun": "./src/@loader-client/index.ts",
-      "default": "./dist/@loader-client/index.js"
-    },
     "./linker": {
       "types": "./src/@linker/index.ts",
       "bun": "./src/@linker/index.ts",
@@ -139,6 +134,11 @@
       "types": "./src/@tool-jopinb/index.ts",
       "bun": "./src/@tool-jopinb/index.ts",
       "default": "./dist/@tool-jopinb/index.js"
+    },
+    "./watcher": {
+      "types": "./src/@watcher/index.ts",
+      "bun": "./src/@watcher/index.ts",
+      "default": "./dist/@watcher/index.js"
     },
     "./types": "./src/@loader-types/extensions.d.ts"
   }

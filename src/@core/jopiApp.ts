@@ -37,6 +37,7 @@ import type { LoggerGroupCallback } from "jopi-toolkit/jk_logs";
 import { setHttpProxyReadPause } from "./dataSources.ts";
 import { isDevelopment } from "jopi-toolkit/jk_process";
 import { getWebSiteConfig } from "jopijs/coreconfig";
+import { initWatcher } from "./watcher.ts";
 
 /**
  * The main application class for JopiJS.
@@ -60,6 +61,8 @@ class JopiApp {
      * ```
      */
     startApp(importMeta: any, f?: (webSite: JopiWebSiteBuilder) => void | Promise<void>): void {
+        initWatcher();
+        
         const doStart = async () => {
             await jk_app.waitServerSideReady();
             await jk_app.declareAppStarted();

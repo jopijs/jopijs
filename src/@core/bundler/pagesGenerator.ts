@@ -2,7 +2,7 @@ import * as jk_events from "jopi-toolkit/jk_events";
 import * as jk_fs from "jopi-toolkit/jk_fs";
 import * as jk_crypto from "jopi-toolkit/jk_crypto";
 import { getBrowserInstallScript } from "jopijs/linker";
-import { getBrowserRefreshScript, isBrowserRefreshEnabled, isSinglePageMode, isReactHMR } from "jopijs/loader-client";
+import { getBrowserRefreshScript, isBrowserRefreshEnabled, isSinglePageMode, isReactHMR } from "jopijs/watcher";
 import { getMergedGlobalCssFileContent } from "jopijs/postcss";
 import type { CreateBundleParams } from "./index.ts";
 import type { RouteBindPageParams } from "jopijs/generated";

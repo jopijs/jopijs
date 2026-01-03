@@ -7,7 +7,7 @@ import type {ServerInstanceBuilder} from "../serverInstanceBuilder.ts";
 import React from "react";
 import * as jk_fs from "jopi-toolkit/jk_fs";
 import {getBundleDirPath} from "../bundler/index.ts";
-import {hasJopiDevUiFlag} from "jopijs/loader-client";
+import {hasJopiDevUiFlag} from "jopijs/watcher";
 import {addBrowserCacheControlHeaders, type TryReturnFileParams} from "../browserCacheControl.ts";
 import {JopiRequestImpl} from "../jopiRequest.tsx";
 

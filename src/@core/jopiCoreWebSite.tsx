@@ -26,7 +26,7 @@ import { createBundle } from "./bundler/index.ts";
 import * as jk_webSocket from "jopi-toolkit/jk_webSocket";
 import type { EventGroup } from "jopi-toolkit/jk_events";
 import * as jk_events from "jopi-toolkit/jk_events";
-import { installBrowserRefreshSseEvent, isBrowserRefreshEnabled } from "jopijs/loader-client";
+import { installBrowserRefreshSseEvent, isBrowserRefreshEnabled } from "jopijs/watcher";
 import { executeBrowserInstall } from "./linker.ts";
 import { getNewServerInstanceBuilder, type ServerInstanceBuilder } from "./serverInstanceBuilder.ts";
 import { PriorityLevel, sortByPriority, type ValueWithPriority } from "jopi-toolkit/jk_tools";
