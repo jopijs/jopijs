@@ -6,5 +6,4 @@ export * from "./bunLoaderPlugin.ts";
 export * from "./nodeJsResolver.ts";
 export * from "./nodeJsLoader.js";
 
-export * from "./jopin.ts"
 export * from "./virtualUrl.ts"
