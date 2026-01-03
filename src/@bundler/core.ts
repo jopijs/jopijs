@@ -8,7 +8,7 @@ async function createBundle(params: CreateBundleParams): Promise<void> {
     const config = params.config;
 
     // Load the metadata generated.
-    const metaDataFilePath = jk_fs.join(params.genDir, "esbuildMeta.json");
+    const metaDataFilePath = jk_fs.join(params.genDir, "esbuildInvolvedFiles.json");
 
     process.env.JOPI_BUNLDER_ESBUILD = "1";
 

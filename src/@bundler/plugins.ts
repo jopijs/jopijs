@@ -181,3 +181,36 @@ export const jopiLoaderPlugin: Plugin = {
         installEsBuildPlugins(build as unknown as Bun.PluginBuilder, "esbuild")
     },
 };
+
+export function jopiWriteMetafile(params: EsBuildParams): Plugin {
+    return {
+        name: "jopi-write-metafile",
+        setup(build) {
+            build.onEnd(async (result) => {
+                if (!result.metafile) return;
+
+                const inputs = Object.keys(result.metafile.inputs);
+                const involvedFiles: string[] = [];
+
+                for (const input of inputs) {
+                    const absPath = path.resolve(input);
+                    
+                    // Filter out files contained in a folder starting with a dot (e.g., .jopijs, .git)
+                    const folders = path.dirname(absPath).split(path.sep);
+                    if (folders.some(folder => folder.startsWith('.') && folder !== "." && folder !== "..")) {
+                        continue;
+                    }
+
+                    involvedFiles.push(absPath);
+                }
+
+                try {
+                    await fs.mkdir(path.dirname(params.metaDataFilePath), {recursive: true});
+                    await fs.writeFile(params.metaDataFilePath, JSON.stringify(involvedFiles, null, 2));
+                } catch (err) {
+                    console.error("Failed to write metafile:", err);
+                }
+            });
+        }
+    }
+}

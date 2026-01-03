@@ -61,7 +61,11 @@ class JopiApp {
      * ```
      */
     startApp(importMeta: any, f?: (webSite: JopiWebSiteBuilder) => void | Promise<void>): void {
-        initWatcher();
+        if (initWatcher()) {
+            // If supervisor, then do nothing.
+            // The application will not exit du to the watching process.
+            return;
+        }
         
         const doStart = async () => {
             await jk_app.waitServerSideReady();
@@ -78,10 +82,6 @@ class JopiApp {
 
         if (this._isStartAppSet) throw "App is already started";
         this._isStartAppSet = true;
-
-        if (isDevelopment) {
-            jk_term.logBgBlue("You are running in development mode. Set env var NODE_ENV to 'production' to disable this message.")
-        }
 
         jk_app.setApplicationMainFile(importMeta.filename);
         doStart().then();
