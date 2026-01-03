@@ -2,14 +2,13 @@ import esbuild, {type BuildResult} from "esbuild";
 import * as jk_fs from "jopi-toolkit/jk_fs";
 import * as n_what from "jopi-toolkit/jk_what";
 import type {CreateBundleParams} from "jopijs";
-import {jopiReplaceText, jopiLoaderPlugin, jopiDetectRebuild, jopiWriteMetafile} from "./plugins.ts";
+import {jopiReplaceText, jopiLoaderPlugin, jopiDetectRebuild} from "./plugins.ts";
 import {tailwindTransformGlobalCss} from "jopijs/postcss";
 import {getWebSiteConfig} from "jopijs/coreconfig";
 
 const gIsProduction = getWebSiteConfig().isProduction;
 
 export interface EsBuildParams extends CreateBundleParams {
-    metaDataFilePath: string;
     dontEmbed: string[]|undefined;
 }
 
@@ -39,7 +38,6 @@ export async function esBuildBundle(params: EsBuildParams) {
         plugins: [
             jopiLoaderPlugin,
             jopiReplaceText(),
-            ...(!gIsProduction ? [jopiWriteMetafile(params)] : [])
         ],
 
         loader: {

@@ -1,6 +1,5 @@
 import { watchProject, type WatcherController } from "jopijs/watcher";
 import {getWebSiteConfig} from "jopijs/coreconfig";
-import * as jk_fs from "jopi-toolkit/jk_fs";
 import * as jk_process from "jopi-toolkit/jk_process";
 
 export function initWatcher(): boolean {
@@ -24,16 +23,14 @@ export function initWatcher(): boolean {
 }
 
 function initializeRules(watcher: WatcherController) {
-    let involvedFiles: Set<string> | null = null;
-    const genFile = jk_fs.join(gWebSiteConfig.bundlerOutputDir, "esbuildInvolvedFiles.json");
 
+    const isUidDev = gWebSiteConfig.hasJopiDevUiFlag;
+    
     // Some files must be excluded from the watch.
     //
     watcher.addListener({
         name: "exclude-core-files",
-        onSpawned: () => {
-            involvedFiles = null;
-        },
+
         callback: async (event) => {
             // Generated file.
             if (event.path === "global.compiled.css") return false;
@@ -44,39 +41,13 @@ function initializeRules(watcher: WatcherController) {
         }
     });
 
-    // If UI mode, then distinguishing between server and UI files.
-    // Used by EsBuild? It's an UI file: don't restart the server.
-    // Not used by EsBuild? It's a server file: restart the server.
-    //
     if (gWebSiteConfig.hasJopiDevUiFlag) {
-        console.log("installing exclude-ui-files");
         watcher.addListener({
-            name: "exclude-ui-files",
-            onSpawned: () => {
-                involvedFiles = null;
-            },
+            name: "ui-dev",
+
             callback: async (event) => {
-                if (involvedFiles === null) {
-                    try {
-                        if (await jk_fs.isFile(genFile)) {
-                            involvedFiles = new Set(await jk_fs.readJsonFromFile(genFile));
-                        } else {
-                            involvedFiles = new Set();
-                        }
-                    } catch (e) {
-                        console.error("Failed to read esbuildInvolvedFiles.json", e);
-                        involvedFiles = new Set();
-                    }
-                }
-
-                let filePath = jk_fs.resolve(event.path);
-
-                if (involvedFiles.has(filePath)) {
-                    console.log("File is used by EsBuild. It's a UI file : don't restart");
-                    return false;
-                }
-
-                console.log("File is not used by EsBuild. It's a server file : restart");
+                // Don't restart the server if the file is only updated.
+                if (event.type === "update") return false;
                 return true;
             }
         });

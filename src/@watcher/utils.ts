@@ -51,7 +51,7 @@ export function installBrowserRefreshSseEvent(webSite: CoreWebSite) {
                 // Can occur multi times with single-page mode.
                 if (!gLimitBrowserRefresh.check()) return;
 
-                console.log("🔥 JopiN - UI change detected: refreshing browser");
+                console.log(`\x1b[34m[Watcher]\x1b[0m 🔄🔥 UI change detected: refreshing browser`);
                 controller.send("change", "updated");
             });
         }

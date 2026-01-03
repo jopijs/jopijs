@@ -141,11 +141,7 @@ export function watchProject(): WatcherController {
         }, 100);
     }
 
-    let timeout: any;
-
-    watcher.on('all', (rawEvent, path) => {
-        clearTimeout(timeout);
-
+    watcher.on('all', async (rawEvent, path) => {
         const changeEvent: WatcherChangeEvent = {
             path,
             rawEvent,
@@ -158,22 +154,26 @@ export function watchProject(): WatcherController {
         else if (rawEvent === 'change') changeEvent.type = 'update';
         else if (rawEvent.startsWith('unlink')) changeEvent.type = 'delete';
 
-        timeout = setTimeout(async () => {
-             for (const listener of listeners) {
-                try {
-                    const canRestart = await listener.callback(changeEvent);
-                    if (canRestart === false) {
-                         console.log(`${BLUE}[Watcher]${RESET} Automatic restart stopped by listener: "${listener.name}"`);
-                        return;
-                    }
-                } catch (error) {
-                    console.log(`${RED}[Watcher]${RESET} Error in listener "${listener.name}":`, error);
-                }
-            }
+        //console.log(`${BLUE}[Watcher]${RESET} Change detected: [${changeEvent.type}] ${path}`);
 
-            console.log(`${BLUE}[Watcher]${RESET} 🔄 Change detected: [${changeEvent.type}] ${path}`);
-            await performRestart();
-        }, 100);
+        let mustRestart = true;
+
+        for (const listener of listeners) {
+            try {
+                const canRestart = await listener.callback(changeEvent);
+            
+                if (canRestart === false) {
+                    //console.log(`${BLUE}[Watcher]${RESET} Automatic restart stopped by listener: "${listener.name}"`);
+                    mustRestart = false;
+                } else {
+                    //console.log(`${BLUE}[Watcher]${RESET} Automatic restart allowed by listener: "${listener.name}"`);
+                }
+            } catch (error) {
+                console.log(`${RED}[Watcher]${RESET} Error in listener "${listener.name}":`, error);
+            }
+        }
+
+        if (mustRestart) await performRestart();
     });
 
     // IMPORTANT: Freezes the current process (Supervisor) to prevent 
