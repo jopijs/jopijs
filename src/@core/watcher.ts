@@ -41,6 +41,9 @@ function initializeRules(watcher: WatcherController) {
         }
     });
 
+    // UI dev mode: don't restart on update.
+    // But restart on file created/deleted, which is required for new routes.
+    //
     if (gWebSiteConfig.hasJopiDevUiFlag) {
         watcher.addListener({
             name: "ui-dev",
@@ -51,9 +54,9 @@ function initializeRules(watcher: WatcherController) {
                 return true;
             }
         });
+    } else {
+        // Not UI dev mode ? Always restart.
     }
 }
-
-
 
 const gWebSiteConfig = getWebSiteConfig();
