@@ -113,9 +113,9 @@ export function watchProject(): WatcherController {
     // Initialize the file watcher
     const watcher = chokidar.watch('.', {
         ignored: [
-            /(^|[\/\\])\../,         
-            '**/node_modules/**',    
-            '**/dist/**',            
+            /(^|[\/\\])\../,
+            /(^|[\/\\])node_modules([\/\\]|$)/,
+            /(^|[\/\\])dist([\/\\]|$)/,
         ],
         persistent: true,
         ignoreInitial: true,

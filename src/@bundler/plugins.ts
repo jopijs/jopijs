@@ -3,6 +3,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import {tailwindTransformGlobalCss} from "jopijs/postcss";
 import * as jk_events from "jopi-toolkit/jk_events";
+import * as jk_fs from "jopi-toolkit/jk_fs";
 import type {EsBuildParams} from "./esbuild.ts";
 import {installEsBuildPlugins} from "jopijs/loader-tools";
 import MagicString from 'magic-string';
@@ -195,18 +196,28 @@ export function jopiWriteMetafile(params: EsBuildParams): Plugin {
                 for (const input of inputs) {
                     const absPath = path.resolve(input);
                     
-                    // Filter out files contained in a folder starting with a dot (e.g., .jopijs, .git)
-                    const folders = path.dirname(absPath).split(path.sep);
-                    if (folders.some(folder => folder.startsWith('.') && folder !== "." && folder !== "..")) {
-                        continue;
-                    }
+                    if (absPath.includes("node_modules")) continue;
+                    if (absPath.includes(".jopijs")) continue;
+                    if (absPath.includes(".jopi-codegen")) continue;
 
                     involvedFiles.push(absPath);
                 }
 
                 try {
-                    await fs.mkdir(path.dirname(params.metaDataFilePath), {recursive: true});
-                    await fs.writeFile(params.metaDataFilePath, JSON.stringify(involvedFiles, null, 2));
+                    await jk_fs.mkDir(jk_fs.dirname(params.metaDataFilePath));
+                    
+                    let finalFiles = involvedFiles;
+
+                    // Merge with the existing file if it exists
+                    try {
+                        const existingFiles = await jk_fs.readJsonFromFile(params.metaDataFilePath);
+                        // Create a unique set of files
+                        finalFiles = Array.from(new Set([...existingFiles, ...involvedFiles]));
+                    } catch {
+                        // Ignore error (file not found or invalid JSON)
+                    }
+
+                    await jk_fs.writeTextToFile(params.metaDataFilePath, JSON.stringify(finalFiles, null, 4));
                 } catch (err) {
                     console.error("Failed to write metafile:", err);
                 }

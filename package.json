@@ -130,11 +130,6 @@
       "bun": "./src/@modules/index.ts",
       "default": "./dist/@modules/index.js"
     },
-    "./tool-jopinb": {
-      "types": "./src/@tool-jopinb/index.ts",
-      "bun": "./src/@tool-jopinb/index.ts",
-      "default": "./dist/@tool-jopinb/index.js"
-    },
     "./watcher": {
       "types": "./src/@watcher/index.ts",
       "bun": "./src/@watcher/index.ts",
