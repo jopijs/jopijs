@@ -7,7 +7,7 @@ import type {ServerInstanceBuilder} from "../serverInstanceBuilder.ts";
 import React from "react";
 import * as jk_fs from "jopi-toolkit/jk_fs";
 import {getBundleDirPath} from "../bundler/index.ts";
-import {hasJopiDevUiFlag} from "jopijs/watcher";
+import {getWebSiteConfig} from "jopijs/coreconfig";
 import {addBrowserCacheControlHeaders, type TryReturnFileParams} from "../browserCacheControl.ts";
 import {JopiRequestImpl} from "../jopiRequest.tsx";
 
@@ -120,7 +120,7 @@ export class BunJsServerInstanceBuilder implements ServerInstanceBuilder {
     private readonly pageToBuild: Record<string, string> = {};
 
     constructor(private readonly webSite: CoreWebSite) {
-        this.isReactHmrEnabled = hasJopiDevUiFlag();
+        this.isReactHmrEnabled = getWebSiteConfig().hasJopiDevUiFlag;
     }
 
     addRoute(verb: HttpMethod, path: string, route: WebSiteRouteInfos) {

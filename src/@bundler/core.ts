@@ -1,7 +1,7 @@
 import * as jk_fs from "jopi-toolkit/jk_fs";
 import * as jk_events from "jopi-toolkit/jk_events";
 import type {CreateBundleParams} from "jopijs";
-import {isReactHMR} from "jopijs/watcher";
+import {getWebSiteConfig} from "jopijs/coreconfig";
 import {esBuildBundle} from "./esbuild.ts";
 
 async function createBundle(params: CreateBundleParams): Promise<void> {
@@ -29,7 +29,7 @@ jk_events.addListener("@jopi.bundler.createBundle", jk_events.EventPriority.very
     // For React HMR, creating the full bundle is not required
     // and will only slow down the startup.
     //
-    if (isReactHMR()) return;
+    if (getWebSiteConfig().isReactHMR) return;
 
     // Will compile all the pages.
     await createBundle(params);

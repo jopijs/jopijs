@@ -26,8 +26,8 @@ import {
 
 import { parseCookies } from "./internalTools.ts";
 import * as jk_term from "jopi-toolkit/jk_term";
+import {getWebSiteConfig} from "jopijs/coreconfig";
 import { isNodeJS } from "jopi-toolkit/jk_what";
-import { isSinglePageMode } from "jopijs/watcher";
 import { createBundleForPage } from "./bundler/index.ts";
 import { type BrowserCacheValidationInfos, type ReqReturnFileParams } from "./browserCacheControl.ts";
 import { WebSiteMirrorCache } from "./caches/webSiteMirrorCache.ts";
@@ -1788,4 +1788,4 @@ export enum ContentTypeCategory {
 }
 
 const gEmptyObject = {};
-const gIsSinglePageMode = isSinglePageMode();
+const gIsSinglePageMode = getWebSiteConfig().isSinglePageMode;

@@ -2,6 +2,7 @@ import * as jk_app from "jopi-toolkit/jk_app";
 import * as jk_fs from "jopi-toolkit/jk_fs";
 import * as jk_process from "jopi-toolkit/jk_process";
 import path from "node:path";
+import {isBunJS} from "jopi-toolkit/jk_what";
 
 export interface WebSiteConfig {
     /**
@@ -56,6 +57,12 @@ export interface WebSiteConfig {
      * Indicate if is in production mode.
      */
     isProduction: boolean;
+
+    isBrowserRefreshEnabled: boolean;
+    hasJopiDevFlag: boolean;
+    hasJopiDevUiFlag: boolean;
+    isSinglePageMode: boolean;
+    isReactHMR: boolean;
 }
 
 export function getWebSiteConfig(): WebSiteConfig {
@@ -82,6 +89,30 @@ function calcWebSiteConfig(): WebSiteConfig {
     }
 
     let pkgJsonFilePath = jk_app.findPackageJson();
+
+    const hasJopiDevFlag = process.env.JOPI_DEV === "1";
+    const hasJopiDevUiFlag = process.env.JOPI_DEV_UI === "1";
+    const isBrowserRefreshEnabled = hasJopiDevFlag || hasJopiDevUiFlag;
+    /**
+     * React HMR is when the browser automatically refreshes his content
+     * but without a full refresh. It does a clever refresh by removing old
+     * JavaScript and injecting the new-one, before re-rendering the React components
+     * without losing their previous state.
+     */
+    const isReactHMR = hasJopiDevUiFlag && isBunJS;
+
+    /**
+     * Single page mode is when the internal bundle compiles the pages one by one.
+     * It's used for development to have a fast starting time.
+     *
+     * The opposite (when not single-page mode) is to compile all the pages in one go.
+     * This produces an optimized bundle, without duplicates, but can be slow to start.
+     */
+    let isSinglePageMode: boolean;
+
+    // Bun.js has his own bundler.
+    if (isReactHMR) isSinglePageMode = false;
+    else isSinglePageMode = hasJopiDevFlag || hasJopiDevUiFlag;
 
     let bundlerOutputDir = jopiTempDir;
 
@@ -159,7 +190,14 @@ function calcWebSiteConfig(): WebSiteConfig {
         webSiteUrl: conf_webSiteUrl!,
         webSiteListeningUrl: conf_webSiteListeningUrl!,
         webResourcesRoot_SSR: conf_webResourcesRoot_SSR!,
-        isProduction: jk_process.isProduction
+
+        isProduction: jk_process.isProduction,
+
+        isBrowserRefreshEnabled,
+        hasJopiDevFlag,
+        hasJopiDevUiFlag,
+        isSinglePageMode,
+        isReactHMR
     }
 }
 

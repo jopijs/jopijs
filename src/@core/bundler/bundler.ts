@@ -6,7 +6,7 @@ import {type BundlerConfig, getBundlerConfig} from "./config.ts";
 import {getExtraCssToBundle} from "./extraContent.ts";
 import {configureServer} from "./server.ts";
 import {getVirtualUrlMap, type VirtualUrlEntry} from "jopijs/loader-tools";
-import {isSinglePageMode} from "jopijs/watcher";
+import {getWebSiteConfig} from "jopijs/coreconfig";
 import {logBundler} from "../_logs.ts";
 
 export interface CreateBundleParams {
@@ -57,7 +57,7 @@ export async function createBundle(webSite: CoreWebSite): Promise<void> {
     const config = getBundlerConfig();
 
     gCreateBundleData = {
-        singlePageMode: isSinglePageMode(),
+        singlePageMode: getWebSiteConfig().isSinglePageMode,
         outputDir, genDir, publicUrl, innerUrl, webSite, requireTailwind,
         config: getBundlerConfig(), entryPoints: [...config.entryPoints],
         virtualUrlMap: getVirtualUrlMap(),
@@ -106,7 +106,7 @@ async function executeBundler(params: CreateBundleParams) {
     // (internally it's an optimized single-page mode).
     // So, we don't need to compile the full bundle.
 
-    if (!isSinglePageMode()) {
+    if (!getWebSiteConfig().isSinglePageMode) {
         const endLog = logBundler.beginInfo("Bundling all pages");
 
         // Will create the HTML pages.

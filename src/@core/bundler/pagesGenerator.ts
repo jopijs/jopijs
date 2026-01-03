@@ -2,7 +2,8 @@ import * as jk_events from "jopi-toolkit/jk_events";
 import * as jk_fs from "jopi-toolkit/jk_fs";
 import * as jk_crypto from "jopi-toolkit/jk_crypto";
 import { getBrowserInstallScript } from "jopijs/linker";
-import { getBrowserRefreshScript, isBrowserRefreshEnabled, isSinglePageMode, isReactHMR } from "jopijs/watcher";
+import { getBrowserRefreshScript } from "jopijs/watcher";
+import {getWebSiteConfig} from "jopijs/coreconfig";
 import { getMergedGlobalCssFileContent } from "jopijs/postcss";
 import type { CreateBundleParams } from "./index.ts";
 import type { RouteBindPageParams } from "jopijs/generated";
@@ -55,11 +56,11 @@ async function rebuildPages(p: CreateBundleParams) {
 
         txt = txt.replace("__PAGE_EXTRA_PARAMS__", JSON.stringify(p.pageExtraParams));
 
-        if (isReactHMR()) {
+        if (getWebSiteConfig().isReactHMR) {
             // Bun.js use his own SSE events.
             txt = txt.replace("__SSE_EVENTS__", "");
         }
-        else if (isBrowserRefreshEnabled()) {
+        else if (getWebSiteConfig().isBrowserRefreshEnabled) {
             // Node.js require our custom SSE events.
             txt = txt.replace("__SSE_EVENTS__", getBrowserRefreshScript());
         } else {
@@ -67,11 +68,11 @@ async function rebuildPages(p: CreateBundleParams) {
             txt = txt.replace("__SSE_EVENTS__", "");
         }
 
-        if (isReactHMR()) {
+        if (getWebSiteConfig().isReactHMR) {
             // The uncompiled version of tailwind.
             txt = txt.replace("__EXTRA_IMPORTS__", 'import "./global-hmr.css";');
         } else {
-            if (isSinglePageMode()) {
+            if (getWebSiteConfig().isSinglePageMode) {
                 txt = txt.replace("__EXTRA_IMPORTS__", `import "./${pageKey}/global.css";`);
             } else {
                 txt = txt.replace("__EXTRA_IMPORTS__", 'import "./global.css";');
@@ -97,7 +98,7 @@ async function rebuildPages(p: CreateBundleParams) {
 
     const installScript = getBrowserInstallScript();
 
-    if (isReactHMR()) {
+    if (getWebSiteConfig().isReactHMR) {
         let globalCss = await getMergedGlobalCssFileContent();
         await jk_fs.writeTextToFile(jk_fs.join(p.genDir, "global-hmr.css"), globalCss);
     }
@@ -218,4 +219,4 @@ let gPageKeyToSourceFile: Record<string, string> = {};
  */
 const gRouteToPageKey: Record<string, string> = {};
 
-const gIsDevMode = isSinglePageMode();
+const gIsDevMode = getWebSiteConfig().isSinglePageMode;
