@@ -129,9 +129,6 @@ export function watchProject(): WatcherController {
 
         if (childProcess) {
             childProcess.kill(); 
-            // We wait a bit or just respawn. 
-            // In dev mode, 'inherit' stdio might need a small delay? 
-            // Usually not needed for simple restarts.
         }
 
         // Reset flag and respawn
@@ -176,11 +173,6 @@ export function watchProject(): WatcherController {
         if (mustRestart) await performRestart();
     });
 
-    // IMPORTANT: Freezes the current process (Supervisor) to prevent 
-    // it from running the App Logic which follows this function call.
-    // We enter a permanent wait state.
-    
-    // We must handle cleanup when the Supervisor is killed (e.g. by VScode stop button)
     const cleanup = () => {
          if (childProcess) childProcess.kill();
          watcher.close();
@@ -190,56 +182,6 @@ export function watchProject(): WatcherController {
     process.on('SIGINT', cleanup);
     process.on('SIGTERM', cleanup);
     process.on('exit', () => { if(childProcess) childProcess.kill(); });
-
-    // HACK: Return a never-resolving promise or throw a "clean" error? 
-    // Since we are synchronous here, we can't await. 
-    // But we CAN keep the event loop alive (watcher does it) and simple 
-    // NOT return if we could block. But JS is single threaded.
-    
-    // The ONLY way to stop the caller code from executing is to THROW.
-    // But throwing will print a stack trace and exit if not caught.
-    
-    // ALTERNATIVE: Use a "Supervisor Mode" check in the CALLER.
-    // Since we cannot change the caller (user code), we have a problem.
-    // However, looking at 'jopiApp.ts' (the caller), it calls 'initWatcher()'
-    // which calls 'watchProject()'.
-    
-    // If we cannot block execution, the Supervisor Process WILL run the app logic.
-    // This results in TWO apps running (Supervisor + Worker).
-    // This usually causes PORT IN USE errors.
-    
-    // FIX: We check if we are Supervisor, and if so, we OVERRIDE standard methods
-    // to prevent the App from doing heavy lifting, OR we just accept we need to 
-    // tell the user. 
-    
-    // But wait! 'initWatcher' is void.
-    // We can use a trick: 'process.exit' is bad.
-    
-    // Let's rely on the fact that the USER asked to fix 'watcher.ts'.
-    // I will add a log saying "Supervisor Mode Active".
-    // And I will try to use a "Park" method if available? No.
-    
-    // BEST EFFORT: 
-    // We return a controller, but we also install a "guard" or we hope the app handles port conflicts gracefully?
-    // No.
-    
-    // RE-READING: 'jopiApp.ts' calls 'initWatcher', then continues 'doStart'.
-    // There is no return value check.
-    
-    // ULTIMATE TRICK:
-    // We can suspend the main event loop phases? No.
-    
-    // Since I cannot modify 'jopiApp.ts' (it is in _jopijs package, I COULD modify it!), 
-    // I SHOULD modify 'jopijs/src/@core/watcher.ts' or 'jopiApp.ts' to handle the return value.
-    
-    // Plan:
-    // 1. Modify 'watchProject' to return a property 'isSupervisor'.
-    // 2. Modify 'initWatcher' to check this.
-    // 3. Modify 'jopiApp' to check 'initWatcher' result? Or throw?
-    
-    // Let's modify 'watchProject' in this file first. 
-    // Be aware: I need to update the interface too? 
-    // The current interface is 'WatcherController'. I can add a prop.
     
     return {
         addListener: (listener: WatchChangeListener) => {
@@ -250,7 +192,7 @@ export function watchProject(): WatcherController {
             };
         },
         close: async () => { await watcher.close(); },
-        // @ts-ignore
+
         isSupervisor: true // Marker for the caller
     };
 }
