@@ -59,10 +59,10 @@ export interface WebSiteConfig {
     isProduction: boolean;
 
     isBrowserRefreshEnabled: boolean;
-    hasJopiDevFlag: boolean;
+    hasJopiDevServerFlag: boolean;
     hasJopiDevUiFlag: boolean;
     isSinglePageMode: boolean;
-    isReactHMR: boolean;
+    hasReactHmrFlag: boolean;
 }
 
 export function getWebSiteConfig(): WebSiteConfig {
@@ -90,17 +90,12 @@ function calcWebSiteConfig(): WebSiteConfig {
 
     let pkgJsonFilePath = jk_app.findPackageJson();
 
-    const hasJopiDevFlag = process.env.JOPI_DEV === "1";
+    const hasJopiDevServerFlag = process.env.JOPI_DEV_SERVER === "1";
     const hasJopiDevUiFlag = process.env.JOPI_DEV_UI === "1";
-    const isBrowserRefreshEnabled = hasJopiDevFlag || hasJopiDevUiFlag;
-    /**
-     * React HMR is when the browser automatically refreshes his content
-     * but without a full refresh. It does a clever refresh by removing old
-     * JavaScript and injecting the new-one, before re-rendering the React components
-     * without losing their previous state.
-     */
-    const isReactHMR = hasJopiDevUiFlag && isBunJS;
+    const hasReactHmrFlag = (process.env.JOPI_DEV_HMR === "1") && isBunJS;
 
+    const isBrowserRefreshEnabled = hasJopiDevServerFlag || hasJopiDevUiFlag;
+    
     /**
      * Single page mode is when the internal bundle compiles the pages one by one.
      * It's used for development to have a fast starting time.
@@ -111,8 +106,8 @@ function calcWebSiteConfig(): WebSiteConfig {
     let isSinglePageMode: boolean;
 
     // Bun.js has his own bundler.
-    if (isReactHMR) isSinglePageMode = false;
-    else isSinglePageMode = hasJopiDevFlag || hasJopiDevUiFlag;
+    if (hasReactHmrFlag) isSinglePageMode = false;
+    else isSinglePageMode = hasJopiDevServerFlag || hasJopiDevUiFlag;
 
     let bundlerOutputDir = jopiTempDir;
 
@@ -194,10 +189,10 @@ function calcWebSiteConfig(): WebSiteConfig {
         isProduction: jk_process.isProduction,
 
         isBrowserRefreshEnabled,
-        hasJopiDevFlag,
+        hasJopiDevServerFlag,
         hasJopiDevUiFlag,
         isSinglePageMode,
-        isReactHMR
+        hasReactHmrFlag
     }
 }
 

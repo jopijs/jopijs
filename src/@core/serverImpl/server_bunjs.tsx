@@ -120,7 +120,7 @@ export class BunJsServerInstanceBuilder implements ServerInstanceBuilder {
     private readonly pageToBuild: Record<string, string> = {};
 
     constructor(private readonly webSite: CoreWebSite) {
-        this.isReactHmrEnabled = getWebSiteConfig().hasJopiDevUiFlag;
+        this.isReactHmrEnabled = getWebSiteConfig().hasReactHmrFlag;
     }
 
     addRoute(verb: HttpMethod, path: string, route: WebSiteRouteInfos) {

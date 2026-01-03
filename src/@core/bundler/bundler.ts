@@ -106,7 +106,7 @@ async function executeBundler(params: CreateBundleParams) {
     // (internally it's an optimized single-page mode).
     // So, we don't need to compile the full bundle.
 
-    if (!getWebSiteConfig().isSinglePageMode) {
+    if (!gIsSinglePageMode) {
         const endLog = logBundler.beginInfo("Bundling all pages");
 
         // Will create the HTML pages.
@@ -119,5 +119,6 @@ async function executeBundler(params: CreateBundleParams) {
 
 const FALLBACK_PACKAGE = "jopijs/bundler";
 let gIsBundlerLoader = false;
+let gIsSinglePageMode = getWebSiteConfig().isSinglePageMode;
 let gCreateBundleData: CreateBundleParams|undefined;
 let gPageBundlerIsOk: Record<string, boolean> = {};

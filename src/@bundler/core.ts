@@ -23,7 +23,7 @@ jk_events.addListener("@jopi.bundler.createBundle", jk_events.EventPriority.very
     // For React HMR, creating the full bundle is not required
     // and will only slow down the startup.
     //
-    if (getWebSiteConfig().isReactHMR) return;
+    if (getWebSiteConfig().hasReactHmrFlag) return;
 
     // Will compile all the pages.
     await createBundle(params);

@@ -7,7 +7,7 @@ export function initWatcher(): boolean {
     if (gWebSiteConfig.isProduction) return false;
 
     // Flag is required.
-    if (!gWebSiteConfig.hasJopiDevFlag && !gWebSiteConfig.hasJopiDevUiFlag) return false;
+    if (!gWebSiteConfig.hasJopiDevServerFlag && !gWebSiteConfig.hasJopiDevUiFlag) return false;
 
     // No watcher in debug mode.
     if (jk_process.isLaunchedWithDebugger()) return false;

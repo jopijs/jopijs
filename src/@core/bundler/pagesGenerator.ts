@@ -56,7 +56,7 @@ async function rebuildPages(p: CreateBundleParams) {
 
         txt = txt.replace("__PAGE_EXTRA_PARAMS__", JSON.stringify(p.pageExtraParams));
 
-        if (getWebSiteConfig().isReactHMR) {
+        if (getWebSiteConfig().hasReactHmrFlag) {
             // Bun.js use his own SSE events.
             txt = txt.replace("__SSE_EVENTS__", "");
         }
@@ -68,7 +68,7 @@ async function rebuildPages(p: CreateBundleParams) {
             txt = txt.replace("__SSE_EVENTS__", "");
         }
 
-        if (getWebSiteConfig().isReactHMR) {
+        if (getWebSiteConfig().hasReactHmrFlag) {
             // The uncompiled version of tailwind.
             txt = txt.replace("__EXTRA_IMPORTS__", 'import "./global-hmr.css";');
         } else {
@@ -84,7 +84,7 @@ async function rebuildPages(p: CreateBundleParams) {
 
         txt = HTML_TEMPLATE;
 
-        if (gIsDevMode) {
+        if (gIsSinglePageMode) {
             txt = txt.replace("__SCRIPT_PATH__", "./" + pageKey + '/' + pageKey + ".jsx");
         } else {
             txt = txt.replace("__SCRIPT_PATH__", "./" + pageKey + ".jsx");
@@ -98,7 +98,7 @@ async function rebuildPages(p: CreateBundleParams) {
 
     const installScript = getBrowserInstallScript();
 
-    if (getWebSiteConfig().isReactHMR) {
+    if (getWebSiteConfig().hasReactHmrFlag) {
         let globalCss = await getMergedGlobalCssFileContent();
         await jk_fs.writeTextToFile(jk_fs.join(p.genDir, "global-hmr.css"), globalCss);
     }
@@ -219,4 +219,4 @@ let gPageKeyToSourceFile: Record<string, string> = {};
  */
 const gRouteToPageKey: Record<string, string> = {};
 
-const gIsDevMode = getWebSiteConfig().isSinglePageMode;
+const gIsSinglePageMode = getWebSiteConfig().isSinglePageMode;
