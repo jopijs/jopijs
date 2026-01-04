@@ -21,7 +21,7 @@
 JopiJS is a high-performance framework inspired by Next.js, built on top of **Bun.js** (and compatible with **Node.js**) and **React**. It brings the familiar developer experience of file-based routing and Server Side Rendering (SSR), but with a core re-engineered for absolute speed.
 
 ### Key highlights:
-- ⚡ **Turbocharged Performance**: Up to **7.5x faster** than Next.js (and **2.5x faster** in Node.js mode) thanks to an advanced automatic caching engine.
+- ⚡ **Turbocharged Performance**: Up to **6.5x faster** than Next.js (and **2x faster** in Node.js mode) thanks to an advanced automatic caching engine.
 - 🧩 **Modular Architecture**: A powerful plugin system that allows you to extend or override any part of the framework without touching the core code.
 - 🛠️ **Developer Experience (DX)**: Built-in Tailwind CSS, ShadCN UI support, and instant Hot Module Replacement (React HMR).
 - 🛡️ **Enterprise Ready**: Baked-in JWT authentication and Role-Based Access Control (RBAC).
