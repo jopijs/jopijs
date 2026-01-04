@@ -60,7 +60,7 @@ export interface PathAliasInfo {
 export async function getPathAliasInfo(): Promise<PathAliasInfo> {
     if (gCache_getPathAliasInfo) return gCache_getPathAliasInfo;
 
-    let pkgJsonFile = jk_app.findPackageJson();
+    let pkgJsonFile = jk_app.findRequiredPackageJson();
     if (!pkgJsonFile) throw new Error("Package.json not found");
 
     const rootDir = path.dirname(pkgJsonFile);

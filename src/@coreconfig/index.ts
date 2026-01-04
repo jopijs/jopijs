@@ -1,6 +1,7 @@
 import * as jk_app from "jopi-toolkit/jk_app";
 import * as jk_fs from "jopi-toolkit/jk_fs";
 import * as jk_process from "jopi-toolkit/jk_process";
+import * as jk_term from "jopi-toolkit/jk_term";
 import path from "node:path";
 import {isBunJS} from "jopi-toolkit/jk_what";
 
@@ -89,6 +90,11 @@ function calcWebSiteConfig(): WebSiteConfig {
     }
 
     let pkgJsonFilePath = jk_app.findPackageJson();
+    //
+    if (!pkgJsonFilePath) {
+        jk_term.logRed("No package.json found.");
+        process.exit(1);
+    }
 
     const hasJopiDevServerFlag = process.env.JOPI_DEV_SERVER === "1";
     const hasJopiDevUiFlag = process.env.JOPI_DEV_UI === "1";

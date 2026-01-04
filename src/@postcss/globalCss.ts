@@ -46,7 +46,7 @@ export async function tailwindTransformGlobalCss(params: CreateBundleParams): Pr
 export async function getMergedGlobalCssFileContent(): Promise<string> {
     if (gGlobalCssContent) return gGlobalCssContent;
 
-    const rootDir = jk_fs.dirname(jk_app.findPackageJson());
+    const rootDir = jk_fs.dirname(jk_app.findRequiredPackageJson());
     let globalCss = `/* Warning: generated file */`;
     let isEmpty = true;
 
@@ -118,7 +118,7 @@ let g_globalCssFileExist = false;
  */
 export function getGlobalCssFilePath() {
     if (!gGlobalCssFilePath) {
-        gGlobalCssFilePath = jk_fs.join(jk_fs.dirname(jk_app.findPackageJson()), "global.compiled.css");
+        gGlobalCssFilePath = jk_fs.join(jk_fs.dirname(jk_app.findRequiredPackageJson()), "global.compiled.css");
     }
 
     return gGlobalCssFilePath;
