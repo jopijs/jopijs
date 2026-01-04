@@ -32,7 +32,7 @@ __BODY__FOOTER
 
 export function getDefaultLinkerConfig(): LinkerConfig {
     return {
-        projectRootDir: jk_app.findPackageJsonDir(),
+        projectRootDir: jk_app.findRequiredPackageJsonDir(),
 
         templateForServer: gServerInstallFileTemplate,
         templateForBrowser: gBrowserInstallFileTemplate,

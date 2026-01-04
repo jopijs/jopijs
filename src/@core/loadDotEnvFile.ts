@@ -6,7 +6,7 @@ import path from "node:path";
 import * as Process from 'node:process';
 
 if (isNodeJS) {
-    let rootDir = jk_app.findPackageJsonDir();
+    let rootDir = jk_app.findRequiredPackageJsonDir();
     let envFile = path.join(rootDir, ".env");
 
     if (jk_fs.isFileSync(envFile)) {

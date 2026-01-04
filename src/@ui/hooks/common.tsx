@@ -35,7 +35,7 @@ export function useRegistry(): IsObjectRegistry {
 /**
  * Get a value from the object registry.
  */
-export function useRegistryValue<T>(key: string): [T | undefined, (v: T) => void] {
+export function useRegistryValue<T>(key: string): [T, (v: T) => void] {
     const registry = useRegistry();
     const [_, setCount] = useState(0);
 
@@ -44,7 +44,7 @@ export function useRegistryValue<T>(key: string): [T | undefined, (v: T) => void
         return registry.onValueChange(key, listener);
     }, []);
 
-    return [registry.getValue(key), (v: T) => registry.setValue(key, v)];
+    return [registry.getValue(key)!, (v: T) => registry.setValue(key, v)];
 }
 
 /**

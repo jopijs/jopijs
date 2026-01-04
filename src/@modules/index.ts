@@ -387,7 +387,7 @@ export function onProjectDependenciesAdded() {
 
 function getProjectDir_src() {
     if (!gProjectDir_src) {
-        gProjectDir_src = jk_fs.join(jk_app.findPackageJsonDir(), "src");
+        gProjectDir_src = jk_fs.join(jk_app.findRequiredPackageJsonDir(), "src");
     }
 
     return gProjectDir_src;
