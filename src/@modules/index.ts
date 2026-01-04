@@ -1,6 +1,7 @@
 import * as jk_app from "jopi-toolkit/jk_app";
 import * as jk_fs from "jopi-toolkit/jk_fs";
 import * as jk_term from "jopi-toolkit/jk_term";
+import { logModules } from "./_logs.ts";
 
 interface IsPackageJson {
     name?: string;
@@ -31,22 +32,44 @@ class JopiItemInfo {
         function append (deps: string[]) {
             for (let d of deps) {
                 let c = toNpmModuleName(d);
+
+                logModules.info((w) => {
+                    w("dependency added", { originalName: d, convertedName: c });
+                });
+
                 if (c) allDeps.push(c);
             }
         }
 
         let pkgJson = await this.getPackageJson();
-        if (!pkgJson) return [];
+        //
+        if (!pkgJson) {
+            logModules.info((w) => {
+                w("Package.json not found", { path: this.fullPath });
+            });
+
+            return [];
+        }
+
+        logModules.spam((w) => {
+            w("Package.json found", { content: pkgJson });
+        });
 
         let allDeps: string[] = [];
 
         if (pkgJson.jopi?.modDependencies) {
+            logModules.spam((w) => {
+                w("modDependencies found", { content: pkgJson!.jopi!.modDependencies });
+            });
+            
             append(pkgJson.jopi.modDependencies);
         }
 
-        if (pkgJson.dependencies) {
-            append(Object.keys(pkgJson.dependencies));
-        } else if (pkgJson.devDependencies) {
+        if (pkgJson.devDependencies) {
+            logModules.spam((w) => {
+                w("devDependencies found", { content: pkgJson!.devDependencies });
+            });
+
             append(Object.keys(pkgJson.devDependencies));
         }
 
@@ -138,6 +161,10 @@ export class JopiModuleInfo extends JopiItemInfo {
         let allDeps = await this.getModDependencies();
 
         if (allDeps.length) {
+            logModules.info((w) => {
+                w("found dependencies", { value: allDeps });
+            });
+
             let modNames = Object.values(await getModulesList()).map(x => x.npmName);
 
             for (let dep of allDeps) {
