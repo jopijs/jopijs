@@ -1,4 +1,4 @@
-import {CodeGenWriter} from "./engine";
+import {CodeGenWriter} from "./engine.ts";
 import * as jk_fs from "jopi-toolkit/jk_fs";
 
 /**

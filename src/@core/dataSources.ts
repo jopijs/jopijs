@@ -1,6 +1,6 @@
 import type {JTableDs, JTableDs_ReadParams} from "jopi-toolkit/jk_data";
-import type {CoreWebSite} from "./jopiCoreWebSite";
-import type {JopiRequest} from "./jopiRequest";
+import type {CoreWebSite} from "./jopiCoreWebSite.tsx";
+import type {JopiRequest} from "./jopiRequest.tsx";
 import {sleep} from "jopi-toolkit/jk_timer";
 import type {PageDataProviderData} from "jopijs/ui";
 

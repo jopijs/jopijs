@@ -1,6 +1,6 @@
 import path from "node:path";
 import * as jk_fs from "jopi-toolkit/jk_fs";
-import type {JopiRequest} from "../jopiRequest";
+import type {JopiRequest} from "../jopiRequest.tsx";
 import fs from "node:fs/promises";
 import {makeIterable} from "../internalTools.ts";
 import type {CacheEntry, PageCache} from "./cache.ts";
