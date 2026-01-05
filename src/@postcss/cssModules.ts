@@ -44,6 +44,8 @@ export async function compileCssModule(filePath: string): Promise<string> {
 
     const plugins: postcss.AcceptedPlugin[] = [];
 
+    const contentToHash = css;
+
     // Must use Tailwind preprocessor.
     if (css.includes("@apply")) {
         let tailwindPlugin = getTailwindPlugin(false);
@@ -56,7 +58,13 @@ export async function compileCssModule(filePath: string): Promise<string> {
 
     plugins.push(postcssModules({
         // The format of the classnames.
-        generateScopedName: '[name]__[local]',
+        generateScopedName: (name: string, filename: string) => {
+            // Use the CSS content and class name for the hash.
+            // This is stable even if the project is moved (no absolute paths).
+            const hash = jk_crypto.md5(contentToHash + name);
+            //const base = path.basename(filename, path.extname(filename)).replace(/\.module$/, '');
+            return "csm_" + hash;
+        },
         localsConvention: 'camelCaseOnly',
 
         // Allow capturing the class names.
@@ -69,7 +77,7 @@ export async function compileCssModule(filePath: string): Promise<string> {
         // Mute the console to avoid an unreadable Tailwind error message in case of error.
         //
         await execConsoleMuted(async () => {
-            let res = await postcss(plugins).process(css, {from: fromPath, map: false});
+            let res = await postcss(plugins).process(css, {from: filePath, map: false});
             css = res.css;
         });
     } catch (e: any) {
