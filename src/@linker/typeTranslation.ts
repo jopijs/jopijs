@@ -359,7 +359,7 @@ export class TypeTranslation extends AliasType {
             let idx = value.indexOf("%(");
 
             if (idx===-1) {
-                if (hasData) {
+                if (hasData && value) {
                     segments.push({text: value});
                 }
 
@@ -368,11 +368,8 @@ export class TypeTranslation extends AliasType {
 
             hasData = true;
 
-            if (idx>0) {
-                segments.push({text: value.substring(0, idx)});
-                value = value.substring(idx + 2);
-            }
-
+            segments.push({text: value.substring(0, idx)});            
+            value = value.substring(idx + 2);
             idx = value.indexOf(")");
 
             if (idx===-1) {
