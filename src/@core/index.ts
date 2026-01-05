@@ -1,5 +1,3 @@
-import "./loadDotEnvFile.ts";
-
 export * from "./publicTools.ts";
 export * from "./searchParamFilter.ts";
 export * from "./serverFetch.ts";

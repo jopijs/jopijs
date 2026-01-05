@@ -73,7 +73,7 @@ export function isReactHMR() {
 
 export function useCssModule(cssModule: undefined | Record<string, string>) {
     if (!cssModule) return;
-    debugger;
+
     // Not a real CSS Module?
     const fileHash = cssModule.__FILE_HASH__;
     if (!fileHash) return;

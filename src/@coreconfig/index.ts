@@ -3,7 +3,9 @@ import * as jk_fs from "jopi-toolkit/jk_fs";
 import * as jk_process from "jopi-toolkit/jk_process";
 import * as jk_term from "jopi-toolkit/jk_term";
 import path from "node:path";
-import {isBunJS} from "jopi-toolkit/jk_what";
+import { isBunJS } from "jopi-toolkit/jk_what";
+
+import "./loadDotEnvFile.ts";
 
 export interface WebSiteConfig {
     /**

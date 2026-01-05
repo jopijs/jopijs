@@ -10,6 +10,7 @@ import path from "node:path";
 import {getTailwindPlugin} from "./tailwinPlugin.ts";
 import {execConsoleMuted} from "./tools.ts";
 import {getGlobalCssFilePath_createIfDontExists} from "./globalCss.ts";
+import {getWebSiteConfig} from "jopijs/coreconfig";
 
 /**
  * Compile a CSS or SCSS file to a JavaScript file.
@@ -85,6 +86,10 @@ export async function compileCssModule(filePath: string): Promise<string> {
     knownClassNames.__CSS__ = css;
     knownClassNames.__FILE_HASH__ = jk_crypto.md5(filePath);
 
+    if (!gWebSiteConfig.isProduction) {
+        knownClassNames.__FILE_PATH__ = filePath;
+    }
+
     return `export default ${JSON.stringify(knownClassNames)};`
 }
 
@@ -92,3 +97,5 @@ function scssToCss(filePath: string): any {
     const res = sass.compile(filePath, { style: 'expanded' });
     return res.css.toString();
 }
+
+const gWebSiteConfig = getWebSiteConfig();
