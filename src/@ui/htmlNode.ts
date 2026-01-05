@@ -9,6 +9,8 @@ export interface HtmlNode {
     property?: string;
     charset?: string;
     src?: string;
+
+    [key: string]: any;
 }
 
 /**

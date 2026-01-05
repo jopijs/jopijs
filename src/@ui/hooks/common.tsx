@@ -79,21 +79,19 @@ export function useCssModule(cssModule: undefined | Record<string, string>) {
     if (!fileHash) return;
 
     const ctx = _usePage<UseCssModuleContextProps>();
+   
+    // Will allow inlining the style inside the page.
+    //
+    // Here we force adding it, since it must be added form browser-side
+    // when a component is mounted for the first time/
+    //
+    const values: any = { tag: "style", key: fileHash, content: cssModule.__CSS__ };
 
-    // Will allow knowing if the module is already inserted for this page.
-    //if (!ctx.data.jopiUseCssModule) ctx.data.jopiUseCssModule = {};
+    if (cssModule.__FILE_PATH__) {
+        values.file = cssModule.__FILE_PATH__;
+    }
 
-    // Not already added? Then add it.
-    //if (!ctx.data.jopiUseCssModule[fileHash]) {
-      //  ctx.data.jopiUseCssModule![fileHash] = true;
-    
-        // Will allow inlining the style inside the page.
-        //
-        // Here we force adding it, since it must be added form browser-side
-        // when a component is mounted for the first time/
-        //
-        ctx.addToHeader({tag: "style", key: fileHash, content: cssModule.__CSS__}, true);
-    //}
+    ctx.addToHeader(values, true);
 }
 
 export interface ReactStaticEvent {
