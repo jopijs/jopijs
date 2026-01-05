@@ -19,6 +19,7 @@ import {getWebSiteConfig} from "jopijs/coreconfig";
  * But also Bun.js and Node.js bundler.
  */
 export async function compileCssModule(filePath: string): Promise<string> {
+    debugger;
     // Occurs when it's compiled with TypeScript.
     if (!await jk_fs.isFile(filePath)) {
         let source = jk_app.searchSourceOf(filePath)!;
