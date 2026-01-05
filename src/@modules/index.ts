@@ -340,7 +340,10 @@ export async function updateWorkspaces() {
             pkgJson.workspaces = newWsItems;
             await jk_fs.writeTextToFile(pkjJsonFile, JSON.stringify(pkgJson, null, 4));
         }
-        
+     
+        if (hasAddedWkItems) {
+        onProjectDependenciesAdded();
+    }
     }
 
     //endregion
@@ -354,9 +357,7 @@ export async function updateWorkspaces() {
 
     //endregion
 
-    if (hasAddedWkItems) {
-        onProjectDependenciesAdded();
-    }
+    
 }
 
 /**
