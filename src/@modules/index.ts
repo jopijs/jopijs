@@ -12,6 +12,11 @@ interface IsPackageJson {
 
     jopi?: {
         modDependencies?: string[];
+
+        /**
+         * If true, the modules will not be added to the project workspaces.
+         */
+        ignoreWorkspaces?: boolean;
     };
 }
 
@@ -269,69 +274,73 @@ export async function updateWorkspaces() {
     const pkjJsonFile = jk_fs.join(getProjectDir_src(), "..", "package.json");
 
     let pkgJson = await jk_fs.readJsonFromFile<IsPackageJson>(pkjJsonFile);
-    if(!pkgJson) pkgJson = {};
+    if (!pkgJson) pkgJson = {};
+    
+    if (!pkgJson.jopi?.ignoreWorkspaces) {
 
-    //region Get workspace items
+        //region Get workspace items
 
-    let wsItems: string[];
+        let wsItems: string[];
 
-    if (!pkgJson.workspaces) {
-        pkgJson.workspaces = [];
-        wsItems = [];
-    } else {
-        wsItems = pkgJson.workspaces;
-    }
-
-    //endregion
-
-    //region Add modules into the workspace
-
-    let newWsItems: string[] = [];
-    let foundModules: Record<string, boolean> = {};
-    let needSavePkgJson = false;
-    let hasAddedWkItems = false;
-
-    for (let item of wsItems) {
-        let modName: string;
-        let idx = item.lastIndexOf("/");
-        if (idx===-1) modName = item;
-        else modName = item.substring(idx+1);
-
-        if (modName.startsWith("mod_")) {
-            if (!allModNames.includes(modName)) {
-                // Is a module but doesn't exist anymore?
-                needSavePkgJson = true;
-                continue;
-            }
-
-            // Avoid double.
-            if (foundModules[modName]) {
-                needSavePkgJson = true;
-                continue;
-            }
-
-            foundModules[modName] = true;
+        if (!pkgJson.workspaces) {
+            pkgJson.workspaces = [];
+            wsItems = [];
+        } else {
+            wsItems = pkgJson.workspaces;
         }
 
-        newWsItems.push("src/" + modName);
-    }
+        //endregion
 
-    for (let modName of allModNames) {
-        // Already found into the workspace?
-        if (foundModules[modName]) continue;
+        //region Add modules into the workspace
 
-        needSavePkgJson = true;
-        hasAddedWkItems = true;
+        let newWsItems: string[] = [];
+        let foundModules: Record<string, boolean> = {};
+        let needSavePkgJson = false;
+        let hasAddedWkItems = false;
 
-        foundModules[modName] = true;
-        newWsItems.push("src/" + modName);
-    }
+        for (let item of wsItems) {
+            let modName: string;
+            let idx = item.lastIndexOf("/");
+            if (idx === -1) modName = item;
+            else modName = item.substring(idx + 1);
 
-    //endregion
+            if (modName.startsWith("mod_")) {
+                if (!allModNames.includes(modName)) {
+                    // Is a module but doesn't exist anymore?
+                    needSavePkgJson = true;
+                    continue;
+                }
 
-    if (needSavePkgJson) {
-        pkgJson.workspaces = newWsItems;
-        await jk_fs.writeTextToFile(pkjJsonFile, JSON.stringify(pkgJson, null, 4));
+                // Avoid double.
+                if (foundModules[modName]) {
+                    needSavePkgJson = true;
+                    continue;
+                }
+
+                foundModules[modName] = true;
+            }
+
+            newWsItems.push("src/" + modName);
+        }
+
+        for (let modName of allModNames) {
+            // Already found into the workspace?
+            if (foundModules[modName]) continue;
+
+            needSavePkgJson = true;
+            hasAddedWkItems = true;
+
+            foundModules[modName] = true;
+            newWsItems.push("src/" + modName);
+        }
+
+        //endregion
+
+        if (needSavePkgJson) {
+            pkgJson.workspaces = newWsItems;
+            await jk_fs.writeTextToFile(pkjJsonFile, JSON.stringify(pkgJson, null, 4));
+        }
+        
     }
 
     //endregion
