@@ -776,6 +776,8 @@ export abstract class AliasType {
     }
 
     registry_requireItem<T extends RegistryItem>(key: string, requireType?: AliasType): T {
+        if (!key) throw new Error("registry_requireItem: key is undefined");
+        
         const entry = gRegistry[key];
         if (!entry) throw declareLinkerError("The item " + key + " is required but not defined");
         if (requireType && (entry.type !== requireType)) throw declareLinkerError("The item " + key + " is not of the expected type @" + requireType.typeName);

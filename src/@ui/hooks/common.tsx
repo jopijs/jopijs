@@ -84,11 +84,15 @@ export function useCssModule(cssModule: undefined | Record<string, string>) {
     if (!ctx.data.jopiUseCssModule) ctx.data.jopiUseCssModule = {};
 
     // Not already added? Then add it.
-    if (fileHash && !ctx.data.jopiUseCssModule[fileHash]) {
+    if (!ctx.data.jopiUseCssModule[fileHash]) {
         ctx.data.jopiUseCssModule![fileHash] = true;
-
+    
         // Will allow inlining the style inside the page.
-        ctx.addToHeader({tag: "style", key: fileHash, content: cssModule.__CSS__});
+        //
+        // Here we force adding it, since it must be added form browser-side
+        // when a component is mounted for the first time/
+        //
+        ctx.addToHeader({tag: "style", key: fileHash, content: cssModule.__CSS__}, true);
     }
 }
 

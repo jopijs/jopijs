@@ -47,7 +47,7 @@ export class PageController<T = any> implements JopiUiApplication_Host {
     }
 
     /**
-     * Allow storing custom data inside the page context.
+     * Allow storing custom internal data inside the page context.
      */
     data: T = {} as unknown as T;
 
@@ -82,32 +82,38 @@ export class PageController<T = any> implements JopiUiApplication_Host {
 
     //region Page options (header/props/...)
 
-    public addToHeader(item: HtmlNode) {
+    public addToHeader(item: HtmlNode, force: boolean = false) {
         if (this.isServerSide) {
             if (!this.checkKey("h" + item.key)) return this;
             if (!this.state.head) this.state.head = [item];
             else this.state.head.push(item);
-        } else if (this.isReactHMR) {
-            // >>> With React HMR there is not server pre-rendering.
-            //     It's why here we allow injecting items into the header.
-
-            const container = document.createElement('div');
-            container.setAttribute('data-jopi-key', item.key);
-
-            let domNode = document.createElement(item.tag);
-            let copy: any = {...item};
-            delete copy.tag;
-
-            for (let k in copy) {
-                domNode.setAttribute(k, copy[k]);
-            }
-
-            const existingElement = document.querySelector(`[data-jopi-key="${item.key}"]`);
-            if (existingElement) existingElement.remove();
-
-            document.head.appendChild(domNode);
         } else {
-            // Do nothing, since the server already adds it.
+            if (this.isReactHMR) force = true;
+ 
+            if (force) {
+                // >>> With React HMR there is not server pre-rendering.
+                //     It's why here we allow injecting items into the header.
+
+                let domNode = document.createElement(item.tag);
+                domNode.setAttribute('key', item.key);
+                
+                let copy: any = { ...item };
+                delete copy.tag;
+                delete copy.key;
+
+                for (let k in copy) {
+                    if (k === "content") {
+                        domNode.innerHTML = copy[k];
+                    } else {
+                        domNode.setAttribute(k, copy[k]);
+                    }
+                }
+
+                const existingElement = document.querySelector(`[key="${item.key}"]`);
+                if (existingElement) existingElement.remove();
+
+                document.head.appendChild(domNode);
+            }
         }
 
         return this;
