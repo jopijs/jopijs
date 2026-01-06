@@ -14,18 +14,33 @@ import {TypeUI} from "./typeUI.ts";
 import {TypeStyles} from "./typeStyles.ts";
 
 // Here it's ASYNC.
-let gServerInstallFileTemplate = `__AI_INSTRUCTIONS
+let gServerInstallFileTemplate_TS = `__AI_INSTRUCTIONS
 __HEADER
 
 export default async function(registry: any, onWebSiteCreated: any) {
 __BODY__FOOTER
 }`;
 
+let gServerInstallFileTemplate_JS = `__AI_INSTRUCTIONS
+__HEADER
+
+export default async function(registry, onWebSiteCreated) {
+__BODY__FOOTER
+}`;
+
 // Here it's not async.
-let gBrowserInstallFileTemplate = `__AI_INSTRUCTIONS
+let gBrowserInstallFileTemplate_TS = `__AI_INSTRUCTIONS
 __HEADER
 
 export default function(registry: any) {
+__BODY__FOOTER
+    registry.events.sendEvent("app.init.ui", {myModule: registry});
+}`;
+
+let gBrowserInstallFileTemplate_JS = `__AI_INSTRUCTIONS
+__HEADER
+
+export default function(registry) {
 __BODY__FOOTER
     registry.events.sendEvent("app.init.ui", {myModule: registry});
 }`;
@@ -34,8 +49,10 @@ export function getDefaultLinkerConfig(): LinkerConfig {
     return {
         projectRootDir: jk_app.findRequiredPackageJsonDir(),
 
-        templateForServer: gServerInstallFileTemplate,
-        templateForBrowser: gBrowserInstallFileTemplate,
+        templateForServer_TS: gServerInstallFileTemplate_TS,
+        templateForServer_JS: gServerInstallFileTemplate_JS,
+        templateForBrowser_TS: gBrowserInstallFileTemplate_TS,
+        templateForBrowser_JS: gBrowserInstallFileTemplate_JS,
 
         aliasTypes: [
             new TypeRoutes("routes", "root"),

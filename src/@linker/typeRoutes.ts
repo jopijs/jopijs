@@ -19,7 +19,6 @@ export default class TypeRoutes extends AliasType {
     private sourceCode_header_TS = `import {routeBindPage, routeBindVerb} from "jopijs/generated";`;
     private sourceCode_header_JS = `import {routeBindPage, routeBindVerb} from "jopijs/generated";`;
     private sourceCode_body = "";
-    private outputDir: string = "";
     private cwdDir: string = process.cwd();
     private routeCount: number = 1;
 
@@ -131,8 +130,10 @@ export default class TypeRoutes extends AliasType {
             ts: `\nimport declareRoutes from "./declareServerRoutes.ts";`,
             js: `\nimport declareRoutes from "./declareServerRoutes.js";`
         });
-        
-        writer.genAddToInstallFile(InstallFileType.server, FilePart.footer, "\n    onWebSiteCreated((webSite) => declareRoutes(webSite));");
+        writer.genAddToInstallFile(InstallFileType.server, FilePart.footer, {
+            ts: "\n    onWebSiteCreated((webSite: any) => declareRoutes(webSite));",
+            js: "\n    onWebSiteCreated((webSite) => declareRoutes(webSite));"
+        });
     }
 
     /**
@@ -291,8 +292,6 @@ export function error401() {
     }
 
     async processDir(p: { moduleDir: string; typeDir: string; genDir: string; }) {
-        this.outputDir = getWriter().dir.output_dir;
-
         let dirAttributes = await this.scanAttributes(p.typeDir);
 
         if (dirAttributes.configFile) {

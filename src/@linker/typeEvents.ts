@@ -39,7 +39,7 @@ export default class TypeEvents extends TypeList {
             // Note: inside installServer.js: use the global event handler.
             //       inside installBrowser.js: use the event handler local to the request.
             //
-            let jsSources = `    registry.events.addProvider("${list.listName}", async () => { const R = await import("@/events/${list.listName}"); return R.list; });`;
+            let jsSources = `\n    registry.events.addProvider("${list.listName}", async () => { const R = await import("@/events/${list.listName}"); return R.list; });`;
             writer.genAddToInstallFile(InstallFileType.both, FilePart.body, jsSources);
         }
     }

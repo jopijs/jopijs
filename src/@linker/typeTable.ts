@@ -100,8 +100,7 @@ export default class TypeTable extends TypeInDirChunk {
             writer.genAddToInstallFile(
                 InstallFileType.server,
                 FilePart.body,
-                `\n    exposeDataSource_Table("${dsName}",
-                 "${dsItem.securityUid}", DS_${count}, ${JSON.stringify(dsItem.conditionsContext)});`
+                `\n    exposeDataSource_Table("${dsName}", "${dsItem.securityUid}", DS_${count}, ${JSON.stringify(dsItem.conditionsContext)});`
             );
         }
     }
@@ -155,10 +154,13 @@ export default C;`;
             let dsName = jk_fs.basename(dsItem.itemPath);
 
             let dsImpl: JTableDs;
+
+            // Calc the path of the file to import.
             let toImport = dsItem.entryPoint;
-            if (!writer.isTypeScriptOnly) toImport = jk_app.getCompiledFilePathFor(toImport);
+            if (!writer.mustUseTypeScript) toImport = jk_app.getCompiledFilePathFor(toImport);
 
             try {
+                // Allows to known the data source name and schema.
                 dsImpl = (await import(toImport)).default;
             } catch {
                 throw this.declareError("Is not a valide data source.", dsItem.entryPoint);

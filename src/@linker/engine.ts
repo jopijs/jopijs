@@ -182,19 +182,19 @@ async function generateAll() {
         await p.generateCode(gCodeGenWriter);
     }
 
-    let installerFile = applyTemplate(gServerInstallFileTemplate, gServerInstallFile_TS[FilePart.imports], gServerInstallFile_TS[FilePart.body], gServerInstallFile_TS[FilePart.footer]);
+    let installerFile = applyTemplate(gServerInstallFileTemplate_TS, gServerInstallFile_TS[FilePart.imports], gServerInstallFile_TS[FilePart.body], gServerInstallFile_TS[FilePart.footer]);
     await writeTextToFileIfMismatch(jk_fs.join(gDir_outputSrc, "installServer.ts"), installerFile);
     gServerInstallFile_TS = {};
 
-    installerFile = applyTemplate(gServerInstallFileTemplate, gServerInstallFile_JS[FilePart.imports], gServerInstallFile_JS[FilePart.body], gServerInstallFile_JS[FilePart.footer]);
+    installerFile = applyTemplate(gServerInstallFileTemplate_JS, gServerInstallFile_JS[FilePart.imports], gServerInstallFile_JS[FilePart.body], gServerInstallFile_JS[FilePart.footer]);
     await writeTextToFileIfMismatch(jk_fs.join(gDir_outputDst, "installServer.js"), installerFile);
     gServerInstallFile_JS = {};
 
-    installerFile = applyTemplate(gBrowserInstallFileTemplate, gBrowserInstallFile_TS[FilePart.imports], gBrowserInstallFile_TS[FilePart.body], gBrowserInstallFile_TS[FilePart.footer]);
+    installerFile = applyTemplate(gBrowserInstallFileTemplate_TS, gBrowserInstallFile_TS[FilePart.imports], gBrowserInstallFile_TS[FilePart.body], gBrowserInstallFile_TS[FilePart.footer]);
     await writeTextToFileIfMismatch(jk_fs.join(gDir_outputSrc, "installBrowser.ts"), installerFile);
     gBrowserInstallFile_TS = {};
 
-    installerFile = applyTemplate(gBrowserInstallFileTemplate, gBrowserInstallFile_JS[FilePart.imports], gBrowserInstallFile_JS[FilePart.body], gBrowserInstallFile_JS[FilePart.footer]);
+    installerFile = applyTemplate(gBrowserInstallFileTemplate_JS, gBrowserInstallFile_JS[FilePart.imports], gBrowserInstallFile_JS[FilePart.body], gBrowserInstallFile_JS[FilePart.footer]);
     await writeTextToFileIfMismatch(jk_fs.join(gDir_outputDst, "installBrowser.js"), installerFile);
     gBrowserInstallFile_JS = {};
 }
@@ -224,7 +224,7 @@ interface WriteCodeFileParams {
 }
 
 export class CodeGenWriter {
-    public readonly isTypeScriptOnly = gIsTypeScriptOnly;
+    public readonly mustUseTypeScript = gMustUseTypeScript;
 
     constructor(public readonly dir: Directories) {
     }
@@ -302,10 +302,17 @@ let gServerInstallFile_TS: Record<string, string> = {};
 let gServerInstallFile_JS: Record<string, string> = {};
 
 // Here it's ASYNC.
-let gServerInstallFileTemplate = `__AI_INSTRUCTIONS
+let gServerInstallFileTemplate_TS = `__AI_INSTRUCTIONS
 __HEADER
 
-export default async function(registry) {
+export default async function(registry: any, onWebSiteCreated: any) {
+__BODY__FOOTER
+}`;
+
+let gServerInstallFileTemplate_JS = `__AI_INSTRUCTIONS
+__HEADER
+
+export default async function(registry, onWebSiteCreated) {
 __BODY__FOOTER
 }`;
 
@@ -313,7 +320,14 @@ let gBrowserInstallFile_TS: Record<string, string> = {};
 let gBrowserInstallFile_JS: Record<string, string> = {};
 
 // Here it's not async.
-let gBrowserInstallFileTemplate = `__AI_INSTRUCTIONS
+let gBrowserInstallFileTemplate_TS = `__AI_INSTRUCTIONS
+__HEADER
+
+export default function(registry: any) {
+__BODY__FOOTER
+}`;
+
+let gBrowserInstallFileTemplate_JS = `__AI_INSTRUCTIONS
 __HEADER
 
 export default function(registry) {
@@ -896,19 +910,19 @@ let gDir_ProjectSrc: string;
 let gDir_ProjectDist: string;
 let gDir_outputSrc: string;
 let gDir_outputDst: string;
-let gIsTypeScriptOnly: boolean;
+let gMustUseTypeScript: boolean;
 
 export function getWriter(): CodeGenWriter {
     return gCodeGenWriter;
 }
 
 export function getBrowserInstallScript() {
-    if (gIsTypeScriptOnly) return jk_fs.join(gDir_outputSrc, "installBrowser.ts");
+    if (gMustUseTypeScript) return jk_fs.join(gDir_outputSrc, "installBrowser.ts");
     return jk_fs.join(gDir_outputDst, "installBrowser.js");
 }
 
 export function getServerInstallScript() {
-    if (gIsTypeScriptOnly) return jk_fs.join(gDir_outputSrc, "installServer.ts");
+    if (gMustUseTypeScript) return jk_fs.join(gDir_outputSrc, "installServer.ts");
     return jk_fs.join(gDir_outputDst, "installServer.js");
 }
 
@@ -922,7 +936,7 @@ export function innerPathToAbsolutePath_src(innerPath: string): string {
  * - We use bun.js and execute a TypeScript file.
  * - Or the same thing with a recent version of Node.js
  */
-function detectIfTypeScriptOnly(_importMeta: any) {
+function detectIfMustUseTypeScript(_importMeta: any) {
     // Allow avoiding Node.js with direct TypeScript execution.
     if (jk_what.isNodeJS) return false;
 
@@ -936,7 +950,6 @@ export interface Directories {
     project_src: string;
     project_dst: string;
 
-    output_dir: string;
     output_src: string;
     output_dist: string;
 }
@@ -956,7 +969,7 @@ export async function compile(importMeta: any, config: LinkerConfig, isRefresh =
 
     collector_begin();
 
-    gIsTypeScriptOnly = detectIfTypeScriptOnly(importMeta);
+    gMustUseTypeScript = detectIfMustUseTypeScript(importMeta);
 
     // Reset the registry in case of a second call to compile.
     gRegistry = {};
@@ -974,16 +987,16 @@ export async function compile(importMeta: any, config: LinkerConfig, isRefresh =
         project_dst: gDir_ProjectDist,
 
         output_src: gDir_outputSrc,
-        output_dist: gDir_outputDst,
-
-        output_dir: gIsTypeScriptOnly ? gDir_outputSrc : gDir_outputDst
+        output_dist: gDir_outputDst
     });
 
     let jopiLinkerScript = await searchLinkerScript();
     if (jopiLinkerScript) await import(jopiLinkerScript);
 
-    gServerInstallFileTemplate = config.templateForServer;
-    gBrowserInstallFileTemplate = config.templateForBrowser;
+    gServerInstallFileTemplate_TS = config.templateForServer_TS;
+    gServerInstallFileTemplate_JS = config.templateForServer_JS;
+    gBrowserInstallFileTemplate_TS = config.templateForBrowser_TS;
+    gBrowserInstallFileTemplate_JS = config.templateForBrowser_JS;
 
     gTypesHandlers = {};
 
@@ -1017,8 +1030,10 @@ export async function compile(importMeta: any, config: LinkerConfig, isRefresh =
 
 export interface LinkerConfig {
     projectRootDir: string;
-    templateForBrowser: string;
-    templateForServer: string;
+    templateForBrowser_TS: string;
+    templateForBrowser_JS: string;
+    templateForServer_TS: string;
+    templateForServer_JS: string;
 
     /**
      * Processor for an entry into the @alias folder.
