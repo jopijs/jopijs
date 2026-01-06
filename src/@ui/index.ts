@@ -5,7 +5,6 @@ export * from "./pageController.ts";
 export * from "./cssModules.tsx";
 export * from "./interfaces.ts";
 
-export * from "./components.tsx";
 export * from "./hooks/index.ts";
 export * from "./modules.ts";
 export * from "./valueStore.ts";
