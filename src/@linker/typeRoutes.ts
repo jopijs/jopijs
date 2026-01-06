@@ -80,6 +80,9 @@ export default class TypeRoutes extends AliasType {
             }
         }
 
+        let body_ts = this.sourceCode_body;
+        let body_js = this.sourceCode_body;
+
         if (Object.keys(this.pageData).length > 0) {
             this.sourceCode_header_TS += `\nimport {setPageDataProvider} from "jopijs/generated";`;
             this.sourceCode_header_JS += `\nimport {setPageDataProvider} from "jopijs/generated";`;
@@ -112,18 +115,21 @@ export default class TypeRoutes extends AliasType {
                 this.sourceCode_header_TS += `\nimport pageData${count} from "${relPathTS}";`;
                 this.sourceCode_header_JS += `\nimport pageData${count} from "${relPathJS}";`;
                 
-                this.sourceCode_body += `\n    setPageDataProvider(webSite, ${JSON.stringify(route)}, ${roles.length ? JSON.stringify(roles) : "undefined"}, pageData${count}, ${JSON.stringify(srcFilePath)});`;
+                let line = `\n    setPageDataProvider(webSite, ${JSON.stringify(route)}, ${roles.length ? JSON.stringify(roles) : "undefined"}, pageData${count}, ${JSON.stringify(srcFilePath)});`;
+                body_ts += line;
+                body_js += line;
 
                 count++;
             }
         }
 
-        let body = `\n\nexport default async function(webSite: any) {${this.sourceCode_body}\n}`;
+        let content_ts = `\n\nexport default async function(webSite: any) {${body_ts}\n}`;
+        let content_js = `\n\nexport default async function(webSite) {${body_js}\n}`;
 
         await writer.writeCodeFile({
             fileInnerPath: "declareServerRoutes",
-            srcFileContent: writer.AI_INSTRUCTIONS + this.sourceCode_header_TS + body,
-            distFileContent: writer.AI_INSTRUCTIONS + this.sourceCode_header_JS + body
+            srcFileContent: writer.AI_INSTRUCTIONS + this.sourceCode_header_TS + content_ts,
+            distFileContent: writer.AI_INSTRUCTIONS + this.sourceCode_header_JS + content_js
         });
 
         writer.genAddToInstallFile(InstallFileType.server, FilePart.imports, {

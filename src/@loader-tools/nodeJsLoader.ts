@@ -56,38 +56,46 @@ export const resolveNodeJsAlias: ResolveHook = async (specifier, context, nextRe
 
         if (foundAlias) {
             if (LOG) console.log(`jopi-loader - Found alias ${foundAlias} for resource ${specifier}`);
-
+            
             const pathAlias = gPathAliasInfos.alias[foundAlias];
             let resolvedPath: string;
 
             if (specifierWithSlash===foundAlias) resolvedPath = pathAlias;
             else resolvedPath = specifier.replace(foundAlias, pathAlias);
 
-            let filePath: string;
-
-            if (resolvedPath.endsWith(".ts")) {
-                resolvedPath = resolvedPath.slice(0, -2) + "js";
-                filePath = resolvedPath;
-            }
-            else if (resolvedPath.endsWith('.js')) {
-                filePath = resolvedPath;
-            } else {
-                filePath = resolvedPath + ".js";
-            }
-
-            filePath = jk_app.getCompiledFilePathFor(filePath);
+            let filePath = jk_app.getCompiledFilePathFor(resolvedPath);
 
             if (await jk_fs.isFile(filePath)) {
                 return nextResolve(pathToFileURL(filePath).href, context);
+            }        
+
+            let basePath = filePath;
+
+            if (filePath.endsWith(".js")) {
+                basePath = filePath.slice(0, -3);
+            } else {
+                filePath = filePath + ".js";
             }
 
-            // Remove .js
-            filePath = filePath.slice(0, -3);
+            let found = false;
+
+            // Test basePath.js
+            if (await jk_fs.isFile(filePath)) {
+                found = true;
+            } else {
+                // Test basePath/idex.js
+
+                filePath = path.join(basePath, "index.js");
+
+                if (await jk_fs.isFile(filePath)) {
+                    found = true;
+                }
+            }
 
             // Test path/index.js
-            filePath = jk_fs.join(filePath, "index.js");
+            //
 
-            if (await jk_fs.isFile(filePath)) {
+            if (found) {
                 return nextResolve(pathToFileURL(filePath).href, context);
             }
 
