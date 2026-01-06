@@ -239,10 +239,8 @@ export class TypeTranslation extends AliasType {
 
             map += "\n};";
 
-            const supportedLangsList = Object.keys(trGroup.langFiles).map(l => `"${l}"`).join(", ");
-
-            srcCode += `\n${map}\n\nexport const supportedLangs = [${supportedLangsList}];\n\nexport default function get(lang?: string) { return lang ? (((byLang as any)[lang]) || defaultLang) :  defaultLang }`;
-            dstCode += `\n${map}\n\nexport const supportedLangs = [${supportedLangsList}];\n\nexport default function get(lang) { return lang ? (byLang[lang] || defaultLang) :  defaultLang }`;
+            srcCode += `\n${map}\n\nexport const supportedLangs = ${JSON.stringify(Object.keys(trGroup.langFiles))};\n\nexport default function get(lang?: string) { return lang ? (((byLang as any)[lang]) || defaultLang) :  defaultLang }`;
+            dstCode += `\n${map}\n\nexport const supportedLangs = ${JSON.stringify(Object.keys(trGroup.langFiles))};\n\nexport default function get(lang) { return lang ? (byLang[lang] || defaultLang) :  defaultLang }`;
 
             await writer.writeCodeFile({
                 fileInnerPath: jk_fs.join(dirName, "index"),
@@ -361,7 +359,7 @@ export class TypeTranslation extends AliasType {
             let idx = value.indexOf("%(");
 
             if (idx===-1) {
-                if (hasData && value) {
+                if (hasData) {
                     segments.push({text: value});
                 }
 
@@ -370,11 +368,12 @@ export class TypeTranslation extends AliasType {
 
             hasData = true;
 
-            if (idx > 0) {
+            if (idx>0) {
                 segments.push({text: value.substring(0, idx)});
             }
             
             value = value.substring(idx + 2);
+
             idx = value.indexOf(")");
 
             if (idx===-1) {
@@ -444,7 +443,7 @@ export class TypeTranslation extends AliasType {
         let body = "";
 
         for (let s of segments) {
-            if (s.text !== undefined) {
+            if (s.text) {
                 body += " + " + JSON.stringify(s.text);
             } else {
                 body += " + data." + s.id;
