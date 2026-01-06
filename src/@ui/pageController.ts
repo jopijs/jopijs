@@ -7,7 +7,7 @@ import { deleteCookie } from "./cookies/index.ts";
 import * as jk_events from "jopi-toolkit/jk_events";
 import type { JopiUiApplication_Host } from "./modules.ts";
 import { isServerSide } from "jopi-toolkit/jk_what";
-import { getDefaultObjectRegistry, type IsObjectRegistry, ObjectRegistry } from "./objectRegistry.ts";
+import { getDefaultValueStore, type IsValueStore, ValueStore } from "./valueStore.ts";
 import type {HtmlNode} from "./htmlNode.ts";
 
 export interface PageOptions {
@@ -38,7 +38,7 @@ export class PageController<T = any> implements JopiUiApplication_Host {
     protected userInfos?: UiUserInfos;
 
     public readonly events = isServerSide ? jk_events.newEventGroup() : jk_events.defaultEventGroup;
-    public readonly objectRegistry: IsObjectRegistry = isServerSide ? new ObjectRegistry() : getDefaultObjectRegistry();
+    public readonly valueStore: IsValueStore = isServerSide ? new ValueStore() : getDefaultValueStore();
 
     constructor(public readonly isDetached = false, public readonly mustRemoveTrailingSlashes: boolean = false, options?: PageOptions) {
         options = options || {};
@@ -225,7 +225,7 @@ export class PageController_ExposePrivate<T = any> extends PageController<T> {
     }
 
     setServerRequest(serverRequest: ServerRequestInstance) {
-        this.objectRegistry.setValue("jopi.serverRequest", serverRequest);
+        this.valueStore.setValue("jopi.serverRequest", serverRequest);
 
         this.serverRequest = serverRequest;
         this.userInfos = serverRequest.user_getUserInfos();

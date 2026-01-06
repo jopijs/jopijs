@@ -8,7 +8,7 @@ export * from "./interfaces.ts";
 export * from "./components.tsx";
 export * from "./hooks/index.ts";
 export * from "./modules.ts";
-export * from "./objectRegistry.ts";
+export * from "./valueStore.ts";
 export * from "./cookies/index.ts";
 export * from "./htmlNode.ts";
 export * from "./events.ts";

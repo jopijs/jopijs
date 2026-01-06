@@ -1,5 +1,6 @@
-export interface IsObjectRegistry {
+export interface IsValueStore {
     getValue<T>(key: string): T | undefined;
+    
     setValue(key: string, instance: any): void;
 
     /**
@@ -17,15 +18,15 @@ export interface IsObjectRegistry {
     onValueChange<T>(key: string, listener: (newValue: T, oldValue: T | undefined) => void): () => void;
 }
 
-interface ObjectRegistryEntry {
+interface ValueStoreEntry {
     builder?: () => any;
     value?: any;
 }
 
 type ValueChangeListener<T = any> = (newValue: T, oldValue: T | undefined) => void;
 
-export class ObjectRegistry implements IsObjectRegistry {
-    private readonly r: Record<string, ObjectRegistryEntry> = {};
+export class ValueStore implements IsValueStore {
+    private readonly r: Record<string, ValueStoreEntry> = {};
     private readonly listeners: Record<string, ValueChangeListener[]> = {};
 
     getValue<T>(key: string): T | undefined {
@@ -79,12 +80,12 @@ export class ObjectRegistry implements IsObjectRegistry {
     }
 }
 
-export function getDefaultObjectRegistry(): IsObjectRegistry {
-    if (!gObjectRegistry) {
-        return gObjectRegistry = new ObjectRegistry();
+export function getDefaultValueStore(): IsValueStore {
+    if (!gValueStore) {
+        return gValueStore = new ValueStore();
     }
 
-    return gObjectRegistry;
+    return gValueStore;
 }
 
-let gObjectRegistry: ObjectRegistry | undefined;
+let gValueStore: ValueStore | undefined;

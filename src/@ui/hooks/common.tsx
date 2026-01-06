@@ -6,7 +6,7 @@ import {type UseCssModuleContextProps} from "../cssModules.tsx";
 import {PageModifier} from "../pageModifier.tsx";
 import type {CookieOptions} from "../cookies/index.ts";
 import type {UiUserInfos} from "../user.ts";
-import type {IsObjectRegistry} from "../objectRegistry.ts";
+import type {IsValueStore} from "../valueStore.ts";
 
 /**
  * Allow getting a reference to the PageController.
@@ -25,26 +25,26 @@ export function _usePage<T = any>(): PageController<T> {
 }
 
 /**
- * Returns the object registry which role is to save value accross the whole application.
+ * Returns the value store which role is to save value accross the whole application.
  */
-export function useRegistry(): IsObjectRegistry {
+export function useValueStore(): IsValueStore {
     const ctx = React.useContext(PageContext) as PageController;
-    return ctx.objectRegistry;
+    return ctx.valueStore;
 }
 
 /**
- * Get a value from the object registry.
+ * Get a value from the value store.
  */
-export function useRegistryValue<T>(key: string): [T, (v: T) => void] {
-    const registry = useRegistry();
+export function useStoreValue<T>(key: string): [T, (v: T) => void] {
+    const store = useValueStore();
     const [_, setCount] = useState(0);
 
     useEffect(() => {
         const listener = () => { setCount(c => c+ 1) };
-        return registry.onValueChange(key, listener);
+        return store.onValueChange(key, listener);
     }, []);
 
-    return [registry.getValue(key)!, (v: T) => registry.setValue(key, v)];
+    return [store.getValue(key)!, (v: T) => store.setValue(key, v)];
 }
 
 /**

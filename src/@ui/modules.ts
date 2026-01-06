@@ -4,11 +4,11 @@ import React from "react";
 import * as jk_events from "jopi-toolkit/jk_events";
 import { type UiUserInfos } from "./user.ts";
 import { isServerSide } from "jopi-toolkit/jk_what";
-import { type IsObjectRegistry } from "./objectRegistry.ts";
+import { type IsValueStore } from "./valueStore.ts";
 import { PageController } from "./pageController.ts";
 
 export interface JopiUiApplication_Host {
-    objectRegistry: IsObjectRegistry;
+    valueStore: IsValueStore;
 
     getCurrentURL(): URL;
     getUserInfos(): UiUserInfos | undefined;
@@ -33,7 +33,7 @@ type UiInitializer = () => void;
  * * On the browser side, it's executed for each browser refresh.
  */
 export class JopiUiApplication {
-    public readonly objectRegistry: IsObjectRegistry;
+    public readonly valueStore: IsValueStore;
     public readonly events: jk_events.EventGroup;
     public readonly isBrowserSide: boolean = !isServerSide;
     protected readonly host: JopiUiApplication_Host;
@@ -44,12 +44,12 @@ export class JopiUiApplication {
         if (!host) host = getDefaultPageController();
         this.host = host;
 
-        this.objectRegistry = host.objectRegistry;
+        this.valueStore = host.valueStore;
         this.events = host.events;
 
         if (extra) {
             for (let key in extra) {
-                this.objectRegistry.setValue("jopi.server." + key, (extra as any)[key]);
+                this.valueStore.setValue("jopi.server." + key, (extra as any)[key]);
             }
         }
 
