@@ -23,9 +23,6 @@ export function initWatcher(): boolean {
 }
 
 function initializeRules(watcher: WatcherController) {
-
-    const isUidDev = gWebSiteConfig.hasJopiDevUiFlag;
-    
     // Some files must be excluded from the watch.
     //
     watcher.addListener({
