@@ -7,8 +7,6 @@ import * as jk_app from "jopi-toolkit/jk_app";
 import * as jk_fs from "jopi-toolkit/jk_fs";
 import {jopiTempDir} from "jopijs/coreconfig";
 
-// Note: Bun.js plugins are partially compatible with EsBuild modules.
-
 interface JopiRawContent {
     file: string;
     type: string
@@ -58,6 +56,8 @@ export function resolveAndCheckPath(filePath: string, resolveDir: string): {path
     } else {
         absolutePath = path.resolve(resolveDir, filePath);
     }
+
+    absolutePath = jk_app.requireSourceOf(absolutePath);
 
     try {
         fs.accessSync(absolutePath);
@@ -124,6 +124,28 @@ export function installEsBuildPlugins(build: Bun.PluginBuilder, who: string) {
 
             //@ts-ignore
             return createJopiRawFile(result.path!, "css");
+        });
+    } else {
+        // @ts-ignore
+        build.onResolve({ filter: /\.(css|scss)$/ }, (args) => {
+            // Is usefulle when we have a import "./style.css" from the dist/ folder.
+            let [filePath, _option] = args.path.split('?');
+            const result = resolveAndCheckPath(filePath, path.dirname(args.importer));
+
+            if (result.error) {
+                return {
+                    errors: [{
+                        text: result.error
+                    }]
+                };
+            }
+
+            // Bun.js don't allows personnalizing css processing.
+            // It's why here we only resolved path.
+            //
+            return {
+                path: result.path!
+            };
         });
     }
 
