@@ -992,7 +992,7 @@ export async function compile(importMeta: any, config: LinkerConfig, isRefresh =
     // Reset the registry in case of a second call to compile.
     gRegistry = {};
 
-    gDir_ProjectRoot = config.projectRootDir;
+    gDir_ProjectRoot = config.projectRootDir ?? process.cwd();
     gDir_ProjectSrc = jk_fs.join(gDir_ProjectRoot, "src");
     gDir_ProjectDist = jk_fs.join(gDir_ProjectRoot, "dist");
 
@@ -1075,6 +1075,8 @@ export async function compile(importMeta: any, config: LinkerConfig, isRefresh =
 }
 
 export interface LinkerConfig {
+    projectRootDir?: string;
+
     templateForBrowser_TS: string;
     templateForBrowser_JS: string;
     templateForServer_TS: string;
