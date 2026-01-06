@@ -29,9 +29,14 @@ export default class ModInstaller extends ModuleDirProcessor {
             i++;
 
             let relPath = writer.makePathRelativeToOutput(uiInitFile);
-            relPath = writer.toPathForImport(relPath, !writer.isTypeScriptOnly);
+            let relPathTS = writer.toPathForImport(relPath, false);
+            let relPathJS = writer.toPathForImport(relPath, true);
 
-            writer.genAddToInstallFile(InstallFileType.browser, FilePart.imports, `\nimport modUiInit${i} from "${relPath}";`);
+            writer.genAddToInstallFile(InstallFileType.browser, FilePart.imports, {
+                ts: `\nimport modUiInit${i} from "${relPathTS}";`,
+                js: `\nimport modUiInit${i} from "${relPathJS}";`
+            });
+
             writer.genAddToInstallFile(InstallFileType.browser, FilePart.footer, `\n    modUiInit${i}(registry);`)
         }
 
@@ -43,9 +48,14 @@ export default class ModInstaller extends ModuleDirProcessor {
             i++;
 
             let relPath = writer.makePathRelativeToOutput(serverInitFile);
-            relPath = writer.toPathForImport(relPath, !writer.isTypeScriptOnly);
+            let relPathTS = writer.toPathForImport(relPath, false);
+            let relPathJS = writer.toPathForImport(relPath, true);
 
-            writer.genAddToInstallFile(InstallFileType.server, FilePart.imports, `\nimport modServerInit${i} from "${relPath}";`);
+            writer.genAddToInstallFile(InstallFileType.server, FilePart.imports, {
+                ts: `\nimport modServerInit${i} from "${relPathTS}";`,
+                js: `\nimport modServerInit${i} from "${relPathJS}";`
+            });
+            
             writer.genAddToInstallFile(InstallFileType.server, FilePart.body, `\n    await modServerInit${i}(registry);`)
         }
     }

@@ -17,7 +17,7 @@ import {TypeStyles} from "./typeStyles.ts";
 let gServerInstallFileTemplate = `__AI_INSTRUCTIONS
 __HEADER
 
-export default async function(registry, onWebSiteCreated) {
+export default async function(registry: any, onWebSiteCreated: any) {
 __BODY__FOOTER
 }`;
 
@@ -25,7 +25,7 @@ __BODY__FOOTER
 let gBrowserInstallFileTemplate = `__AI_INSTRUCTIONS
 __HEADER
 
-export default function(registry) {
+export default function(registry: any) {
 __BODY__FOOTER
     registry.events.sendEvent("app.init.ui", {myModule: registry});
 }`;

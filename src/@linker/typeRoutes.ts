@@ -16,7 +16,8 @@ import { isBrowser } from "jopi-toolkit/jk_what";
 import { collector_declareUiComponent } from "./dataCollector.ts";
 
 export default class TypeRoutes extends AliasType {
-    private sourceCode_header = `import {routeBindPage, routeBindVerb} from "jopijs/generated";`;
+    private sourceCode_header_TS = `import {routeBindPage, routeBindVerb} from "jopijs/generated";`;
+    private sourceCode_header_JS = `import {routeBindPage, routeBindVerb} from "jopijs/generated";`;
     private sourceCode_body = "";
     private outputDir: string = "";
     private cwdDir: string = process.cwd();
@@ -42,14 +43,23 @@ export default class TypeRoutes extends AliasType {
 
     private async genCode_DeclareServerRoutes(writer: CodeGenWriter) {
         if (Object.keys(this.routeConfig).length > 0) {
-            this.sourceCode_header += `\nimport {JopiRouteConfig} from "jopijs";`;
+            this.sourceCode_header_TS += `\nimport {JopiRouteConfig} from "jopijs";`;
+            this.sourceCode_header_JS += `\nimport {JopiRouteConfig} from "jopijs";`;
 
             let count = 1;
 
             for (let route of Object.keys(this.routeConfig)) {
                 let routeAttributes = this.routeConfig[route];
-                let relPath = jk_fs.getRelativePath(writer.dir.output_dir, routeAttributes.configFile!);
-                relPath = writer.toPathForImport(relPath, false);
+                
+                const tmpRelPath = writer.makePathRelativeToOutput(routeAttributes.configFile!);
+
+                // TS
+                let relPathTS = tmpRelPath;
+                relPathTS = writer.toPathForImport(relPathTS, false);
+                
+                // JS
+                let relPathJS = tmpRelPath;
+                relPathJS = writer.toPathForImport(relPathJS, true);
 
                 // Merge page roles + all roles.
                 let roles: string[] = [];
@@ -61,7 +71,10 @@ export default class TypeRoutes extends AliasType {
                 if (allRoles) allRoles.forEach(r => { if (!roles.includes(r)) roles.push(r) });
 
                 let sRoles = roles.length ? ", " + JSON.stringify(roles) : ", undefined";
-                this.sourceCode_header += `\nimport routeConfig${count} from "${relPath}";`;
+                
+                this.sourceCode_header_TS += `\nimport routeConfig${count} from "${relPathTS}";`;
+                this.sourceCode_header_JS += `\nimport routeConfig${count} from "${relPathJS}";`;
+                
                 this.sourceCode_body += `\n    await routeConfig${count}(new JopiRouteConfig(webSite, ${JSON.stringify(route)}${sRoles}));`;
 
                 count++;
@@ -69,7 +82,8 @@ export default class TypeRoutes extends AliasType {
         }
 
         if (Object.keys(this.pageData).length > 0) {
-            this.sourceCode_header += `\nimport {setPageDataProvider} from "jopijs/generated";`;
+            this.sourceCode_header_TS += `\nimport {setPageDataProvider} from "jopijs/generated";`;
+            this.sourceCode_header_JS += `\nimport {setPageDataProvider} from "jopijs/generated";`;
 
             let count = 1;
 
@@ -77,8 +91,15 @@ export default class TypeRoutes extends AliasType {
                 let routeAttributes = this.pageData[route];
                 let srcFilePath = jk_fs.getRelativePath(this.cwdDir, routeAttributes.pageData!);
 
-                let relPath = jk_fs.getRelativePath(writer.dir.output_dir, routeAttributes.pageData!);
-                relPath = writer.toPathForImport(relPath, false);
+                const tmpRelPath = writer.makePathRelativeToOutput(routeAttributes.pageData!);
+
+                // TS
+                let relPathTS = tmpRelPath;
+                relPathTS = writer.toPathForImport(relPathTS, false);
+                
+                // JS
+                let relPathJS = tmpRelPath;
+                relPathJS = writer.toPathForImport(relPathJS, true);
 
                 // Merge page roles + all roles.
                 let roles: string[] = [];
@@ -89,19 +110,28 @@ export default class TypeRoutes extends AliasType {
                 let allRoles = routeAttributes.needRoles?.[""];
                 if (allRoles) allRoles.forEach(r => { if (!roles.includes(r)) roles.push(r) });
 
-                this.sourceCode_header += `\nimport pageData${count} from "${relPath}";`;
+                this.sourceCode_header_TS += `\nimport pageData${count} from "${relPathTS}";`;
+                this.sourceCode_header_JS += `\nimport pageData${count} from "${relPathJS}";`;
+                
                 this.sourceCode_body += `\n    setPageDataProvider(webSite, ${JSON.stringify(route)}, ${roles.length ? JSON.stringify(roles) : "undefined"}, pageData${count}, ${JSON.stringify(srcFilePath)});`;
 
                 count++;
             }
         }
 
-        this.sourceCode_body = `\n\nexport default async function(webSite) {${this.sourceCode_body}\n}`;
+        let body = `\n\nexport default async function(webSite: any) {${this.sourceCode_body}\n}`;
 
-        let filePath = jk_fs.join(writer.dir.output_dir, "declareServerRoutes.js");
-        await writeTextToFileIfMismatch(filePath, writer.AI_INSTRUCTIONS + this.sourceCode_header + this.sourceCode_body);
+        await writer.writeCodeFile({
+            fileInnerPath: "declareServerRoutes",
+            srcFileContent: writer.AI_INSTRUCTIONS + this.sourceCode_header_TS + body,
+            distFileContent: writer.AI_INSTRUCTIONS + this.sourceCode_header_JS + body
+        });
 
-        writer.genAddToInstallFile(InstallFileType.server, FilePart.imports, `\nimport declareRoutes from "./declareServerRoutes.js";`);
+        writer.genAddToInstallFile(InstallFileType.server, FilePart.imports, {
+            ts: `\nimport declareRoutes from "./declareServerRoutes.ts";`,
+            js: `\nimport declareRoutes from "./declareServerRoutes.js";`
+        });
+        
         writer.genAddToInstallFile(InstallFileType.server, FilePart.footer, "\n    onWebSiteCreated((webSite) => declareRoutes(webSite));");
     }
 
@@ -290,11 +320,18 @@ export function error401() {
             }
         };
 
-        filePath = jk_app.getCompiledFilePathFor(filePath);
-        let distFilePath = jk_fs.getRelativePath(this.outputDir, filePath);
-        distFilePath = writer.toPathForImport(distFilePath, false);
+        // TS Path
+        let relPathTS = writer.makePathRelativeToOutput(filePath);
+        relPathTS = writer.toPathForImport(relPathTS, false);
 
-        this.sourceCode_header += `\nimport c_${routeId} from "${distFilePath}";`;
+        // JS Path
+        let compiledPath = jk_app.getCompiledFilePathFor(filePath);
+        let relPathJS = writer.makePathRelativeToOutput(compiledPath);
+        relPathJS = writer.toPathForImport(relPathJS, true);
+
+        this.sourceCode_header_TS += `\nimport c_${routeId} from "${relPathTS}";`;
+        this.sourceCode_header_JS += `\nimport c_${routeId} from "${relPathJS}";`;
+        
         this.sourceCode_body += `\n    await routeBindPage(webSite, c_${routeId}, ${JSON.stringify(routeBindingParams)});`
     }
 
@@ -312,10 +349,19 @@ export function error401() {
         };
 
         let routeId = "r" + (this.routeCount++);
-        let relPath = jk_fs.getRelativePath(this.outputDir, filePath);
-        relPath = writer.toPathForImport(relPath, false);
+        
+        // TS Path
+        let relPathTS = writer.makePathRelativeToOutput(filePath);
+        relPathTS = writer.toPathForImport(relPathTS, false);
+        
+        // JS Path
+        let compiledPath = jk_app.getCompiledFilePathFor(filePath);
+        let relPathJS = writer.makePathRelativeToOutput(compiledPath);
+        relPathJS = writer.toPathForImport(relPathJS, true);
 
-        this.sourceCode_header += `\nimport f_${routeId} from "${relPath}";`;
+        this.sourceCode_header_TS += `\nimport f_${routeId} from "${relPathTS}";`;
+        this.sourceCode_header_JS += `\nimport f_${routeId} from "${relPathJS}";`;
+        
         this.sourceCode_body += `\n    await routeBindVerb(webSite, f_${routeId}, ${JSON.stringify(routeBindingParams)});`
     }
 

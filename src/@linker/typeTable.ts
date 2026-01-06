@@ -87,9 +87,22 @@ export default class TypeTable extends TypeInDirChunk {
 
             let dsName = jk_fs.basename(dsItem.itemPath);
             let relPath = writer.makePathRelativeToOutput(dsItem.entryPoint);
-            relPath = writer.toPathForImport(relPath, !writer.isTypeScriptOnly);
-            writer.genAddToInstallFile(InstallFileType.server, FilePart.imports, `\nimport DS_${count} from "${relPath}";`);
-            writer.genAddToInstallFile(InstallFileType.server, FilePart.body, `\n    exposeDataSource_Table("${dsName}", "${dsItem.securityUid}", DS_${count}, ${JSON.stringify(dsItem.conditionsContext)});`);
+            let relPathTS = writer.toPathForImport(relPath, false);
+            let relPathJS = writer.toPathForImport(relPath, true);
+
+            writer.genAddToInstallFile(
+                InstallFileType.server,
+                FilePart.imports, {
+                    ts: `\nimport DS_${count} from "${relPathTS}";`,
+                    js: `\nimport DS_${count} from "${relPathJS}";`
+                });
+
+            writer.genAddToInstallFile(
+                InstallFileType.server,
+                FilePart.body,
+                `\n    exposeDataSource_Table("${dsName}",
+                 "${dsItem.securityUid}", DS_${count}, ${JSON.stringify(dsItem.conditionsContext)});`
+            );
         }
     }
 

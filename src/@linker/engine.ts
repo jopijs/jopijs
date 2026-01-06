@@ -182,13 +182,21 @@ async function generateAll() {
         await p.generateCode(gCodeGenWriter);
     }
 
-    let installerFile = applyTemplate(gServerInstallFileTemplate, gServerInstallFile[FilePart.imports], gServerInstallFile[FilePart.body], gServerInstallFile[FilePart.footer]);
-    await writeTextToFileIfMismatch(getServerInstallScript(), installerFile);
-    gServerInstallFile = {};
+    let installerFile = applyTemplate(gServerInstallFileTemplate, gServerInstallFile_TS[FilePart.imports], gServerInstallFile_TS[FilePart.body], gServerInstallFile_TS[FilePart.footer]);
+    await writeTextToFileIfMismatch(jk_fs.join(gDir_outputSrc, "installServer.ts"), installerFile);
+    gServerInstallFile_TS = {};
 
-    installerFile = applyTemplate(gBrowserInstallFileTemplate, gBrowserInstallFile[FilePart.imports], gBrowserInstallFile[FilePart.body], gBrowserInstallFile[FilePart.footer]);
-    await writeTextToFileIfMismatch(getBrowserInstallScript(), installerFile);
-    gBrowserInstallFile = {};
+    installerFile = applyTemplate(gServerInstallFileTemplate, gServerInstallFile_JS[FilePart.imports], gServerInstallFile_JS[FilePart.body], gServerInstallFile_JS[FilePart.footer]);
+    await writeTextToFileIfMismatch(jk_fs.join(gDir_outputDst, "installServer.js"), installerFile);
+    gServerInstallFile_JS = {};
+
+    installerFile = applyTemplate(gBrowserInstallFileTemplate, gBrowserInstallFile_TS[FilePart.imports], gBrowserInstallFile_TS[FilePart.body], gBrowserInstallFile_TS[FilePart.footer]);
+    await writeTextToFileIfMismatch(jk_fs.join(gDir_outputSrc, "installBrowser.ts"), installerFile);
+    gBrowserInstallFile_TS = {};
+
+    installerFile = applyTemplate(gBrowserInstallFileTemplate, gBrowserInstallFile_JS[FilePart.imports], gBrowserInstallFile_JS[FilePart.body], gBrowserInstallFile_JS[FilePart.footer]);
+    await writeTextToFileIfMismatch(jk_fs.join(gDir_outputDst, "installBrowser.js"), installerFile);
+    gBrowserInstallFile_JS = {};
 }
 
 interface WriteCodeFileParams {
@@ -246,28 +254,42 @@ export class CodeGenWriter {
 
         await writeTextToFileIfMismatch(jk_fs.join(gDir_outputSrc, params.fileInnerPath + ".ts"), params.srcFileContent);
 
-        if (!gIsTypeScriptOnly && params.distFileContent) {
+        if (params.distFileContent) {
             await writeTextToFileIfMismatch(jk_fs.join(gDir_outputDst, params.fileInnerPath + ".js"), params.distFileContent);
         }
 
-        if (!gIsTypeScriptOnly && params.declarationFile) {
+        if (params.declarationFile) {
             await writeTextToFileIfMismatch(jk_fs.join(gDir_outputDst, params.fileInnerPath + ".d.ts"), params.declarationFile);
         }
     }
 
-    genAddToInstallFile(who: InstallFileType, where: FilePart, javascriptContent: string) {
-        function addTo(group: Record<string, string>) {
+    genAddToInstallFile(who: InstallFileType, where: FilePart, content: string | { ts: string, js: string }) {
+        let tsContent: string, jsContent: string;
+
+        if (typeof content === "string") {
+            tsContent = content;
+            jsContent = content;
+        } else {
+            tsContent = content.ts;
+            jsContent = content.js;
+        }
+
+        function addTo(group: Record<string, string>, c: string) {
             let part = group[where] || "";
-            group[where] = part + javascriptContent;
+            group[where] = part + c;
         }
 
         if (who === InstallFileType.both) {
-            addTo(gServerInstallFile);
-            addTo(gBrowserInstallFile);
+            addTo(gServerInstallFile_TS, tsContent);
+            addTo(gServerInstallFile_JS, jsContent);
+            addTo(gBrowserInstallFile_TS, tsContent);
+            addTo(gBrowserInstallFile_JS, jsContent);
         } else if (who === InstallFileType.server) {
-            addTo(gServerInstallFile);
+            addTo(gServerInstallFile_TS, tsContent);
+            addTo(gServerInstallFile_JS, jsContent);
         } else if (who === InstallFileType.browser) {
-            addTo(gBrowserInstallFile);
+            addTo(gBrowserInstallFile_TS, tsContent);
+            addTo(gBrowserInstallFile_JS, jsContent);
         }
     }
 
@@ -276,7 +298,8 @@ export class CodeGenWriter {
 
 let gCodeGenWriter: CodeGenWriter;
 
-let gServerInstallFile: Record<string, string> = {};
+let gServerInstallFile_TS: Record<string, string> = {};
+let gServerInstallFile_JS: Record<string, string> = {};
 
 // Here it's ASYNC.
 let gServerInstallFileTemplate = `__AI_INSTRUCTIONS
@@ -286,7 +309,8 @@ export default async function(registry) {
 __BODY__FOOTER
 }`;
 
-let gBrowserInstallFile: Record<string, string> = {};
+let gBrowserInstallFile_TS: Record<string, string> = {};
+let gBrowserInstallFile_JS: Record<string, string> = {};
 
 // Here it's not async.
 let gBrowserInstallFileTemplate = `__AI_INSTRUCTIONS
@@ -879,12 +903,12 @@ export function getWriter(): CodeGenWriter {
 }
 
 export function getBrowserInstallScript() {
-    if (gIsTypeScriptOnly) return jk_fs.join(gDir_outputSrc, "installBrowser.js");
+    if (gIsTypeScriptOnly) return jk_fs.join(gDir_outputSrc, "installBrowser.ts");
     return jk_fs.join(gDir_outputDst, "installBrowser.js");
 }
 
 export function getServerInstallScript() {
-    if (gIsTypeScriptOnly) return jk_fs.join(gDir_outputSrc, "installServer.js");
+    if (gIsTypeScriptOnly) return jk_fs.join(gDir_outputSrc, "installServer.ts");
     return jk_fs.join(gDir_outputDst, "installServer.js");
 }
 
