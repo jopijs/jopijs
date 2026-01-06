@@ -9,7 +9,7 @@ import { getModulesList, setModulesSourceDir } from "jopijs/modules";
 import { JopiModuleInfo } from "../@modules/index.ts";
 import { collector_begin, collector_end } from "./dataCollector.ts";
 export { PriorityLevel } from "jopi-toolkit/jk_tools";
-import { logLinker_registry } from "./_logs.ts";
+import { logLinker_performance, logLinker_registry } from "./_logs.ts";
 
 //region Helpers
 
@@ -954,6 +954,24 @@ export interface Directories {
     output_dist: string;
 }
 
+
+async function checkFilesModifiedSince(dirToScan: string, since: number): Promise<boolean> {
+    const items = await jk_fs.listDir(dirToScan);
+
+    for (const item of items) {
+        if (item.name.startsWith(".")) continue;
+        if (item.name.includes(".gen.")) continue;
+
+        if (item.isDirectory) {
+            if (await checkFilesModifiedSince(item.fullPath, since)) return true;
+        } else if (item.isFile) {
+            const stat = await jk_fs.getFileStat(item.fullPath);
+            if (stat && stat.mtimeMs > since) return true;
+        }
+    }
+    return false;
+}
+
 export async function compile(importMeta: any, config: LinkerConfig, isRefresh = false): Promise<void> {
     async function searchLinkerScript(): Promise<string | undefined> {
         let jopiLinkerScript = jk_fs.join(gDir_ProjectRoot, "dist", "jopi-linker.js");
@@ -967,8 +985,8 @@ export async function compile(importMeta: any, config: LinkerConfig, isRefresh =
         return undefined;
     }
 
-    collector_begin();
-
+    const logPerformanceEnd = logLinker_performance.beginInfo("Linker Execution");
+    
     gMustUseTypeScript = detectIfMustUseTypeScript(importMeta);
 
     // Reset the registry in case of a second call to compile.
@@ -981,55 +999,82 @@ export async function compile(importMeta: any, config: LinkerConfig, isRefresh =
     gDir_outputSrc = jk_fs.join(gDir_ProjectSrc, ".jopi-codegen");
     gDir_outputDst = jk_fs.join(gDir_ProjectDist, ".jopi-codegen");
 
+    const timestampFile = jk_fs.join(gDir_outputSrc, ".last_run");
+    let lastRun = 0;
+
+    try {
+        const content = await jk_fs.readTextFromFile(timestampFile);
+        if (content) lastRun = parseInt(content, 10);
+    } catch { }
+
+    if (lastRun > 0) {
+        if (process.env.JOPI_FORCE_LINKER === "1") {
+            logLinker_performance.info("Linker forced by JOPI_FORCE_LINKER");
+        } else {
+            const hasChanged = await checkFilesModifiedSince(gDir_ProjectSrc, lastRun);
+            
+            if (!hasChanged) {
+                logPerformanceEnd("Linker skipped (no changes)");
+                return;
+            }
+        }
+    }
+
+    collector_begin();
+
     gCodeGenWriter = new CodeGenWriter({
-        project: gDir_ProjectRoot,
-        project_src: gDir_ProjectSrc,
-        project_dst: gDir_ProjectDist,
+            project: gDir_ProjectRoot,
+            project_src: gDir_ProjectSrc,
+            project_dst: gDir_ProjectDist,
 
-        output_src: gDir_outputSrc,
-        output_dist: gDir_outputDst
-    });
+            output_src: gDir_outputSrc,
+            output_dist: gDir_outputDst
+        });
 
-    let jopiLinkerScript = await searchLinkerScript();
-    if (jopiLinkerScript) await import(jopiLinkerScript);
+        let jopiLinkerScript = await searchLinkerScript();
+        if (jopiLinkerScript) await import(jopiLinkerScript);
 
-    gServerInstallFileTemplate_TS = config.templateForServer_TS;
-    gServerInstallFileTemplate_JS = config.templateForServer_JS;
-    gBrowserInstallFileTemplate_TS = config.templateForBrowser_TS;
-    gBrowserInstallFileTemplate_JS = config.templateForBrowser_JS;
+        gServerInstallFileTemplate_TS = config.templateForServer_TS;
+        gServerInstallFileTemplate_JS = config.templateForServer_JS;
+        gBrowserInstallFileTemplate_TS = config.templateForBrowser_TS;
+        gBrowserInstallFileTemplate_JS = config.templateForBrowser_JS;
 
-    gTypesHandlers = {};
+        gTypesHandlers = {};
 
-    for (let aType of config.aliasTypes) {
-        gTypesHandlers[aType.typeName] = aType;
-    }
+        for (let aType of config.aliasTypes) {
+            gTypesHandlers[aType.typeName] = aType;
+        }
 
-    gModuleDirProcessors = [];
+        gModuleDirProcessors = [];
 
-    for (let p of config.modulesProcess) {
-        gModuleDirProcessors.push(p);
-    }
+        for (let p of config.modulesProcess) {
+            gModuleDirProcessors.push(p);
+        }
 
-    for (let aType of config.aliasTypes) {
-        aType.initialize(gTypesHandlers);
-    }
+        for (let aType of config.aliasTypes) {
+            aType.initialize(gTypesHandlers);
+        }
 
-    // Avoid deleting the directory if it's a refresh.
-    // Why? Because resource can be requested while the
-    // refresh is occurring.
-    //
-    if (!isRefresh) {
-        // Note: here we don't destroy the dist dir.
-        await jk_fs.rmDir(gDir_outputSrc);
-    }
+        // Avoid deleting the directory if it's a refresh.
+        // Why? Because resource can be requested while the
+        // refresh is occurring.
+        //
+        if (!isRefresh) {
+            // Note: here we don't destroy the dist dir.
+            await jk_fs.rmDir(gDir_outputSrc);
+        }
 
-    await processProject();
+        await processProject();
+
 
     await collector_end(gCodeGenWriter);
+
+    await jk_fs.writeTextToFile(timestampFile, Date.now().toString());
+
+    logPerformanceEnd();
 }
 
 export interface LinkerConfig {
-    projectRootDir: string;
     templateForBrowser_TS: string;
     templateForBrowser_JS: string;
     templateForServer_TS: string;
