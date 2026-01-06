@@ -1118,6 +1118,8 @@ export class JopiRequest {
      * @param value Optional value to check against (returns true only if name AND value match).
      */
     cookie_reqHasCookie(name: string, value?: string): boolean {
+        if (this.isFakingNoUsers) return false;
+
         if (!this.cookies) this.cookies = parseCookies(this.coreRequest.headers);
         if (value) return this.cookies[name] === value;
         return this.cookies[name] !== undefined;
@@ -1128,6 +1130,8 @@ export class JopiRequest {
      * @param name The name of the cookie.
      */
     cookie_getReqCookie(name: string): string | undefined {
+        if (this.isFakingNoUsers) return undefined;
+
         if (!this.cookies) this.cookies = parseCookies(this.coreRequest.headers);
         return this.cookies[name];
     }
@@ -1138,27 +1142,6 @@ export class JopiRequest {
      */
     cookie_deleteResCookie(name: string) {
         this.cookie_addCookieToRes(name, "", { maxAge: -1 });
-    }
-
-    /**
-     * Conditionally applies hooks to the response if a specific request cookie exists.
-     * @param res The response to potentially modify.
-     * @param name The name of the required cookie.
-     * @param testCookieValue Optional function to validate the cookie's value.
-     * @param hooks One or more TextModifier functions to apply.
-     */
-    async cookie_hookIfResHasCookie(res: Response, name: string, testCookieValue: null | undefined | TestCookieValue, ...hooks: TextModifier[]): Promise<Response> {
-        const cookieValue = this.cookie_getReqCookie(name);
-
-        if (cookieValue) {
-            if (testCookieValue && !testCookieValue(cookieValue)) {
-                return Promise.resolve(res);
-            }
-
-            return this.res_htmlResponse(await this.resValue_applyTextModifiers(res, hooks));
-        }
-
-        return Promise.resolve(res);
     }
 
     /**
