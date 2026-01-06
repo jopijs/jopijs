@@ -33,9 +33,6 @@ function initializeRules(watcher: WatcherController) {
 
         callback: async (event) => {
             // Generated file.
-            if (event.path === "global.compiled.css") return false;
-
-            // Generated file.
             if (event.path.includes(".gen.")) return false;
             return true;
         }

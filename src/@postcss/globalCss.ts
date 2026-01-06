@@ -86,7 +86,7 @@ export async function getMergedGlobalCssFileContent(): Promise<string> {
         globalCss += `\n\n/* Not global.css found, automatically added minimal Tailwind import */\n@import "tailwindcss";`;
     }
 
-    gGlobalCssFilePath = jk_fs.join(rootDir, "global.compiled.css");
+    gGlobalCssFilePath = jk_fs.join(rootDir, "global.gen.css");
     await jk_fs.writeTextToFile(gGlobalCssFilePath, globalCss);
 
     return gGlobalCssContent = globalCss;
@@ -102,7 +102,7 @@ export async function getGlobalCssFilePath_createIfDontExists() {
     let filePath = getGlobalCssFilePath();
     if (g_globalCssFileExist) return filePath;
 
-    if (!jk_fs.isFile(filePath)) {
+    if (!await jk_fs.isFile(filePath)) {
         let fileContent = await getMergedGlobalCssFileContent();
         await jk_fs.writeTextToFile(filePath, fileContent);
         g_globalCssFileExist = true;
@@ -118,7 +118,7 @@ let g_globalCssFileExist = false;
  */
 export function getGlobalCssFilePath() {
     if (!gGlobalCssFilePath) {
-        gGlobalCssFilePath = jk_fs.join(jk_fs.dirname(jk_app.findRequiredPackageJson()), "global.compiled.css");
+        gGlobalCssFilePath = jk_fs.join(jk_fs.dirname(jk_app.findRequiredPackageJson()), "global.gen.css");
     }
 
     return gGlobalCssFilePath;
