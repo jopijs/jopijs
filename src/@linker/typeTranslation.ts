@@ -368,7 +368,10 @@ export class TypeTranslation extends AliasType {
 
             hasData = true;
 
-            segments.push({text: value.substring(0, idx)});            
+            if (idx > 0) {
+                segments.push({text: value.substring(0, idx)});
+            }
+            
             value = value.substring(idx + 2);
             idx = value.indexOf(")");
 
@@ -439,7 +442,7 @@ export class TypeTranslation extends AliasType {
         let body = "";
 
         for (let s of segments) {
-            if (s.text) {
+            if (s.text !== undefined) {
                 body += " + " + JSON.stringify(s.text);
             } else {
                 body += " + data." + s.id;
