@@ -186,7 +186,9 @@ export interface MenuItemForExtraPageParams {
     icon?: string,
     roles?: string[]
 
-    priority?: number
+    priority?: number,
+
+    translations?: Record<string, string>
 }
 
 export function getDefaultJopiUiApplication(): JopiUiApplication {

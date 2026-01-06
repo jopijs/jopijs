@@ -211,5 +211,7 @@ interface MenuItemForRouteConfig {
     /** Lucide icon name or image path. */
     icon?: string,
     /** Sorting order in the menu. */
-    priority?: number
+    priority?: number,
+    /** Translations for the menu title. Key is language code (e.g. 'en_us'). */
+    translations?: Record<string, string>
 }
