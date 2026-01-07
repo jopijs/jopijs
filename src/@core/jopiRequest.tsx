@@ -1112,13 +1112,19 @@ export class JopiRequest {
 
     //region Cookies
 
+    private isFakingNoCookies = false;
+
+    cookie_fakeNoCookies() {
+        this.isFakingNoCookies = true;
+    }
+
     /**
      * Checks if a cookie is present in the request.
      * @param name The name of the cookie.
      * @param value Optional value to check against (returns true only if name AND value match).
      */
     cookie_reqHasCookie(name: string, value?: string): boolean {
-        if (this.isFakingNoUsers) return false;
+        if (this.isFakingNoCookies) return false;
 
         if (!this.cookies) this.cookies = parseCookies(this.coreRequest.headers);
         if (value) return this.cookies[name] === value;
@@ -1130,7 +1136,7 @@ export class JopiRequest {
      * @param name The name of the cookie.
      */
     cookie_getReqCookie(name: string): string | undefined {
-        if (this.isFakingNoUsers) return undefined;
+        if (this.isFakingNoCookies) return undefined;
 
         if (!this.cookies) this.cookies = parseCookies(this.coreRequest.headers);
         return this.cookies[name];
@@ -1323,8 +1329,6 @@ export class JopiRequest {
      * Once done, the data is saved and can be read through req.userTokenData.
      */
     private user_decodeJwtToken(): UserInfos | undefined {
-        if (this.isFakingNoUsers) return undefined;
-
         const token = this.user_getJwtToken();
         if (!token) return undefined;
 
