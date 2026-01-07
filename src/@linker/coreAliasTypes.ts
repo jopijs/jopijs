@@ -96,6 +96,8 @@ export class TypeList extends AliasType {
         const dirItems = await getSortedDirItem(p.itemPath);
         let listItems: TypeList_GroupItem[] = [];
 
+        await this.preProcessGroup(dirItems, p.itemPath);
+
         const params: ProcessDirItemParams = {
             rootDirName: p.parentDirName,
             nameConstraint: "canBeUid",
@@ -159,6 +161,9 @@ export class TypeList extends AliasType {
             // The list of event declaration locations.
             current.allDirPath.push(p.itemPath);
         }
+    }
+
+    async preProcessGroup(dirItems: jk_fs.DirItem[], dirPath: string): Promise<void> {
     }
 
     protected getGenOutputDir(_list: TypeList_Group) {

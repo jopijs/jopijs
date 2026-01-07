@@ -1,5 +1,6 @@
-import {type TypeList_Group, TypeList} from "./coreAliasTypes.ts";
-import {CodeGenWriter, FilePart, InstallFileType, type RegistryItem} from "./engine.ts";
+import {type TypeList_Group, type TypeList_GroupItem, TypeList} from "./coreAliasTypes.ts";
+import { CodeGenWriter, FilePart, InstallFileType, type RegistryItem } from "./engine.ts";
+import * as jk_fs from "jopi-toolkit/jk_fs";
 
 /**
  * Allows the linker to generate an event entry.
@@ -14,6 +15,27 @@ export function addStaticEvent(eventName: string) {
 const gExtraStaticEvents: string[] = [];
 
 export default class TypeEvents extends TypeList {
+    /**
+     * Will add a .gitkeep file if the directory is empty.
+     * Allows to avoid GIT deleting the directory.
+     * 
+     * To known: empty directories are valid events
+     *           but some GIT systems delete empty directories.
+     */
+    async preProcessGroup(dirItems: jk_fs.DirItem[], dirPath: string) {
+        let isEmpty = true;
+
+        for (let item of dirItems) {
+            if ((item.name !== ".") && (item.name !== "..")) {
+                isEmpty = false;
+            }
+        }
+
+        if (isEmpty) {
+            await jk_fs.writeTextToFile(jk_fs.join(dirPath, ".gitkeep"), "");
+        }
+    }
+    
     protected getShadowLists(): string[]|undefined {
         // Will allow generating the code for some events
         // that can be called through jk_events.sendEvent(eventName)

@@ -438,7 +438,7 @@ export abstract class AliasType {
      */
     async dir_recurseOnDir(p: ScanDirItemsParams) {
         const dirItems = await jk_fs.listDir(p.dirToScan);
-
+        
         for (let entry of dirItems) {
             if ((entry.name[0] === ".") || (entry.name[0] === "_")) continue;
 
