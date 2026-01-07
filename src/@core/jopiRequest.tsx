@@ -57,7 +57,7 @@ export class JopiRequest {
     private cache: PageCache;
 
     private readonly mainCache: PageCache;
-    private cookies?: { [name: string]: string };
+
     private _req_headers: Headers;
     private _req_urlParts?: Record<string, string | string[]>;
     private _req_urlParts_done: boolean;
@@ -1118,6 +1118,18 @@ export class JopiRequest {
         this.isFakingNoCookies = true;
     }
 
+    private _allCookies?: Record<string, string>;
+
+    cookie_getAllCookies(): Record<string, string> {
+        if (this.isFakingNoCookies) return {};
+        
+        if (this._allCookies===undefined) {
+            this._allCookies = parseCookies(this.coreRequest.headers);
+        }
+
+        return this._allCookies;
+    }
+
     /**
      * Checks if a cookie is present in the request.
      * @param name The name of the cookie.
@@ -1125,10 +1137,10 @@ export class JopiRequest {
      */
     cookie_reqHasCookie(name: string, value?: string): boolean {
         if (this.isFakingNoCookies) return false;
+        const cookies = this.cookie_getAllCookies();
 
-        if (!this.cookies) this.cookies = parseCookies(this.coreRequest.headers);
-        if (value) return this.cookies[name] === value;
-        return this.cookies[name] !== undefined;
+        if (value) return cookies[name] === value;
+        return cookies[name] !== undefined;
     }
 
     /**
@@ -1137,9 +1149,8 @@ export class JopiRequest {
      */
     cookie_getReqCookie(name: string): string | undefined {
         if (this.isFakingNoCookies) return undefined;
-
-        if (!this.cookies) this.cookies = parseCookies(this.coreRequest.headers);
-        return this.cookies[name];
+        const cookies = this.cookie_getAllCookies();
+        return cookies[name];
     }
 
     /**

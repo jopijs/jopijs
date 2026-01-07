@@ -288,8 +288,8 @@ export class CoreWebSite {
             return nextToCall;
         }
 
-        return async (req: JopiRequest) => {
-            const routeInfos = (req as JopiRequestImpl).routeInfos;
+        return async (rootReq: JopiRequest) => {
+            const routeInfos = (rootReq as JopiRequestImpl).routeInfos;
             const routeRawMiddlewares = routeInfos ? routeInfos.middlewares : undefined;
             const routeRawPostMiddlewares = routeInfos ? routeInfos.postMiddlewares : undefined;
 
@@ -325,12 +325,12 @@ export class CoreWebSite {
             const mustUseAutoCache = this.mustUseAutomaticCache && routeInfos && (routeInfos.mustEnableAutomaticCache === true)
             const extraMiddlewares: JopiMiddleware[] = [];
 
-            if ((req as JopiRequestImpl).routeInfos.requiredRoles) {
-                const roles = (req as JopiRequestImpl).routeInfos.requiredRoles;
+            if ((rootReq as JopiRequestImpl).routeInfos.requiredRoles) {
+                const roles = (rootReq as JopiRequestImpl).routeInfos.requiredRoles;
 
                 if (roles) {
-                    extraMiddlewares.push((req: JopiRequest) => {
-                        req.role_assertUserHasOneOfThisRoles(roles);
+                    extraMiddlewares.push((localReq: JopiRequest) => {
+                        localReq.role_assertUserHasOneOfThisRoles(roles);
                         return null;
                     });
                 }
@@ -339,72 +339,72 @@ export class CoreWebSite {
             if (mustUseAutoCache) {
                 const beforeCheckingCache = routeInfos.beforeCheckingCache;
                 const afterGetFromCache = routeInfos.afterGetFromCache;
-                const beforeAddToCache = req.routeInfos.beforeAddToCache;
-                const ifNotInCache = req.routeInfos.ifNotInCache;
+                const beforeAddToCache = rootReq.routeInfos.beforeAddToCache;
+                const ifNotInCache = rootReq.routeInfos.ifNotInCache;
 
-                extraMiddlewares.push(async function () {
+                extraMiddlewares.push(async function (localReq) {
                     if (beforeCheckingCache) {
-                        let r = await beforeCheckingCache(req);
+                        let r = await beforeCheckingCache(localReq);
                         //
                         if (r) {
-                            return fPostMiddleware ? fPostMiddleware(req, r) : r;
+                            return fPostMiddleware ? fPostMiddleware(localReq, r) : r;
                         }
                     }
 
-                    if ((req as JopiRequestImpl)._cache_ignoreDefaultBehaviors) {
-                        (req as JopiRequestImpl)._cache_ignoreDefaultBehaviors = false;
+                    if ((localReq as JopiRequestImpl)._cache_ignoreDefaultBehaviors) {
+                        (localReq as JopiRequestImpl)._cache_ignoreDefaultBehaviors = false;
                     } else {
                         if (isPage) {
                             // Remove the search params and the href
                             // for security reasons to avoid cache poisoning.
                             //
-                            req.req_clearSearchParamsAndHash();
+                            localReq.req_clearSearchParamsAndHash();
                         }
                     }
 
                     let res: Response | undefined;
 
-                    if (!(req as JopiRequestImpl)._cache_ignoreCacheRead) {
-                        res = await req.cache_getFromCache();
+                    if (!(localReq as JopiRequestImpl)._cache_ignoreCacheRead) {
+                        res = await localReq.cache_getFromCache();
 
                         if (res) {
                             if (afterGetFromCache) {
-                                const r = await afterGetFromCache(req, res);
+                                const r = await afterGetFromCache(localReq, res);
                                 //
                                 if (r) {
-                                    return fPostMiddleware ? fPostMiddleware(req, r) : r;
+                                    return fPostMiddleware ? fPostMiddleware(localReq, r) : r;
                                 }
                             }
 
-                            return fPostMiddleware ? fPostMiddleware(req, res) : res;
+                            return fPostMiddleware ? fPostMiddleware(localReq, res) : res;
                         }
                     }
 
-                    logCache_notInCache.info(w => w(`${req.req_method} request`, { url: req.req_urlInfos?.href }));
+                    logCache_notInCache.info(w => w(`${localReq.req_method} request`, { url: localReq.req_urlInfos?.href }));
 
                     if (ifNotInCache) {
-                        ifNotInCache(req, isPage);
+                        ifNotInCache(localReq, isPage);
                     }
 
-                    if ((req as JopiRequestImpl)._cache_ignoreDefaultBehaviors) {
-                        (req as JopiRequestImpl)._cache_ignoreDefaultBehaviors = false;
+                    if ((localReq as JopiRequestImpl)._cache_ignoreDefaultBehaviors) {
+                        (localReq as JopiRequestImpl)._cache_ignoreDefaultBehaviors = false;
                     } else {
                         if (isPage) {
                             // Allows creating anonymous pages.
-                            req.user_fakeNoUsers();
+                            localReq.user_fakeNoUsers();
                         }
                     }
 
                     // > Here we bypass the default workflow.
 
-                    res = await baseHandler(req);
+                    res = await baseHandler(localReq);
 
-                    if (!(req as JopiRequestImpl)._cache_ignoreCacheWrite) {
+                    if (!(localReq as JopiRequestImpl)._cache_ignoreCacheWrite) {
                         if (beforeAddToCache) {
-                            let r = await beforeAddToCache(req, res);
-                            if (r) return await req.cache_addToCache(r)!;
+                            let r = await beforeAddToCache(localReq, res);
+                            if (r) return await localReq.cache_addToCache(r)!;
                         } else {
-                            return await req.cache_addToCache(res)!;
+                            return await localReq.cache_addToCache(res)!;
                         }
                     }
 
@@ -420,16 +420,16 @@ export class CoreWebSite {
             const fPostMiddleware = mergePostMiddlewares(postMiddlewares);
 
             if (fMiddleware || fPostMiddleware) {
-                newHandler = async (req: JopiRequest) => {
+                newHandler = async (localReq: JopiRequest) => {
                     if (fMiddleware) {
-                        const res = await fMiddleware(req);
+                        const res = await fMiddleware(localReq);
                         if (res) return res;
                     }
 
-                    const res = await baseHandler(req);
+                    const res = await baseHandler(localReq);
 
                     if (fPostMiddleware) {
-                        return fPostMiddleware(req, res);
+                        return fPostMiddleware(localReq, res);
                     }
 
                     return res;
@@ -438,8 +438,8 @@ export class CoreWebSite {
                 newHandler = handler;
             }
 
-            req.routeInfos.handler = newHandler;
-            return await newHandler(req);
+            rootReq.routeInfos.handler = newHandler;
+            return await newHandler(rootReq);
         };
     }
 
