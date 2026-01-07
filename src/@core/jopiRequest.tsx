@@ -1154,9 +1154,12 @@ export class JopiRequest {
     cookie_addCookieToRes(cookieName: string, cookieValue: string, options?: CookieOptions) {
         let cookie = `${cookieName}=${cookieValue};`;
 
-        if (this.webSite.cookieDefaults) {
-            options = { ...this.webSite.cookieDefaults, ...options };
-        }
+        options = {
+            path: "/",
+            maxAge: 315360000, // 10 years
+            ...this.webSite.cookieDefaults,
+            ...options
+        };
 
         if (options) {
             if (options.maxAge) cookie += ` Max-Age=${options.maxAge};`;
