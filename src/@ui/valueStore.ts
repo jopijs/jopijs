@@ -39,7 +39,12 @@ export class ValueStore implements IsValueStore {
 
         if (entry.builder) {
             let v = entry.builder() as T;
-            this.setValue(key, v);
+
+            // Important: don't call setValue, to not call the listeners.
+            // Required to avoid SSR behaviors.
+            //
+            entry.value = v;
+            
             return v;
         }
 
