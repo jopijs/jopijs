@@ -637,12 +637,18 @@ export class CoreWebSite {
         this.serverInstanceBuilder.addSseEVent(path, handler);
     }
 
-    async processRequest(handler: RouteHandler | undefined, urlParts: any, routeInfos: WebSiteRouteInfos | undefined, urlInfos: URL | undefined, coreRequest: Request, coreServer: CoreServer): Promise<Response | undefined> {
+    async processRequest(
+        handler: RouteHandler | undefined,
+        urlParts: any,
+        routeInfos: WebSiteRouteInfos | undefined,
+        urlInfos: URL | undefined,
+        coreRequest: Request,
+        coreServer: CoreServer): Promise<Response | undefined>
+    {
         // For security reasons. Without that, an attacker can break a cache.
         if (urlInfos) urlInfos.hash = "";
 
         const req = new JopiRequestImpl(this, urlInfos, coreRequest, coreServer, routeInfos!, urlParts);
-
         const endReq = logServer_request.beginInfo((w) => w(`${req.req_method} request`, { url: req.req_url }));
 
         try {

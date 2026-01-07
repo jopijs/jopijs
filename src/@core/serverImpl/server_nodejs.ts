@@ -193,6 +193,7 @@ export class NodeJsServerInstanceBuilder implements ServerInstanceBuilder {
     }
 
     addRoute(verb: HttpMethod, path: string, routeInfos: WebSiteRouteInfos) {
+        // Note: I have checked than the stored routeInfos is not a copy.
         addRoute(this.router, verb, path, routeInfos);
     }
 

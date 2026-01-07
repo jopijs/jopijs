@@ -18,7 +18,9 @@ import { collector_declareUiComponent } from "./dataCollector.ts";
 export default class TypeRoutes extends AliasType {
     private sourceCode_header_TS = `import {routeBindPage, routeBindVerb} from "jopijs/generated";`;
     private sourceCode_header_JS = `import {routeBindPage, routeBindVerb} from "jopijs/generated";`;
-    private sourceCode_body = "";
+    private sourceCode_body_TS = "";
+    private sourceCode_body_JS = "";
+
     private cwdDir: string = process.cwd();
     private routeCount: number = 1;
 
@@ -41,6 +43,91 @@ export default class TypeRoutes extends AliasType {
     }
 
     private async genCode_DeclareServerRoutes(writer: CodeGenWriter) {
+        // region Generate the code calling all the routes.
+
+        // It's lines of type : setPageDataProvider(...);
+        //      await routeBindPage(...)
+        // or   
+        //      await routeBindVerb(...)
+
+        const bindPage = (writer: CodeGenWriter, route: string, filePath: string, attributes: RouteAttributes) => {
+            let routeId = "r" + (this.routeCount++);
+            let srcFilePath = jk_fs.getRelativePath(this.cwdDir, filePath);
+
+            const routeBindingParams: RouteBindPageParams = {
+                route,
+                filePath: srcFilePath,
+                attributes: {
+                    needRoles: attributes.needRoles,
+                    disableCache: attributes.disableCache,
+                    catchAllSlug: attributes.catchAllSlug,
+                }
+            };
+
+            // >>> Javascript
+
+            let compiledPath = jk_app.getCompiledFilePathFor(filePath);
+            let relPathJS = writer.makePathRelativeToOutput(compiledPath);
+            relPathJS = writer.toPathForImport(relPathJS, true);
+            this.sourceCode_header_JS += `\nimport c_${routeId} from "${relPathJS}";`;
+            this.sourceCode_body_JS += `\n    await routeBindPage(webSite, c_${routeId}, ${JSON.stringify(routeBindingParams)});`;
+            
+            // >>> Typescript
+            
+            let relPathTS = writer.makePathRelativeToOutput(filePath);
+            relPathTS = writer.toPathForImport(relPathTS, false);
+            this.sourceCode_header_TS += `\nimport c_${routeId} from "${relPathTS}";`;
+            this.sourceCode_body_TS += `\n    await routeBindPage(webSite, c_${routeId}, ${JSON.stringify(routeBindingParams)});`;
+        }
+
+        const bindVerb = (writer: CodeGenWriter, verb: string, route: string, filePath: string, attributes: RouteAttributes) => {
+            let srcFilePath = jk_fs.getRelativePath(this.cwdDir, filePath);
+
+            const routeBindingParams: RouteBindVerbParams = {
+                verb: verb as HttpMethod,
+                route,
+                filePath: srcFilePath,
+                attributes: {
+                    needRoles: attributes.needRoles,
+                    disableCache: attributes.disableCache
+                }
+            };
+
+            let routeId = "r" + (this.routeCount++);
+            const toAddToBody = `\n    await routeBindVerb(webSite, f_${routeId}, ${JSON.stringify(routeBindingParams)});`;
+            
+            // >>> Javascript
+
+            let compiledPath = jk_app.getCompiledFilePathFor(filePath);
+            let relPathJS = writer.makePathRelativeToOutput(compiledPath);
+            relPathJS = writer.toPathForImport(relPathJS, true);
+
+            this.sourceCode_header_JS += `\nimport f_${routeId} from "${relPathJS}";`;
+            this.sourceCode_body_JS += toAddToBody;
+            
+            // >>> Typescript
+            
+            let relPathTS = writer.makePathRelativeToOutput(filePath);
+            relPathTS = writer.toPathForImport(relPathTS, false);
+
+            this.sourceCode_header_TS += `\nimport f_${routeId} from "${relPathTS}";`;
+            this.sourceCode_body_TS += toAddToBody;
+        }
+
+        const registryValues = Object.values(this.registry);
+
+        for (let item of registryValues) {
+            if (item.verb === "PAGE") {
+                bindPage(writer, item.route, item.filePath, item.attributes);
+            } else {
+                bindVerb(writer, item.verb, item.route, item.filePath, item.attributes);
+            }
+        }
+
+        //endregion
+        
+        //region Declare all the routes config.
+        
         if (Object.keys(this.routeConfig).length > 0) {
             this.sourceCode_header_TS += `\nimport {JopiRouteConfig} from "jopijs";`;
             this.sourceCode_header_JS += `\nimport {JopiRouteConfig} from "jopijs";`;
@@ -49,6 +136,22 @@ export default class TypeRoutes extends AliasType {
 
             for (let route of Object.keys(this.routeConfig)) {
                 let routeAttributes = this.routeConfig[route];
+
+                //region Merge page roles + all roles.
+
+                // It's lines of type: await routeConfig(new JopiRouteConfig(...))
+                
+                let roles: string[] = [];
+
+                let pageRoles = routeAttributes.needRoles?.["PAGE"];
+                if (pageRoles) pageRoles.forEach(r => { if (!roles.includes(r)) roles.push(r) });
+
+                let allRoles = routeAttributes.needRoles?.[""];
+                if (allRoles) allRoles.forEach(r => { if (!roles.includes(r)) roles.push(r) });
+
+                let sRoles = roles.length ? ", " + JSON.stringify(roles) : ", undefined";
+
+                //endregion
                 
                 const tmpRelPath = writer.makePathRelativeToOutput(routeAttributes.configFile!);
 
@@ -60,28 +163,23 @@ export default class TypeRoutes extends AliasType {
                 let relPathJS = tmpRelPath;
                 relPathJS = writer.toPathForImport(relPathJS, true);
 
-                // Merge page roles + all roles.
-                let roles: string[] = [];
-
-                let pageRoles = routeAttributes.needRoles?.["PAGE"];
-                if (pageRoles) pageRoles.forEach(r => { if (!roles.includes(r)) roles.push(r) });
-
-                let allRoles = routeAttributes.needRoles?.[""];
-                if (allRoles) allRoles.forEach(r => { if (!roles.includes(r)) roles.push(r) });
-
-                let sRoles = roles.length ? ", " + JSON.stringify(roles) : ", undefined";
                 
                 this.sourceCode_header_TS += `\nimport routeConfig${count} from "${relPathTS}";`;
                 this.sourceCode_header_JS += `\nimport routeConfig${count} from "${relPathJS}";`;
                 
-                this.sourceCode_body += `\n    await routeConfig${count}(new JopiRouteConfig(webSite, ${JSON.stringify(route)}${sRoles}));`;
+                const toAdd = `\n    await routeConfig${count}(new JopiRouteConfig(webSite, ${JSON.stringify(route)}${sRoles}));`;
+                this.sourceCode_body_TS += toAdd;
+                this.sourceCode_body_JS += toAdd;
 
                 count++;
             }
         }
 
-        let body_ts = this.sourceCode_body;
-        let body_js = this.sourceCode_body;
+        //endregion
+
+        //region Declare all page data provider
+
+        // It's lines of type : setPageDataProvider(...);
 
         if (Object.keys(this.pageData).length > 0) {
             this.sourceCode_header_TS += `\nimport {setPageDataProvider} from "jopijs/generated";`;
@@ -91,8 +189,20 @@ export default class TypeRoutes extends AliasType {
 
             for (let route of Object.keys(this.pageData)) {
                 let routeAttributes = this.pageData[route];
-                let srcFilePath = jk_fs.getRelativePath(this.cwdDir, routeAttributes.pageData!);
 
+                //region Merge page roles + all roles.
+
+                let roles: string[] = [];
+
+                let pageRoles = routeAttributes.needRoles?.["PAGE"];
+                if (pageRoles) pageRoles.forEach(r => { if (!roles.includes(r)) roles.push(r) });
+
+                let allRoles = routeAttributes.needRoles?.[""];
+                if (allRoles) allRoles.forEach(r => { if (!roles.includes(r)) roles.push(r) });
+
+                //endregion
+
+                let srcFilePath = jk_fs.getRelativePath(this.cwdDir, routeAttributes.pageData!);
                 const tmpRelPath = writer.makePathRelativeToOutput(routeAttributes.pageData!);
 
                 // TS
@@ -103,28 +213,21 @@ export default class TypeRoutes extends AliasType {
                 let relPathJS = tmpRelPath;
                 relPathJS = writer.toPathForImport(relPathJS, true);
 
-                // Merge page roles + all roles.
-                let roles: string[] = [];
-
-                let pageRoles = routeAttributes.needRoles?.["PAGE"];
-                if (pageRoles) pageRoles.forEach(r => { if (!roles.includes(r)) roles.push(r) });
-
-                let allRoles = routeAttributes.needRoles?.[""];
-                if (allRoles) allRoles.forEach(r => { if (!roles.includes(r)) roles.push(r) });
-
                 this.sourceCode_header_TS += `\nimport pageData${count} from "${relPathTS}";`;
                 this.sourceCode_header_JS += `\nimport pageData${count} from "${relPathJS}";`;
                 
                 let line = `\n    setPageDataProvider(webSite, ${JSON.stringify(route)}, ${roles.length ? JSON.stringify(roles) : "undefined"}, pageData${count}, ${JSON.stringify(srcFilePath)});`;
-                body_ts += line;
-                body_js += line;
+                this.sourceCode_body_TS += line;
+                this.sourceCode_body_JS += line;
 
                 count++;
             }
         }
 
-        let content_ts = `\n\nexport default async function(webSite: any) {${body_ts}\n}`;
-        let content_js = `\n\nexport default async function(webSite) {${body_js}\n}`;
+        //endregion
+
+        const content_ts = `\n\nexport default async function(webSite: any) {${this.sourceCode_body_TS}\n}`;
+        const content_js = `\n\nexport default async function(webSite) {${this.sourceCode_body_JS}\n}`;
 
         await writer.writeCodeFile({
             fileInnerPath: "declareServerRoutes",
@@ -136,6 +239,7 @@ export default class TypeRoutes extends AliasType {
             ts: `\nimport declareRoutes from "./declareServerRoutes.ts";`,
             js: `\nimport declareRoutes from "./declareServerRoutes.js";`
         });
+
         writer.genAddToInstallFile(InstallFileType.server, FilePart.footer, {
             ts: "\n    onWebSiteCreated((webSite: any) => declareRoutes(webSite));",
             js: "\n    onWebSiteCreated((webSite) => declareRoutes(webSite));"
@@ -149,7 +253,9 @@ export default class TypeRoutes extends AliasType {
     private async genCode_RouterFile(writer: CodeGenWriter) {
         const myDir = jk_fs.join(writer.dir.output_src, "routes");
 
-        const generateRoutes = (sources: { header: string, body: string }, browserSide: boolean, forJavaScript: boolean) => {
+        // Generate the code calling all the routes.
+        //
+        const generateRoutes = (sources: { header: string, body: string }, browserSide: boolean, forJavaScript: boolean) => {        
             if (browserSide) sources.header += `import React from "react";\n\n`;
             else sources.header += "\n";
 
@@ -173,11 +279,6 @@ export default class TypeRoutes extends AliasType {
                     } else {
                         sources.header += `import I${count} from ${JSON.stringify(relPath)};\n`;
                         sources.body += `\n    "${item.route}": I${count},`;
-                        this.bindPage(writer, item.route, item.filePath, item.attributes);
-                    }
-                } else {
-                    if (!isBrowser) {
-                        this.bindVerb(writer, item.verb, item.route, item.filePath, item.attributes);
                     }
                 }
             }
@@ -191,12 +292,13 @@ export default class TypeRoutes extends AliasType {
 
         //region Common
 
-        let commonTS = {
+        const commonTS = {
             header: writer.AI_INSTRUCTIONS + `import { jsx as _jsx } from "react/jsx-runtime";\n`,
             body: ""
         }
             ;
-        let commonJS = { ...commonTS };
+        
+        const commonJS = { ...commonTS };
 
         commonTS.body += `function renderRoute(name: string) {
     let F = (routes as any)[name];
@@ -233,8 +335,8 @@ export function error401() {
 }
 `;
 
-            let sourcesTS = { ...commonTS };
-            let sourcesJS = { ...commonJS };
+            const sourcesTS = { ...commonTS };
+            const sourcesJS = { ...commonJS };
 
             sourcesTS.header += `import { SBPE_ErrorPage } from "jopijs";\n`;
             sourcesJS.header += `import { SBPE_ErrorPage } from "jopijs";\n`;
@@ -309,65 +411,6 @@ export function error401() {
         }
 
         await this.scanDir(p.typeDir, "/", dirAttributes);
-    }
-
-    private bindPage(writer: CodeGenWriter, route: string, filePath: string, attributes: RouteAttributes) {
-        let routeId = "r" + (this.routeCount++);
-        let srcFilePath = jk_fs.getRelativePath(this.cwdDir, filePath);
-
-        const routeBindingParams: RouteBindPageParams = {
-            route,
-            filePath: srcFilePath,
-            attributes: {
-                needRoles: attributes.needRoles,
-                disableCache: attributes.disableCache,
-                catchAllSlug: attributes.catchAllSlug,
-            }
-        };
-
-        // TS Path
-        let relPathTS = writer.makePathRelativeToOutput(filePath);
-        relPathTS = writer.toPathForImport(relPathTS, false);
-
-        // JS Path
-        let compiledPath = jk_app.getCompiledFilePathFor(filePath);
-        let relPathJS = writer.makePathRelativeToOutput(compiledPath);
-        relPathJS = writer.toPathForImport(relPathJS, true);
-
-        this.sourceCode_header_TS += `\nimport c_${routeId} from "${relPathTS}";`;
-        this.sourceCode_header_JS += `\nimport c_${routeId} from "${relPathJS}";`;
-        
-        this.sourceCode_body += `\n    await routeBindPage(webSite, c_${routeId}, ${JSON.stringify(routeBindingParams)});`
-    }
-
-    private bindVerb(writer: CodeGenWriter, verb: string, route: string, filePath: string, attributes: RouteAttributes) {
-        let srcFilePath = jk_fs.getRelativePath(this.cwdDir, filePath);
-
-        const routeBindingParams: RouteBindVerbParams = {
-            verb: verb as HttpMethod,
-            route,
-            filePath: srcFilePath,
-            attributes: {
-                needRoles: attributes.needRoles,
-                disableCache: attributes.disableCache
-            }
-        };
-
-        let routeId = "r" + (this.routeCount++);
-        
-        // TS Path
-        let relPathTS = writer.makePathRelativeToOutput(filePath);
-        relPathTS = writer.toPathForImport(relPathTS, false);
-        
-        // JS Path
-        let compiledPath = jk_app.getCompiledFilePathFor(filePath);
-        let relPathJS = writer.makePathRelativeToOutput(compiledPath);
-        relPathJS = writer.toPathForImport(relPathJS, true);
-
-        this.sourceCode_header_TS += `\nimport f_${routeId} from "${relPathTS}";`;
-        this.sourceCode_header_JS += `\nimport f_${routeId} from "${relPathJS}";`;
-        
-        this.sourceCode_body += `\n    await routeBindVerb(webSite, f_${routeId}, ${JSON.stringify(routeBindingParams)});`
     }
 
     protected getDefaultFeatures(): Record<string, boolean> | undefined {
