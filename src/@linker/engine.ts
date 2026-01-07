@@ -522,7 +522,7 @@ export abstract class AliasType {
         const refTarget = result.refTarget;
         let priority = result.priority!;
 
-        if (!priority) {
+        if (priority === undefined) {
             priority = PriorityLevel.default;
 
             if (p.requirePriority) {

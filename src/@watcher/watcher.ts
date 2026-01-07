@@ -151,8 +151,6 @@ export function watchProject(): WatcherController {
         else if (rawEvent === 'change') changeEvent.type = 'update';
         else if (rawEvent.startsWith('unlink')) changeEvent.type = 'delete';
 
-        //console.log(`${BLUE}[Watcher]${RESET} Change detected: [${changeEvent.type}] ${path}`);
-
         let mustRestart = true;
 
         for (const listener of listeners) {
@@ -170,7 +168,10 @@ export function watchProject(): WatcherController {
             }
         }
 
-        if (mustRestart) await performRestart();
+        if (mustRestart) {
+            console.log(`${BLUE}[Watcher]${RESET} Change detected: [${changeEvent.type}] ${path}`);
+            await performRestart();
+        }
     });
 
     const cleanup = () => {

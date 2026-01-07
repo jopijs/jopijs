@@ -34,7 +34,7 @@ export class TypeTranslation extends AliasType {
 
         let priority = infos.priority;
 
-        if (!priority) {
+        if (priority === undefined) {
             priority = PriorityLevel.default;
             await jk_fs.writeTextToFile(jk_fs.join(trDir.fullPath, "default.priority"), "default.priority");
         }
