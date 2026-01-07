@@ -3,8 +3,7 @@ import type {CacheEntry} from "./caches/cache.ts";
 export function parseCookies(headers: Headers): { [name: string]: string } {
     const cookies: { [name: string]: string } = {};
     const cookieHeader = headers.get('Cookie');
-    console.log("Parsing cookies use", cookieHeader);
-
+    
     if (!cookieHeader) {
         return cookies;
     }
@@ -17,7 +16,6 @@ export function parseCookies(headers: Headers): { [name: string]: string } {
         }
     });
 
-    console.log("Parsing cookies res is", cookies);
     return cookies;
 }
 
