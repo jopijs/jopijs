@@ -7,3 +7,5 @@ logs
 .turbo
 dist
 /tsconfig.tsbuildinfo
+.jopi-sync.json
+.jopi.state.updating

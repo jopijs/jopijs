@@ -370,7 +370,7 @@ export async function getModulesList(): Promise<Record<string, JopiModuleInfo>> 
     let found: Record<string, JopiModuleInfo> = {};
 
     for (let dirItem of dirItems) {
-        if (!dirItem.isDirectory) continue;
+        if (!dirItem.isDirectory && !dirItem.isSymbolicLink) continue;
         if (!dirItem.name.startsWith("mod_")) continue;
         found[dirItem.name] = new JopiModuleInfo(dirItem.name, dirItem.fullPath);
     }
