@@ -6,23 +6,29 @@ import path from "node:path";
 import * as Process from 'node:process';
 
 if (isNodeJS) {
-    let rootDir = jk_app.findRequiredPackageJsonDir();
-    let envFile = path.join(rootDir, ".env");
+    // Note: keep findPackageJsonDir, in order to not block
+    // when there is no package.json
+    //
+    let rootDir = jk_app.findPackageJsonDir();
 
-    if (jk_fs.isFileSync(envFile)) {
-        Process.loadEnvFile(envFile);
-    } else {
-        // development or production
-        let nodeEnv = jk_process.isProduction ? "production" : "development";
-        envFile = jk_fs.join(rootDir, ".env." + nodeEnv);
+    if (rootDir) {
+        let envFile = path.join(rootDir, ".env");
 
         if (jk_fs.isFileSync(envFile)) {
             Process.loadEnvFile(envFile);
         } else {
-            envFile = path.join(rootDir, ".env.local");
+            // development or production
+            let nodeEnv = jk_process.isProduction ? "production" : "development";
+            envFile = jk_fs.join(rootDir, ".env." + nodeEnv);
 
             if (jk_fs.isFileSync(envFile)) {
                 Process.loadEnvFile(envFile);
+            } else {
+                envFile = path.join(rootDir, ".env.local");
+
+                if (jk_fs.isFileSync(envFile)) {
+                    Process.loadEnvFile(envFile);
+                }
             }
         }
     }
