@@ -1,4 +1,5 @@
 import * as jk_fs from "jopi-toolkit/jk_fs";
+import * as jk_crypto from "jopi-toolkit/jk_crypto";
 import * as jk_tools from "jopi-toolkit/jk_tools";
 import * as jk_term from "jopi-toolkit/jk_term";
 import * as jk_what from "jopi-toolkit/jk_what";
@@ -955,21 +956,28 @@ export interface Directories {
 }
 
 
-async function checkFilesModifiedSince(dirToScan: string, since: number): Promise<boolean> {
+
+async function computeDirectoryHash(dirToScan: string): Promise<string> {
     const items = await jk_fs.listDir(dirToScan);
+    const hashes: string[] = [];
 
     for (const item of items) {
         if (item.name.startsWith(".")) continue;
         if (item.name.includes(".gen.")) continue;
 
         if (item.isDirectory) {
-            if (await checkFilesModifiedSince(item.fullPath, since)) return true;
+            hashes.push(item.name + "/:" + await computeDirectoryHash(item.fullPath));
         } else if (item.isFile) {
             const stat = await jk_fs.getFileStat(item.fullPath);
-            if (stat && stat.mtimeMs > since) return true;
+            if (stat) {
+                hashes.push(item.name + ":" + stat.mtimeMs);
+            }
         }
     }
-    return false;
+
+    hashes.sort();
+
+    return jk_crypto.md5(hashes.join("|"));
 }
 
 export async function compile(importMeta: any, config: LinkerConfig, isRefresh = false): Promise<void> {
@@ -999,21 +1007,21 @@ export async function compile(importMeta: any, config: LinkerConfig, isRefresh =
     gDir_outputSrc = jk_fs.join(gDir_ProjectSrc, ".jopi-codegen");
     gDir_outputDst = jk_fs.join(gDir_ProjectDist, ".jopi-codegen");
 
+
     const timestampFile = jk_fs.join(gDir_outputSrc, ".last_run");
-    let lastRun = 0;
+    let lastRun = "";
 
     try {
-        const content = await jk_fs.readTextFromFile(timestampFile);
-        if (content) lastRun = parseInt(content, 10);
+        lastRun = await jk_fs.readTextFromFile(timestampFile);
     } catch { }
 
-    if (lastRun > 0) {
+    const currentHash = await computeDirectoryHash(gDir_ProjectSrc);
+
+    if (lastRun) {
         if (process.env.JOPI_FORCE_LINKER === "1") {
             logLinker_performance.info("Linker forced by JOPI_FORCE_LINKER");
         } else {
-            const hasChanged = await checkFilesModifiedSince(gDir_ProjectSrc, lastRun);
-            
-            if (!hasChanged) {
+            if (lastRun === currentHash) {
                 logPerformanceEnd("Linker skipped (no changes)");
                 return;
             }
@@ -1069,7 +1077,7 @@ export async function compile(importMeta: any, config: LinkerConfig, isRefresh =
 
     await collector_end(gCodeGenWriter);
 
-    await jk_fs.writeTextToFile(timestampFile, Date.now().toString());
+    await jk_fs.writeTextToFile(timestampFile, currentHash);
 
     logPerformanceEnd();
 }
