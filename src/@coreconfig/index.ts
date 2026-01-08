@@ -92,12 +92,6 @@ function calcWebSiteConfig(): WebSiteConfig {
     }
 
     let pkgJsonFilePath = jk_app.findPackageJson();
-    //
-    if (!pkgJsonFilePath) {
-        jk_term.logRed("No package.json found.");
-        process.exit(1);
-    }
-
     const hasJopiDevServerFlag = process.env.JOPI_DEV_SERVER === "1";
     const hasJopiDevUiFlag = process.env.JOPI_DEV_UI === "1";
     const hasReactHmrFlag = (process.env.JOPI_DEV_HMR === "1") && isBunJS;
@@ -125,7 +119,7 @@ function calcWebSiteConfig(): WebSiteConfig {
     let conf_bundlerOutputDir: string|undefined;
     let conf_webSiteUrl: string|undefined;
     let conf_webSiteListeningUrl: string|undefined;
-    let conf_webResourcesRoot_SSR: string|undefined;
+    let conf_webResourcesRoot_SSR: string|undefined = "_bundle_s/";
 
     if (pkgJsonFilePath) {
         try {
@@ -174,6 +168,13 @@ function calcWebSiteConfig(): WebSiteConfig {
         conf_webSiteListeningUrl = conf_webSiteUrl;
     } else if (!conf_webSiteUrl) {
         conf_webSiteUrl = conf_webSiteListeningUrl;
+    }
+
+    if (!conf_webSiteUrl) {
+        conf_webSiteUrl = "http://localhost/";
+    }
+    if (!conf_webSiteListeningUrl) {
+        conf_webSiteListeningUrl = "http://localhost/";
     }
 
     if (bundlerOutputDir && conf_webSiteUrl) {
