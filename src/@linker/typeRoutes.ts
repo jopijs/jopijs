@@ -146,7 +146,7 @@ export default class TypeRoutes extends AliasType {
                 let pageRoles = routeAttributes.needRoles?.["PAGE"];
                 if (pageRoles) pageRoles.forEach(r => { if (!roles.includes(r)) roles.push(r) });
 
-                let allRoles = routeAttributes.needRoles?.[""];
+                let allRoles = routeAttributes.needRoles?.["ALL"];
                 if (allRoles) allRoles.forEach(r => { if (!roles.includes(r)) roles.push(r) });
 
                 let sRoles = roles.length ? ", " + JSON.stringify(roles) : ", undefined";
@@ -163,7 +163,6 @@ export default class TypeRoutes extends AliasType {
                 let relPathJS = tmpRelPath;
                 relPathJS = writer.toPathForImport(relPathJS, true);
 
-                
                 this.sourceCode_header_TS += `\nimport routeConfig${count} from "${relPathTS}";`;
                 this.sourceCode_header_JS += `\nimport routeConfig${count} from "${relPathJS}";`;
                 
@@ -197,7 +196,7 @@ export default class TypeRoutes extends AliasType {
                 let pageRoles = routeAttributes.needRoles?.["PAGE"];
                 if (pageRoles) pageRoles.forEach(r => { if (!roles.includes(r)) roles.push(r) });
 
-                let allRoles = routeAttributes.needRoles?.[""];
+                let allRoles = routeAttributes.needRoles?.["ALL"];
                 if (allRoles) allRoles.forEach(r => { if (!roles.includes(r)) roles.push(r) });
 
                 //endregion
@@ -295,8 +294,7 @@ export default class TypeRoutes extends AliasType {
         const commonTS = {
             header: writer.AI_INSTRUCTIONS + `import { jsx as _jsx } from "react/jsx-runtime";\n`,
             body: ""
-        }
-            ;
+        };
         
         const commonJS = { ...commonTS };
 
