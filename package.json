@@ -1,7 +1,7 @@
 {
   "name": "jopijs",
-  "version": "3.1.15",
-  "publishedDate": "1/8/2026",
+  "version": "3.1.19",
+  "publishedDate": "1/9/2026",
   "publicPublishedDate": "12/20/2025",
   "license": "MIT",
   "homepage": "https://github.com/johanpiquet/jopijs",
@@ -37,6 +37,7 @@
     "dev:tsc-check": "tsc --noEmit"
   },
   "dependencies": {
+    "bun-plugin-tailwind": "latest",
     "@tailwindcss/postcss": "^4.1.12",
     "@tanstack/react-query": "^5.90.12",
     "@tanstack/react-table": "^8.21.3",

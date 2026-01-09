@@ -101,8 +101,13 @@ export function watchProject(): WatcherController {
 
         childProcess.on('close', (code: number) => {
             if (!isRestarting) {
-                 // If the app exited naturally (without us killing it), we exit too.
-                process.exit(code);
+                if (code !== 0) {
+                    console.log(`${RED}[Watcher]${RESET} App crashed! Waiting for changes... (Exit code: ${code})`);
+                    childProcess = null;
+                } else {
+                     // If the app exited naturally (without us killing it), we exit too.
+                    process.exit(code);
+                }
             }
         });
     };
@@ -124,9 +129,7 @@ export function watchProject(): WatcherController {
     async function performRestart() {
         if (isRestarting) return;
         isRestarting = true;
-
-        console.log(`${BLUE}[Watcher]${RESET} 🔄 Restarting project...`);
-
+        
         if (childProcess) {
             childProcess.kill(); 
         }
@@ -134,8 +137,9 @@ export function watchProject(): WatcherController {
         // Reset flag and respawn
         setTimeout(() => {
             isRestarting = false;
+            console.log(`${BLUE}[Watcher]${RESET} 🔄 Restarting project...`);
             spawnWorker();
-        }, 100);
+        }, 1000);
     }
 
     watcher.on('all', async (rawEvent, path) => {
