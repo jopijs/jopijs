@@ -38,12 +38,32 @@ import { installDataSourcesServer, type JopiPageDataProvider } from "./dataSourc
 export type RouteHandler = (req: JopiRequest) => Promise<Response>;
 
 export interface MiddlewareOptions {
+    /**
+     * Defines the execution order of the middleware.
+     * Middlewares are executed in descending order of priority (from highest to lowest).
+     * - `veryHigh (200)`: Executed first.
+     * - `default (0)`: Standard execution.
+     * - `veryLow (-200)`: Executed last.
+     */
     priority?: PriorityLevel;
-    regExp?: RegExp;
+
+    /**
+     * Define the path pattern.
+     * - "/": matches everything
+     * - "/hello": matches "/hello" and sub-paths like "/hello/world" (but NOT "/helloworld")
+     * - "/hello/": matches sub-paths like "/hello/world" (but NOT "/hello")
+     */
+    fromPath?: string;
 }
 
 export interface CacheRules {
-    regExp?: RegExp;
+    /**
+     * Define the path pattern.
+     * - "/": matches everything
+     * - "/hello": matches "/hello" and sub-paths like "/hello/world" (but NOT "/helloworld")
+     * - "/hello/": matches sub-paths like "/hello/world" (but NOT "/hello")
+     */
+    fromPath?: string;
 
     /**
      * If true, then disable the cache for the routes.
@@ -78,6 +98,10 @@ export interface CacheRules {
     ifNotInCache(req: JopiRequest, isPage: boolean): void;
 }
 
+/**
+ * The core class representing a JopiJS website.
+ * Handles routing, middleware, caching, server lifecycle, and more.
+ */
 export class CoreWebSite {
     readonly port: number;
     readonly host: string;
@@ -94,9 +118,14 @@ export class CoreWebSite {
     public readonly mustRemoveTrailingSlashes: boolean;
     public readonly cookieDefaults?: CookieOptions;
 
-    private globalMiddlewares: Record<string, { value: JopiMiddleware, priority: PriorityLevel, regExp?: RegExp }[]> = {};
-    private globalPostMiddlewares: Record<string, { value: JopiPostMiddleware, priority: PriorityLevel, regExp?: RegExp }[]> = {};
+    private globalMiddlewares: Record<string, { value: JopiMiddleware, priority: PriorityLevel, fromPath?: string }[]> = {};
+    private globalPostMiddlewares: Record<string, { value: JopiPostMiddleware, priority: PriorityLevel, fromPath?: string }[]> = {};
 
+    /**
+     * Creates a new instance of CoreWebSite.
+     * @param url The full public URL of the website (e.g. "https://mysite.com:3000").
+     * @param options Configuration options for the website.
+     */
     constructor(url: string, options?: WebSiteOptions) {
         if (!options) options = {};
 
@@ -131,14 +160,24 @@ export class CoreWebSite {
         jk_events.sendEvent("jopi.webSite.created", this);
     }
 
+    /** Returns the public URL of the website. */
     getWelcomeUrl(): string {
         return this.welcomeUrl;
     }
 
+    /**
+     * Adds a backend server to the load balancer pool.
+     * @param serverFetch The server fetch handler to add.
+     * @param weight Priority weight for load balancing (default is equal weight).
+     */
     addSourceServer<T>(serverFetch: ServerFetch<T>, weight?: number) {
         this.loadBalancer.addServer<T>(serverFetch, weight);
     }
 
+    /**
+     * Returns (or creates) a companion HTTP website that redirects to this HTTPS website.
+     * Useful for handling HTTP->HTTPS redirection on port 80.
+     */
     getOrCreateHttpRedirectWebsite(): CoreWebSite {
         if (this.http80WebSite) return this.http80WebSite;
         if (this.port === 80) return this;
@@ -160,6 +199,10 @@ export class CoreWebSite {
         return webSite;
     }
 
+    /**
+     * Updates the SSL certificate used by the server.
+     * Triggers a certificate rebuild if applicable.
+     */
     updateSslCertificate(certificate: SslCertificatePath) {
         this.certificate = certificate;
         if (this._onRebuildCertificate) this._onRebuildCertificate();
@@ -167,6 +210,7 @@ export class CoreWebSite {
 
     //region Server events
 
+    /** Called internally before the server starts listening. */
     async onBeforeServerStart() {
         await jk_events.sendAsyncEvent("@jopi.server.before.start", { webSite: this });
         await createBundle(this);
@@ -183,6 +227,7 @@ export class CoreWebSite {
         }
     }
 
+    /** Called internally once the server is successfully started. */
     async onServerStarted() {
         if (this._onWebSiteReady) {
             this._onWebSiteReady.forEach(e => e());
@@ -193,6 +238,11 @@ export class CoreWebSite {
         }
     }
 
+    /**
+     * Registers a new WebSocket route.
+     * @param path The path pattern for the WebSocket.
+     * @param handler The handler function for the WebSocket connection.
+     */
     onWebSocketConnect(path: string, handler: JopiWsRouteHandler) {
         return this.serverInstanceBuilder.addWsRoute(path, handler);
     }
@@ -213,20 +263,32 @@ export class CoreWebSite {
 
     //region Middlewares
 
+    /**
+     * Adds a middleware function that runs before the route handler.
+     * @param method The HTTP method to target (or "*" for all).
+     * @param middleware The middleware function.
+     * @param options Options like priority and path filtering.
+     */
     addGlobalMiddleware(method: HttpMethod | "*" | undefined, middleware: JopiMiddleware, options?: MiddlewareOptions) {
         options = options || {};
 
         let m = method ? method : "*";
         if (!this.globalMiddlewares[m]) this.globalMiddlewares[m] = [];
-        this.globalMiddlewares[m].push({ priority: options.priority || PriorityLevel.default, value: middleware, regExp: options.regExp });
+        this.globalMiddlewares[m].push({ priority: options.priority || PriorityLevel.default, value: middleware, fromPath: options.fromPath });
     }
 
+    /**
+     * Adds a post-middleware function that runs after the route handler.
+     * @param method The HTTP method to target (or "*" for all).
+     * @param middleware The middleware function.
+     * @param options Options like priority and path filtering.
+     */
     addGlobalPostMiddleware(method: HttpMethod | "*" | undefined, middleware: JopiPostMiddleware, options?: MiddlewareOptions) {
         options = options || {};
 
         let m = method ? method : "*";
         if (!this.globalPostMiddlewares[m]) this.globalPostMiddlewares[m] = [];
-        this.globalPostMiddlewares[m].push({ priority: options.priority || PriorityLevel.default, value: middleware, regExp: options.regExp });
+        this.globalPostMiddlewares[m].push({ priority: options.priority || PriorityLevel.default, value: middleware, fromPath: options.fromPath });
     }
 
     applyMiddlewares(verb: HttpMethod, route: string, handler: JopiRouteHandler, isPage: boolean): JopiRouteHandler {
@@ -298,8 +360,12 @@ export class CoreWebSite {
 
             if (globalRawMiddleware) {
                 globalRawMiddleware = globalRawMiddleware.filter(m => {
-                    if (m.regExp) {
-                        return m.regExp.test(route);
+                    if (m.fromPath) {
+                        if (m.fromPath.endsWith("/")) {
+                            if (!route.startsWith(m.fromPath)) return false;
+                        } else {
+                            if (route !== m.fromPath && !route.startsWith(m.fromPath + "/")) return false;
+                        }
                     }
 
                     return true;
@@ -308,31 +374,36 @@ export class CoreWebSite {
 
             if (globalRawPostMiddleware) {
                 globalRawPostMiddleware = globalRawPostMiddleware.filter(m => {
-                    if (m.regExp) {
-                        return m.regExp.test(route);
+                    if (m.fromPath) {
+                        if (m.fromPath.endsWith("/")) {
+                            if (!route.startsWith(m.fromPath)) return false;
+                        } else {
+                            if (route !== m.fromPath && !route.startsWith(m.fromPath + "/")) return false;
+                        }
                     }
 
                     return true;
                 })
             }
 
-            let middlewares = sortByPriority(merge(routeRawMiddlewares, globalRawMiddleware)) || [];
-            let postMiddlewares = sortByPriority(merge(routeRawPostMiddlewares, globalRawPostMiddleware)) || [];
+            let middlewares = (sortByPriority(merge(routeRawMiddlewares, globalRawMiddleware)) || []).reverse();
+            let postMiddlewares = (sortByPriority(merge(routeRawPostMiddlewares, globalRawPostMiddleware)) || []).reverse();
 
             // **********
 
             const baseHandler = handler;
             const mustUseAutoCache = this.mustUseAutomaticCache && routeInfos && (routeInfos.mustEnableAutomaticCache === true)
-            const extraMiddlewares: JopiMiddleware[] = [];
-
+            
             if ((rootReq as JopiRequestImpl).routeInfos.requiredRoles) {
                 const roles = (rootReq as JopiRequestImpl).routeInfos.requiredRoles;
 
                 if (roles) {
-                    extraMiddlewares.push((localReq: JopiRequest) => {
+                    const checkRolesMdw: JopiMiddleware = (localReq: JopiRequest) => {
                         localReq.role_assertUserHasOneOfThisRoles(roles);
                         return null;
-                    });
+                    };
+
+                    middlewares = [checkRolesMdw, ...middlewares];
                 }
             }
 
@@ -342,7 +413,7 @@ export class CoreWebSite {
                 const beforeAddToCache = rootReq.routeInfos.beforeAddToCache;
                 const ifNotInCache = rootReq.routeInfos.ifNotInCache;
 
-                extraMiddlewares.push(async function (localReq) {
+                const checkCacheMdw: JopiMiddleware = async function (localReq) {
                     if (beforeCheckingCache) {
                         let r = await beforeCheckingCache(localReq);
                         //
@@ -409,10 +480,10 @@ export class CoreWebSite {
                     }
 
                     return res;
-                });
-            }
+                };
 
-            middlewares = [...extraMiddlewares, ...middlewares];
+                middlewares.push(checkCacheMdw);
+            }
 
             let newHandler: JopiRouteHandler;
 
@@ -443,6 +514,10 @@ export class CoreWebSite {
         };
     }
 
+    /**
+     * Enables CORS (Cross-Origin Resource Sharing) for the website.
+     * @param allows A list of allowed origins. If undefined, defaults to the website's own URL.
+     */
     enableCors(allows?: string[]) {
         if (!allows) allows = [this.welcomeUrl];
         this.addGlobalPostMiddleware(undefined, PostMiddlewares.cors({ accessControlAllowOrigin: allows }), { priority: PriorityLevel.veryHigh });
@@ -456,6 +531,7 @@ export class CoreWebSite {
         menuEntries: []
     }
 
+    /** Returns default parameters used when rendering pages (e.g. menu entries). */
     public getExtraPageParams(): ExtraPageParams {
         return this.extraPageParams;
     }
@@ -467,6 +543,10 @@ export class CoreWebSite {
         this.extraPageParams.menuEntries.push(menuEntry);
     }
 
+    /**
+     * Executes the browser-side installation script (hydration code).
+     * @param pageController The controller for the current page.
+     */
     executeBrowserInstall(pageController: PageController) {
         const modInit = this.createModuleInitInstance(pageController, this.extraPageParams);
         executeBrowserInstall(modInit);
@@ -494,35 +574,55 @@ export class CoreWebSite {
     private cacheRules: CacheRules[] = [];
     private headersToCache: string[] = ["content-type", "etag", "last-modified"];
 
+    /** Returns the current cache engine instance. */
     getCache(): PageCache {
         return this.mainCache;
     }
 
+    /**
+     * Sets a custom cache engine.
+     * @param pageCache The cache implementation to use.
+     */
     setCache(pageCache: PageCache) {
         this.mainCache = pageCache || gVoidCache;
     }
 
+    /** Disables the entire automatic caching system. */
     disableAutomaticCache() {
         this.mustUseAutomaticCache = false;
     }
 
+    /** Returns the list of standard headers that are preserved in the cache. */
     getHeadersToCache(): string[] {
         return this.headersToCache;
     }
 
+    /**
+     * Adds a header name to the list of headers that should be cached along with the response.
+     * @param header The name of the HTTP header.
+     */
     addHeaderToCache(header: string) {
         header = header.trim().toLowerCase();
         if (!this.headersToCache.includes(header)) this.headersToCache.push(header);
     }
 
+    /**
+     * Sets the global cache rules.
+     * @param rules An array of rules to determine caching behavior.
+     */
     setCacheRules(rules: CacheRules[]) {
         this.cacheRules = rules;
     }
 
     private applyCacheRules(routeInfos: WebSiteRouteInfos, path: string) {
+
         for (let rule of this.cacheRules) {
-            if (rule.regExp) {
-                if (!rule.regExp.test(path)) continue;
+            if (rule.fromPath) {
+                if (rule.fromPath.endsWith("/")) {
+                    if (!path.startsWith(rule.fromPath)) continue;
+                } else {
+                    if (path !== rule.fromPath && !path.startsWith(rule.fromPath + "/")) continue;
+                }
             }
 
             if (!routeInfos.afterGetFromCache) {
@@ -552,6 +652,10 @@ export class CoreWebSite {
     private authHandler?: UserAuthentificationFunction;
     private jwtTokenStore?: JwtTokenStore;
 
+    /**
+     * Stores the JWT token for the current user.
+     * Uses the configured token store or falls back to a high-priority cookie.
+     */
     public storeJwtToken(req: JopiRequest) {
         const token = req.user_getJwtToken();
 
@@ -566,10 +670,12 @@ export class CoreWebSite {
         }
     }
 
+    /** Sets a custom function to handle how JWT tokens are stored (e.g. in cookies). */
     public setJwtTokenStore(store: JwtTokenStore) {
         this.jwtTokenStore = store;
     }
 
+    /** Creates a signed JWT token containing the user info. */
     createJwtToken(data: UserInfos): string | undefined {
         try {
             return jwt.sign(data as object, this.JWT_SECRET!, this.jwtSignInOptions);
@@ -579,6 +685,7 @@ export class CoreWebSite {
         }
     }
 
+    /** Decodes and verifies a JWT token. Returns undefined if invalid. */
     decodeJwtToken(req: JopiRequest, token: string): UserInfos | undefined {
         if (!this.JWT_SECRET) return undefined;
 
@@ -591,10 +698,15 @@ export class CoreWebSite {
         }
     }
 
+    /** Sets the secret key used for signing JWT tokens. */
     setJwtSecret(secret: string) {
         this.JWT_SECRET = secret;
     }
 
+    /**
+     * Attempts to authenticate a user with the provided credentials.
+     * Uses the configured auth handler.
+     */
     async tryAuthUser<T = LoginPassword>(loginInfo: T): Promise<AuthResult> {
         if (this.authHandler) {
             const res = this.authHandler(loginInfo);
@@ -605,6 +717,7 @@ export class CoreWebSite {
         return { isOk: false };
     }
 
+    /** Sets the function responsible for validating user credentials. */
     setAuthHandler<T>(authHandler: UserAuthentificationFunction<T>) {
         this.authHandler = authHandler;
     }
@@ -625,14 +738,17 @@ export class CoreWebSite {
         this.allRouteInfos[verb + " " + route] = routeInfos;
     }
 
+    /** Retrieves the route configuration for a given method and path. */
     getRouteInfos(verb: string, route: string): WebSiteRouteInfos | undefined {
         return this.allRouteInfos[verb + " " + route];
     }
 
+    /** Tries to serve a static file if it exists. */
     tryReturnFile(params: TryReturnFileParams): Promise<Response | undefined> {
         return this.serverInstanceBuilder.tryReturnFile(params);
     }
 
+    /** Adds a Server-Sent Events (SSE) endpoint. */
     addSseEVent(path: string, handler: SseEvent): void {
         this.serverInstanceBuilder.addSseEVent(path, handler);
     }
@@ -696,6 +812,7 @@ export class CoreWebSite {
 
     //region Path handler
 
+    /** Internal helper to register a route handler for a specific HTTP verb. */
     onVerb(verb: HttpMethod, path: string, handler: (req: JopiRequest) => Promise<Response>): WebSiteRouteInfos {
         handler = this.applyMiddlewares(verb, path, handler, false);
 
@@ -708,6 +825,12 @@ export class CoreWebSite {
         return routeInfos;
     }
 
+    /**
+     * Registers a page route (renderable React component).
+     * @param path The URL path for the page.
+     * @param pageKey A unique key for the page.
+     * @param reactComponent The React component to render.
+     */
     onPage(path: string, pageKey: string, reactComponent: React.FC<any>): WebSiteRouteInfos {
         const routeInfos: WebSiteRouteInfos = { route: path, handler: gVoidRouteHandler };
         this.saveRouteInfos("GET", path, routeInfos);
@@ -720,30 +843,37 @@ export class CoreWebSite {
         return routeInfos;
     }
 
+    /** Registers a GET route handler. */
     onGET(path: string, handler: (req: JopiRequest) => Promise<Response>): WebSiteRouteInfos {
         return this.onVerb("GET", path, handler);
     }
 
+    /** Registers a POST route handler. */
     onPOST(path: string, handler: (req: JopiRequest) => Promise<Response>): WebSiteRouteInfos {
         return this.onVerb("POST", path, handler);
     }
 
+    /** Registers a PUT route handler. */
     onPUT(path: string, handler: (req: JopiRequest) => Promise<Response>): WebSiteRouteInfos {
         return this.onVerb("PUT", path, handler);
     }
 
+    /** Registers a DELETE route handler. */
     onDELETE(path: string, handler: (req: JopiRequest) => Promise<Response>): WebSiteRouteInfos {
         return this.onVerb("DELETE", path, handler);
     }
 
+    /** Registers a PATCH route handler. */
     onPATCH(path: string, handler: (req: JopiRequest) => Promise<Response>): WebSiteRouteInfos {
         return this.onVerb("PATCH", path, handler);
     }
 
+    /** Registers a HEAD route handler. */
     onHEAD(path: string, handler: (req: JopiRequest) => Promise<Response>): WebSiteRouteInfos {
         return this.onVerb("HEAD", path, handler);
     }
 
+    /** Registers a OPTIONS route handler. */
     onOPTIONS(path: string, handler: (req: JopiRequest) => Promise<Response>): WebSiteRouteInfos {
         return this.onVerb("OPTIONS", path, handler);
     }
@@ -752,18 +882,22 @@ export class CoreWebSite {
 
     //region Error handler
 
+    /** Sets a custom handler for 404 Not Found errors. */
     on404_NotFound(handler: JopiRouteHandler) {
         this._on404_NotFound = handler;
     }
 
+    /** Sets a custom handler for 500 Internal Server Error. */
     on500_Error(handler: JopiRouteHandler) {
         this._on500_Error = handler;
     }
 
+    /** Sets a custom handler for 401 Unauthorized errors. */
     on401_Unauthorized(handler: JopiRouteHandler) {
         this._on401_Unauthorized = handler;
     }
 
+    /** Returns a 404 error response, potentially using a custom handler. */
     async return404(req: JopiRequest): Promise<Response> {
         const accept = req.req_headers.get("accept");
         if (!accept || !accept.startsWith("text/html")) return new Response("", { status: 404 });
@@ -784,6 +918,7 @@ export class CoreWebSite {
         return new Response("", { status: 404 });
     }
 
+    /** Returns a 500 error response, potentially using a custom handler. */
     async return500(req: JopiRequest, error?: any | string): Promise<Response> {
         const accept = req.req_headers.get("accept");
         if (!accept || !accept.startsWith("text/html")) return new Response("", { status: 500 });
@@ -809,6 +944,7 @@ export class CoreWebSite {
         return new Response("", { status: 500 });
     }
 
+    /** Returns a 401 error response, potentially using a custom handler. */
     async return401(req: JopiRequest, error?: Error | string): Promise<Response> {
         if (this._on401_Unauthorized) {
             let res = this._on401_Unauthorized(req, error);
@@ -940,44 +1076,93 @@ export interface WebSiteRouteInfos {
     afterGetFromCache?: (req: JopiRequest, res: Response) => Promise<Response | undefined | void>;
 }
 
+/**
+ * Wrapper around the standard WebSocket object to provide JopiJS specific functionality.
+ */
 export class JopiWebSocket {
     constructor(private readonly webSite: CoreWebSite, private readonly server: CoreServer, private readonly webSocket: WebSocket) {
     }
 
+    /** Closes the WebSocket connection. */
     close(): void {
         this.webSocket.close();
     }
 
+    /** Registers a listener for incoming messages. */
     onMessage(listener: (msg: string | Buffer) => void): void {
         jk_webSocket.onMessage(this.webSocket, listener);
     }
 
+    /** Sends a message to the client. */
     sendMessage(msg: string | Buffer | Uint8Array | ArrayBuffer) {
         jk_webSocket.sendMessage(this.webSocket, msg);
     }
 }
 
+/**
+ * Factory function to create a new JopiJS website instance.
+ * @param url The public URL of the website.
+ * @param options Configuration options.
+ */
 export function newWebSite(url: string, options?: WebSiteOptions): CoreWebSite {
     return new CoreWebSite(url, options);
 }
 
+/** Function signature for handling a standard HTTP route. */
 export type JopiRouteHandler = (req: JopiRequest) => Promise<Response>;
+
+/** Function signature for handling a WebSocket connection. */
 export type JopiWsRouteHandler = (ws: JopiWebSocket, infos: WebSocketConnectionInfos) => void;
+
+/** Function signature for handling HTTP errors (404, 500, etc.). */
 export type JopiErrorHandler = (req: JopiRequest, error?: Error | string) => Response | Promise<Response>;
+
+/** Supported HTTP methods. */
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'HEAD' | 'OPTIONS';
+
+/** Represents the incoming request body stream. */
 export type RequestBody = ReadableStream<Uint8Array> | null;
+
+/** Represents the body content that can be sent in a response. */
 export type SendingBody = ReadableStream<Uint8Array> | string | FormData | null;
 
+/** Function that can modify a response before it is sent. */
 export type ResponseModifier = (res: Response, req: JopiRequest) => Response | Promise<Response>;
+
+/** Function that can modify text content (e.g. HTML injection). */
 export type TextModifier = (text: string, req: JopiRequest) => string | Promise<string>;
+
+/** Function to validate a cookie value. */
 export type TestCookieValue = (value: string) => boolean | Promise<boolean>;
 
+/** 
+ * Custom storage handler for JWT tokens.
+ * Allows storing tokens in cookies, local storage, or other mechanisms.
+ */
 export type JwtTokenStore = (jwtToken: string, cookieValue: string, req: JopiRequest) => void;
+
+/**
+ * Function (usually a hook) that validates user credentials.
+ */
 export type UserAuthentificationFunction<T = any> = (loginInfo: T) => AuthResult | Promise<AuthResult>;
 
+/**
+ * Middleware function executed before the main route handler.
+ * Can return a Response to intercept the request, or null/void to pass to the next handler.
+ */
 export type JopiMiddleware = (req: JopiRequest) => Response | Promise<Response | null> | null;
+
+/**
+ * Middleware function executed after the main route handler.
+ * Takes the response generated by the handler and can modify or replace it.
+ */
 export type JopiPostMiddleware = (req: JopiRequest, res: Response) => Response | Promise<Response>;
 
+/**
+ * Base class for exceptions that modify the control flow of the server request processing.
+ * These are caught by the server to trigger specific behaviors (redirect, error page, etc.)
+ * rather than being treated as standard runtime errors.
+ */
 export class SBPE_ServerByPassException extends Error {
 }
 
@@ -1004,21 +1189,35 @@ export class SBPE_ErrorPage extends SBPE_ServerByPassException {
     }
 }
 
+/**
+ * Exception thrown to indicate that the current user does not have the required permissions.
+ * Triggers the 401 Unauthorized handler.
+ */
 export class SBPE_NotAuthorizedException extends SBPE_ServerByPassException {
 }
 
+/**
+ * Exception thrown to immediately send a specific response, bypassing the rest of the route logic.
+ */
 export class SBPE_DirectSendThisResponseException extends SBPE_ServerByPassException {
     constructor(public readonly response: Response | JopiRouteHandler) {
         super();
     }
 }
 
+/**
+ * Exception thrown to stop request processing without sending any response.
+ * Useful when the response has already been handled by other means (e.g. raw socket).
+ */
 export class SBPE_MustReturnWithoutResponseException extends SBPE_ServerByPassException {
     constructor() {
         super();
     }
 }
 
+/**
+ * Error thrown when attempting to start a server that is already running.
+ */
 export class ServerAlreadyStartedError extends Error {
     constructor() {
         super("the server is already");
