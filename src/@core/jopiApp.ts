@@ -31,7 +31,7 @@ import {
 import type { PageCache } from "./caches/cache.ts";
 import { getServer, type SseEvent } from "./jopiServer.ts";
 import { initLinker } from "./linker.ts";
-import { addStaticEvent as linker_addStaticEvent } from "jopijs/linker";
+import { addStaticEvent_ui, addStaticEvent_server } from "jopijs/linker";
 import { logServer_startApp } from "./_logs.ts";
 import type { LoggerGroupCallback } from "jopi-toolkit/jk_logs";
 import { setHttpProxyReadPause } from "./dataSources.ts";
@@ -300,10 +300,10 @@ export class JopiWebSiteBuilder {
         });
 
         // Will allow `import eventUserInfosUpdated from "@/events/app.user.infosUpdated"`
-        this.add_staticEvent("app.user.infosUpdated");
-        this.add_staticEvent("app.menu.click");
-        this.add_staticEvent("app.menu.invalided");
-        this.add_staticEvent("app.menu.activeItemChanged");
+        this.add_staticEvent_ui("app.user.infosUpdated");
+        this.add_staticEvent_ui("app.menu.click");
+        this.add_staticEvent_ui("app.menu.invalided");
+        this.add_staticEvent_ui("app.menu.activeItemChanged");
     }
 
     private async initWebSiteInstance(): Promise<void> {
@@ -447,11 +447,18 @@ export class JopiWebSiteBuilder {
     }
 
     /**
-     * Registers a static event name that can be imported by the client.
-     * Useful for type-safe event communication between client and server.
+     * Registers a static event name.
      */
-    add_staticEvent(name: string): JopiWebSiteBuilder {
-        linker_addStaticEvent(name);
+    add_staticEvent_ui(name: string): JopiWebSiteBuilder {
+        addStaticEvent_ui(name);
+        return this;
+    }
+
+    /**
+     * Registers a static server event name.
+     */
+    add_staticEvent_server(name: string): JopiWebSiteBuilder {
+        addStaticEvent_server(name);
         return this;
     }
 

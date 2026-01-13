@@ -1,4 +1,4 @@
-import {type TypeList_Group, type TypeList_GroupItem, TypeList} from "./coreAliasTypes.ts";
+import {type TypeList_Group, TypeList} from "./coreAliasTypes.ts";
 import { CodeGenWriter, FilePart, InstallFileType, type RegistryItem } from "./engine.ts";
 import * as jk_fs from "jopi-toolkit/jk_fs";
 
@@ -6,7 +6,7 @@ import * as jk_fs from "jopi-toolkit/jk_fs";
  * Allows the linker to generate an event entry.
  * Will allow to do `import myEvent from "@/events/myEventName`
  */
-export function addStaticEvent(eventName: string) {
+export function addStaticEvent_ui(eventName: string) {
     if (!gExtraStaticEvents.includes(eventName)) {
         gExtraStaticEvents.push(eventName);
     }
@@ -62,7 +62,8 @@ export default class TypeEvents extends TypeList {
             //       inside installBrowser.js: use the event handler local to the request.
             //
             let jsSources = `\n    registry.events.addProvider("${list.listName}", async () => { const R = await import("@/events/${list.listName}"); return R.list; });`;
-            writer.genAddToInstallFile(InstallFileType.both, FilePart.body, jsSources);
+
+            writer.genAddToInstallFile(InstallFileType.browser, FilePart.body, jsSources);
         }
     }
 

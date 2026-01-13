@@ -12,6 +12,7 @@ import {TypeTranslation} from "./typeTranslation.ts";
 import {TypeLib} from "./typeLib.ts";
 import {TypeUI} from "./typeUI.ts";
 import {TypeStyles} from "./typeStyles.ts";
+import TypeServerEvents from "./typeServerEvents.ts";
 
 // Here it's ASYNC.
 let gServerInstallFileTemplate_TS = `__AI_INSTRUCTIONS
@@ -66,6 +67,7 @@ export function getDefaultLinkerConfig(): LinkerConfig {
             new TypeLib("lib"),
             new TypeUiComposite("uiComposites"),
             new TypeEvents("events"),
+            new TypeServerEvents("server-events"),
             new TypeTable("tables"),
 
             new TypeVariants("variants"),
