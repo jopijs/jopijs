@@ -189,7 +189,7 @@ export class CoreWebSite {
         }
 
         if (this.welcomeUrl) {
-            console.log("Website started:", this.welcomeUrl);
+            console.log("Website started:", getWebSiteConfig().webSiteUrl);
         }
     }
 
