@@ -64,8 +64,17 @@ interface MyCacheEntry extends CacheEntry {
 }
 
 class InMemoryCache implements PageCache {
+    private readonly subCaches: Record<string, InMemorySubCache> = {};
+
     createSubCache(name: string): PageCache {
-        return new InMemorySubCache(this, name);
+        let cache = this.subCaches[name];
+        
+        if (!cache) {
+            cache = new InMemorySubCache(this, name);
+            this.subCaches[name] = cache;
+        }
+
+        return cache;
     }
 
     private readonly cache = keepOnHotReload(HOT_RELOAD_KEY, () => new Map<string, MyCacheEntry>());
@@ -104,8 +113,12 @@ class InMemoryCache implements PageCache {
         return this.key_addToCache("", url.toString(), response, headersToInclude);
     }
 
-    removeFromCache(url: URL): Promise<void> {
-        return this.key_removeFromCache(url.toString());
+    async removeFromCache(url: URL): Promise<void> {
+        await this.key_removeFromCache(url.toString());
+
+        for (let subCache of Object.values(this.subCaches)) {
+            await subCache.removeFromCache(url);
+        }
     }
 
     async getFromCache(req: JopiRequest, url: URL): Promise<Response|undefined> {

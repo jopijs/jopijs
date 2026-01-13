@@ -16,6 +16,7 @@ import type {JopiRequest} from "../jopiRequest.tsx";
 import {ONE_MEGA_OCTET} from "../publicTools.ts";
 
 export class SimpleFileCache implements PageCache {
+    private readonly subCaches: Record<string, SimpleFileCache> = {};
     public readonly rootDir: string;
     
     constructor(rootDir: string) {
@@ -70,7 +71,9 @@ export class SimpleFileCache implements PageCache {
         await jk_fs.unlink(filePath + " gz");
         await jk_fs.unlink(filePath + " info");
 
-        return Promise.resolve();
+        for (let subCache of Object.values(this.subCaches)) {
+            await subCache.removeFromCache(url);
+        }
     }
 
     async getFromCache(req: JopiRequest, url: URL): Promise<Response|undefined> {
@@ -130,8 +133,15 @@ export class SimpleFileCache implements PageCache {
     }
 
     createSubCache(name: string): PageCache {
-        const newDir = path.join(this.rootDir, "_ subCaches", name);
-        return new SimpleFileCache(newDir);
+        let cache = this.subCaches[name];
+
+        if (!cache) {
+            const newDir = path.join(this.rootDir, "_ subCaches", name);
+            cache = new SimpleFileCache(newDir);
+            this.subCaches[name] = cache;
+        }
+
+        return cache;
     }
 
     getCacheEntryIterator() {

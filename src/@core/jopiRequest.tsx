@@ -688,7 +688,7 @@ export class JopiRequest {
             url.pathname = url.pathname.toLowerCase();
         }
 
-        return this.cache.removeFromCache(url || this.req_urlInfos);
+        return this.cache.removeFromCache(url);
     }
 
     /**
