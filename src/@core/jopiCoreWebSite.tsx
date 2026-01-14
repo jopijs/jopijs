@@ -54,6 +54,11 @@ export interface MiddlewareOptions {
      * - "/hello/": matches sub-paths like "/hello/world" (but NOT "/hello")
      */
     fromPath?: string;
+
+    /**
+     * Allows to select routes on which this middleware will apply.
+     */
+    routeSelector?: RouteSelector;
 }
 
 /**
@@ -89,36 +94,38 @@ export interface RouteSelector {
  * Tests if a path matches the route selector.
  */
 export function testRoutePath(path: string, routeSelector: RouteSelector): boolean {
-    // Is the route accepted?
-    if (routeSelector.test && !routeSelector.test(path)) {
+    // 1. Security First: Exclude (Veto)
+    // If explicitly excluded, reject immediately.
+    if (routeSelector.exclude && routeSelector.exclude.includes(path)) {
         return false;
     }
 
-    // Check exclude list
-    if (routeSelector.exclude) {
-        if (routeSelector.exclude.includes(path)) {
-            return false;
-        }
+    // 2. Authorize via Explicit Include
+    if (routeSelector.include && routeSelector.include.includes(path)) {
+        return true;
     }
 
-    // Check include list
-    if (routeSelector.include) {
-        if (routeSelector.include.includes(path)) {
-            return true;
-        }
-    }
-
-    // Check fromPath pattern
+    // 3. Authorize via Path Pattern
     if (routeSelector.fromPath) {
-        if (routeSelector.fromPath.endsWith("/")) {
+        const fp = routeSelector.fromPath;
+
+        if (fp.endsWith("/")) {
             // If ends with /, we match sub-paths
-            if (!path.startsWith(routeSelector.fromPath)) return false;
+            if (path.startsWith(fp)) return true;
         } else {
             // Exact match or sub-path with /
-            if (path !== routeSelector.fromPath && !path.startsWith(routeSelector.fromPath + "/")) return false;
+            if ((path === fp) || path.startsWith(fp + "/")) return true;
         }
     }
 
+    // 4. Authorize via Custom Test
+    // If the test function returns true, we authorize.
+    if (routeSelector.test && routeSelector.test(path)) {
+        return true;
+    }
+
+    // 5. Default Deny
+    // If no rule authorized the route, it is rejected.
     return false;
 }
 
@@ -181,8 +188,8 @@ export class CoreWebSite {
     public readonly mustRemoveTrailingSlashes: boolean;
     public readonly cookieDefaults?: CookieOptions;
 
-    private globalMiddlewares: Record<string, { value: JopiMiddleware, priority: PriorityLevel, fromPath?: string }[]> = {};
-    private globalPostMiddlewares: Record<string, { value: JopiPostMiddleware, priority: PriorityLevel, fromPath?: string }[]> = {};
+    private globalMiddlewares: Record<string, { value: JopiMiddleware, priority: PriorityLevel, routeSelector?: RouteSelector }[]> = {};
+    private globalPostMiddlewares: Record<string, { value: JopiPostMiddleware, priority: PriorityLevel, routeSelector?: RouteSelector }[]> = {};
 
     /**
      * Creates a new instance of CoreWebSite.
@@ -337,7 +344,13 @@ export class CoreWebSite {
 
         let m = method ? method : "*";
         if (!this.globalMiddlewares[m]) this.globalMiddlewares[m] = [];
-        this.globalMiddlewares[m].push({ priority: options.priority || PriorityLevel.default, value: middleware, fromPath: options.fromPath });
+
+        let routeSelector = options.routeSelector;
+        if (!routeSelector && options.fromPath) {
+            routeSelector = { fromPath: options.fromPath };
+        }
+
+        this.globalMiddlewares[m].push({ priority: options.priority || PriorityLevel.default, value: middleware, routeSelector });
     }
 
     /**
@@ -351,7 +364,13 @@ export class CoreWebSite {
 
         let m = method ? method : "*";
         if (!this.globalPostMiddlewares[m]) this.globalPostMiddlewares[m] = [];
-        this.globalPostMiddlewares[m].push({ priority: options.priority || PriorityLevel.default, value: middleware, fromPath: options.fromPath });
+
+        let routeSelector = options.routeSelector;
+        if (!routeSelector && options.fromPath) {
+            routeSelector = { fromPath: options.fromPath };
+        }
+
+        this.globalPostMiddlewares[m].push({ priority: options.priority || PriorityLevel.default, value: middleware, routeSelector });
     }
 
     applyMiddlewares(verb: HttpMethod, route: string, handler: JopiRouteHandler, isPage: boolean): JopiRouteHandler {
@@ -423,12 +442,8 @@ export class CoreWebSite {
 
             if (globalRawMiddleware) {
                 globalRawMiddleware = globalRawMiddleware.filter(m => {
-                    if (m.fromPath) {
-                        if (m.fromPath.endsWith("/")) {
-                            if (!route.startsWith(m.fromPath)) return false;
-                        } else {
-                            if (route !== m.fromPath && !route.startsWith(m.fromPath + "/")) return false;
-                        }
+                    if (m.routeSelector) {
+                        return testRoutePath(route, m.routeSelector);
                     }
 
                     return true;
@@ -437,12 +452,8 @@ export class CoreWebSite {
 
             if (globalRawPostMiddleware) {
                 globalRawPostMiddleware = globalRawPostMiddleware.filter(m => {
-                    if (m.fromPath) {
-                        if (m.fromPath.endsWith("/")) {
-                            if (!route.startsWith(m.fromPath)) return false;
-                        } else {
-                            if (route !== m.fromPath && !route.startsWith(m.fromPath + "/")) return false;
-                        }
+                    if (m.routeSelector) {
+                        return testRoutePath(route, m.routeSelector);
                     }
 
                     return true;
