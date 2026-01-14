@@ -95,7 +95,7 @@ export interface CacheRules {
     /**
      * Define a function which is called when the response is not in the cache.
      */
-    ifNotInCache(req: JopiRequest, isPage: boolean): void;
+    ifNotInCache?(req: JopiRequest, isPage: boolean): void;
 }
 
 /**
