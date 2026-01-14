@@ -56,7 +56,10 @@ export interface MiddlewareOptions {
     fromPath?: string;
 }
 
-export interface CacheRules {
+/**
+ * Allows to select routes.
+ */
+export interface RouteSelector {
     /**
      * Define the path pattern.
      * - "/": matches everything
@@ -64,6 +67,66 @@ export interface CacheRules {
      * - "/hello/": matches sub-paths like "/hello/world" (but NOT "/hello")
      */
     fromPath?: string;
+
+    /**
+     * Define the list of paths to include.
+     */
+    include?: string[];
+
+    /**
+     * Define the list of paths to exclude.
+     */
+    exclude?: string[];
+
+    /**
+     * Allow testing if a path is accepted or not.
+     * @param handler
+     */
+    test?: (routePath: string) => boolean;
+}
+
+/**
+ * Tests if a path matches the route selector.
+ */
+export function testRoutePath(path: string, routeSelector: RouteSelector): boolean {
+    // Is the route accepted?
+    if (routeSelector.test && !routeSelector.test(path)) {
+        return false;
+    }
+
+    // Check exclude list
+    if (routeSelector.exclude) {
+        if (routeSelector.exclude.includes(path)) {
+            return false;
+        }
+    }
+
+    // Check include list
+    if (routeSelector.include) {
+        if (routeSelector.include.includes(path)) {
+            return true;
+        }
+    }
+
+    // Check fromPath pattern
+    if (routeSelector.fromPath) {
+        if (routeSelector.fromPath.endsWith("/")) {
+            // If ends with /, we match sub-paths
+            if (!path.startsWith(routeSelector.fromPath)) return false;
+        } else {
+            // Exact match or sub-path with /
+            if (path !== routeSelector.fromPath && !path.startsWith(routeSelector.fromPath + "/")) return false;
+        }
+    }
+
+    return false;
+}
+
+export interface CacheRules {
+    /**
+     * Allows selecting routes on which this cache rules will apply.
+     */
+    routeSelector: RouteSelector;
 
     /**
      * If true, then disable the cache for the routes.
@@ -616,13 +679,7 @@ export class CoreWebSite {
 
     private applyCacheRules(routeInfos: WebSiteRouteInfos, path: string) {
         for (let rule of this.cacheRules) {
-            if (rule.fromPath) {
-                if (rule.fromPath.endsWith("/")) {
-                    if (!path.startsWith(rule.fromPath)) continue;
-                } else {
-                    if (path !== rule.fromPath && !path.startsWith(rule.fromPath + "/")) continue;
-                }
-            }
+            if (!testRoutePath(path, rule.routeSelector)) continue;
 
             if (!routeInfos.afterGetFromCache) {
                 routeInfos.afterGetFromCache = rule.afterGetFromCache;
