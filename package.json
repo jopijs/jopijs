@@ -31,7 +31,6 @@
   },
   "scripts": {
     "jopiLink": "npx jopi-mono link-add",
-    "bunLink": "bun link",
     "dev:build": "tsc",
     "dev:tsc-watch": "tsc --watch",
     "dev:tsc-check": "tsc --noEmit"
