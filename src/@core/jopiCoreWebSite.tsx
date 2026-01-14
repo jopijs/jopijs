@@ -615,7 +615,6 @@ export class CoreWebSite {
     }
 
     private applyCacheRules(routeInfos: WebSiteRouteInfos, path: string) {
-
         for (let rule of this.cacheRules) {
             if (rule.fromPath) {
                 if (rule.fromPath.endsWith("/")) {
@@ -821,7 +820,6 @@ export class CoreWebSite {
 
         this.serverInstanceBuilder.addRoute(verb, path, routeInfos);
 
-        if (verb === "GET") this.applyCacheRules(routeInfos, path);
         return routeInfos;
     }
 
@@ -839,6 +837,8 @@ export class CoreWebSite {
 
         // Cache is automatically enabled for pages.
         routeInfos.mustEnableAutomaticCache = true;
+
+        this.applyCacheRules(routeInfos, path);
 
         return routeInfos;
     }
