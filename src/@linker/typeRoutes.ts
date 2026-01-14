@@ -12,7 +12,6 @@ import * as jk_app from "jopi-toolkit/jk_app";
 import type { RouteAttributes, RouteBindPageParams, RouteBindVerbParams } from "jopijs/generated";
 import { normalizeNeedRoleConditionName } from "./common.ts";
 import type { HttpMethod } from "jopijs";
-import { isBrowser } from "jopi-toolkit/jk_what";
 import { collector_declareUiComponent } from "./dataCollector.ts";
 
 export default class TypeRoutes extends AliasType {
@@ -24,16 +23,25 @@ export default class TypeRoutes extends AliasType {
     private cwdDir: string = process.cwd();
     private routeCount: number = 1;
 
-    private registry: Record<string, RegistryItem> = {};
+    private registry: Record<string, RouteRegistryItem> = {};
     private routeConfig: Record<string, RouteAttributes> = {};
     private pageData: Record<string, RouteAttributes> = {};
 
+    /**
+     * Entry point for generating code related to routes.
+     * It generates the router file (which maps URLs to React components)
+     * and the server-side route declaration file (which registers routes with the backend).
+     */
     async beginGeneratingCode(writer: CodeGenWriter): Promise<void> {
         await this.genCode_RouterFile(writer);
         await this.genCode_DeclareServerRoutes(writer);
         this.genCode_DeclarePages();
     }
 
+    /**
+     * Declares all pages found in the registry as UI components.
+     * This is useful for collecting data about which components are used in the application.
+     */
     private genCode_DeclarePages() {
         for (let item of Object.values(this.registry)) {
             if (item.verb === "PAGE") {
@@ -42,6 +50,12 @@ export default class TypeRoutes extends AliasType {
         }
     }
 
+    /**
+     * Generates the `declareServerRoutes` file.
+     * This file is responsible for registering all routes (pages and API endpoints)
+     * with the server-side framework (JopiJS core), including their configuration,
+     * roles, and cache settings.
+     */
     private async genCode_DeclareServerRoutes(writer: CodeGenWriter) {
         // region Generate the code calling all the routes.
 
@@ -117,10 +131,12 @@ export default class TypeRoutes extends AliasType {
         const registryValues = Object.values(this.registry);
 
         for (let item of registryValues) {
+            const attributes = this.routeAttributes[item.route];
+
             if (item.verb === "PAGE") {
-                bindPage(writer, item.route, item.filePath, item.attributes);
+                bindPage(writer, item.route, item.filePath, attributes);
             } else {
-                bindVerb(writer, item.verb, item.route, item.filePath, item.attributes);
+                bindVerb(writer, item.verb, item.route, item.filePath, attributes);
             }
         }
 
@@ -397,37 +413,58 @@ export function error401() {
         });
     }
 
+    /**
+     * Processes a directory within the `@routes` alias.
+     * Scans for route definitions, configurations, and page data, merging them into the internal registry.
+     */
     async processDir(p: { moduleDir: string; typeDir: string; genDir: string; }) {
         let dirAttributes = await this.scanAttributes(p.typeDir);
 
         if (dirAttributes.configFile) {
-            this.mergeConfig("/", dirAttributes);
+            this.registerConfigFile("/", dirAttributes);
         }
 
         if (dirAttributes.pageData) {
-            this.mergePageData("/", dirAttributes);
+            this.registerPageData("/", dirAttributes);
         }
 
         await this.scanDir(p.typeDir, "/", dirAttributes);
     }
 
+    /**
+     * Defines the default features available for routes.
+     * Currently, `autoCache` is enabled by default.
+     */
     protected getDefaultFeatures(): Record<string, boolean> | undefined {
         return {
             autoCache: true
         };
     }
 
+    /**
+     * Handles feature configuration files (e.g., `autocache.enable`).
+     * Maps file names to feature keys.
+     */
     protected onFeatureFileFound(feature: string): string | undefined {
         if (feature === "autocache") return "autoCache";
         if (feature === "cache") return "autoCache";
         return undefined;
     }
 
+    /**
+     * Normalizes condition names found in `.cond` files.
+     * Checks against a list of allowed condition types (verbs like GET, POST, or PAGE/ALL).
+     */
     protected normalizeConditionName(condName: string, filePath: string, ctx: any | undefined): string | undefined {
         return normalizeNeedRoleConditionName(condName, filePath, ctx,
             ["PAGE", "GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS", "ALL", "PATH"]);
     }
 
+    /**
+     * Scans a directory for route attributes.
+     * This includes configuration files (`config.ts`), page data providers (`pageData.ts`),
+     * priority settings, roles (`.cond` files), and feature flags (cache).
+     */
     private async scanAttributes(dirPath: string): Promise<RouteAttributes> {
         let dirInfos = await this.dir_extractInfos(dirPath, {
             allowConditions: true,
@@ -450,7 +487,12 @@ export function error401() {
         return res;
     }
 
-    private addToRegistry(item: RegistryItem) {
+    /**
+     * Adds a route item to the internal registry.
+     * Handles conflict resolution based on priority: strictly higher priority replaces the existing item.
+     * No merging of attributes occurs; the higher priority definition takes full precedence.
+     */
+    private addToRegistry(item: RouteRegistryItem) {
         const key = item.route + ' ' + item.verb;
         let current = this.registry[key];
 
@@ -459,15 +501,21 @@ export function error401() {
             return;
         }
 
-        let newPriority = item.attributes.priority || PriorityLevel.default;
-        let currentPriority = current.attributes.priority || PriorityLevel.default;
+        let newPriority = item.priority || PriorityLevel.default;
+        let currentPriority = current.priority || PriorityLevel.default;
 
         if (newPriority > currentPriority) {
             this.registry[key] = item;
         }
     }
 
+    /**
+     * Recursively scans a directory to build the route tree.
+     * Identifies route segments, handles dynamic parameters, and processes files
+     * to register pages and API handlers.
+     */
     private async scanDir(dir: string, route: string, attributes: RouteAttributes) {
+        this.registerRouteAttributes(route, attributes);
         let dirItems = await jk_fs.listDir(dir);
 
         for (let dirItem of dirItems) {
@@ -486,11 +534,11 @@ export function error401() {
                 }
 
                 if (dirAttributes.configFile) {
-                    this.mergeConfig(newRoute, dirAttributes);
+                    this.registerConfigFile(newRoute, dirAttributes);
                 }
 
                 if (dirAttributes.pageData) {
-                    this.mergePageData(newRoute, dirAttributes);
+                    this.registerPageData(newRoute, dirAttributes);
                 }
 
                 await this.scanDir(dirItem.fullPath, newRoute, dirAttributes);
@@ -503,30 +551,32 @@ export function error401() {
 
                     let isAccepted = true;
 
+                    // TOOD: stocker les attributs dans un registre path -> attribute.
+
                     switch (name) {
                         case "page":
-                            this.addToRegistry({ verb: "PAGE", route, filePath: dirItem.fullPath, attributes: attributes });
+                            this.addToRegistry({ verb: "PAGE", route, filePath: dirItem.fullPath, priority: attributes.priority });
                             break;
                         case "onGET":
-                            this.addToRegistry({ verb: "GET", route, filePath: dirItem.fullPath, attributes: attributes });
+                            this.addToRegistry({ verb: "GET", route, filePath: dirItem.fullPath, priority: attributes.priority });
                             break;
                         case "onPOST":
-                            this.addToRegistry({ verb: "POST", route, filePath: dirItem.fullPath, attributes: attributes });
+                            this.addToRegistry({ verb: "POST", route, filePath: dirItem.fullPath, priority: attributes.priority });
                             break;
                         case "onPUT":
-                            this.addToRegistry({ verb: "PUT", route, filePath: dirItem.fullPath, attributes: attributes });
+                            this.addToRegistry({ verb: "PUT", route, filePath: dirItem.fullPath, priority: attributes.priority });
                             break;
                         case "onDELETE":
-                            this.addToRegistry({ verb: "DELETE", route, filePath: dirItem.fullPath, attributes: attributes });
+                            this.addToRegistry({ verb: "DELETE", route, filePath: dirItem.fullPath, priority: attributes.priority });
                             break;
                         case "onHEAD":
-                            this.addToRegistry({ verb: "HEAD", route, filePath: dirItem.fullPath, attributes: attributes });
+                            this.addToRegistry({ verb: "HEAD", route, filePath: dirItem.fullPath, priority: attributes.priority });
                             break;
                         case "onPATCH":
-                            this.addToRegistry({ verb: "PATCH", route, filePath: dirItem.fullPath, attributes: attributes });
+                            this.addToRegistry({ verb: "PATCH", route, filePath: dirItem.fullPath, priority: attributes.priority });
                             break;
                         case "onOPTIONS":
-                            this.addToRegistry({ verb: "OPTIONS", route, filePath: dirItem.fullPath, attributes: attributes });
+                            this.addToRegistry({ verb: "OPTIONS", route, filePath: dirItem.fullPath, priority: attributes.priority });
                             break;
                         default:
                             isAccepted = false;
@@ -541,13 +591,45 @@ export function error401() {
         }
     }
 
-    mergeConfig(newRoute: string, dirAttributes: RouteAttributes) {
+    readonly routeAttributes: Record<string, RouteAttributes> = {};
+
+    registerRouteAttributes(newRoute: string, dirAttributes: RouteAttributes) {
+        let current = this.routeAttributes[newRoute];
+
+        if (!current) {
+            this.routeAttributes[newRoute] = dirAttributes;
+            return;
+        }
+
+        const currentPriority = current.priority || PriorityLevel.default;
+        const newPriority = dirAttributes.priority || PriorityLevel.default;
+
+        // Si priorité actuelle > alors ignore.
+        if (currentPriority > newPriority) return;
+
+        // Nouveau remplace needRoles si défini.
+        if (dirAttributes.needRoles) current.needRoles = dirAttributes.needRoles;
+        if (dirAttributes.disableCache !== undefined) current.disableCache = dirAttributes.disableCache;
+        if (dirAttributes.pageData) current.pageData = dirAttributes.pageData;
+        if (dirAttributes.configFile) current.configFile = dirAttributes.configFile;
+
+        current.priority = newPriority;
+    }
+
+    /**
+     * Merges route configuration into the global config registry.
+     * Adheres to the strict replacement rule: if the new configuration has a higher priority,
+     * it completely replaces the existing one.
+     */
+    registerConfigFile(newRoute: string, dirAttributes: RouteAttributes) {
         let currentItem = this.routeConfig[newRoute];
 
         if (currentItem) {
             const currentPriority = currentItem.priority || PriorityLevel.default;
             const newPriority = dirAttributes.priority || PriorityLevel.default;
 
+            // Strict replacement for config.ts
+            // If the new config has higher priority, it replaces the old one entirely.
             if (newPriority > currentPriority) {
                 this.routeConfig[newRoute] = dirAttributes;
             }
@@ -557,13 +639,19 @@ export function error401() {
         }
     }
 
-    private mergePageData(newRoute: string, dirAttributes: RouteAttributes) {
+    /**
+     * Merges page data configuration into the global registry.
+     * Follows the strict replacement rule: higher priority overrides existing data completely.
+     */
+    private registerPageData(newRoute: string, dirAttributes: RouteAttributes) {
         let currentItem = this.pageData[newRoute];
 
         if (currentItem) {
             const currentPriority = currentItem.priority || PriorityLevel.default;
             const newPriority = dirAttributes.priority || PriorityLevel.default;
 
+            // Strict replacement for pageData.
+            // If the new config has higher priority, it replaces the old one entirely.
             if (newPriority > currentPriority) {
                 this.pageData[newRoute] = dirAttributes;
             }
@@ -574,11 +662,11 @@ export function error401() {
     }
 }
 
-interface RegistryItem {
+interface RouteRegistryItem {
     verb: string;
     route: string;
     filePath: string;
-    attributes: RouteAttributes;
+    priority?: PriorityLevel;
 }
 
 function convertRouteSegment(segment: string): { routePart: string, isCatchAll?: boolean, name?: string } {
