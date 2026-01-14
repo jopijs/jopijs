@@ -24,9 +24,7 @@ export default class TypeRoutes extends AliasType {
     private routeCount: number = 1;
 
     private registry: Record<string, RouteRegistryItem> = {};
-    private routeConfig: Record<string, RouteAttributes> = {};
-    private pageData: Record<string, RouteAttributes> = {};
-
+    
     /**
      * Entry point for generating code related to routes.
      * It generates the router file (which maps URLs to React components)
@@ -143,15 +141,17 @@ export default class TypeRoutes extends AliasType {
         //endregion
         
         //region Declare all the routes config.
+
+        const routeWithConfig = Object.keys(this.routeAttributes).filter(route => this.routeAttributes[route].configFile);
         
-        if (Object.keys(this.routeConfig).length > 0) {
+        if (routeWithConfig.length > 0) {
             this.sourceCode_header_TS += `\nimport {JopiRouteConfig} from "jopijs";`;
             this.sourceCode_header_JS += `\nimport {JopiRouteConfig} from "jopijs";`;
 
             let count = 1;
 
-            for (let route of Object.keys(this.routeConfig)) {
-                let routeAttributes = this.routeConfig[route];
+            for (let route of routeWithConfig) {
+                let routeAttributes = this.routeAttributes[route];
 
                 //region Merge page roles + all roles.
 
@@ -196,14 +196,16 @@ export default class TypeRoutes extends AliasType {
 
         // It's lines of type : setPageDataProvider(...);
 
-        if (Object.keys(this.pageData).length > 0) {
+        const routeWithPageData = Object.keys(this.routeAttributes).filter(route => this.routeAttributes[route].pageData);
+
+        if (routeWithPageData.length > 0) {
             this.sourceCode_header_TS += `\nimport {setPageDataProvider} from "jopijs/generated";`;
             this.sourceCode_header_JS += `\nimport {setPageDataProvider} from "jopijs/generated";`;
 
             let count = 1;
 
-            for (let route of Object.keys(this.pageData)) {
-                let routeAttributes = this.pageData[route];
+            for (let route of routeWithPageData) {
+                let routeAttributes = this.routeAttributes[route];
 
                 //region Merge page roles + all roles.
 
@@ -419,15 +421,6 @@ export function error401() {
      */
     async processDir(p: { moduleDir: string; typeDir: string; genDir: string; }) {
         let dirAttributes = await this.scanAttributes(p.typeDir);
-
-        if (dirAttributes.configFile) {
-            this.registerConfigFile("/", dirAttributes);
-        }
-
-        if (dirAttributes.pageData) {
-            this.registerPageData("/", dirAttributes);
-        }
-
         await this.scanDir(p.typeDir, "/", dirAttributes);
     }
 
@@ -515,7 +508,7 @@ export function error401() {
      * to register pages and API handlers.
      */
     private async scanDir(dir: string, route: string, attributes: RouteAttributes) {
-        this.registerRouteAttributes(route, attributes);
+        this.registerRouteAttributes(dir, route, attributes);
         let dirItems = await jk_fs.listDir(dir);
 
         for (let dirItem of dirItems) {
@@ -531,14 +524,6 @@ export function error401() {
 
                 if (segmentInfos.isCatchAll && segmentInfos.name) {
                     dirAttributes.catchAllSlug = segmentInfos.name;
-                }
-
-                if (dirAttributes.configFile) {
-                    this.registerConfigFile(newRoute, dirAttributes);
-                }
-
-                if (dirAttributes.pageData) {
-                    this.registerPageData(newRoute, dirAttributes);
                 }
 
                 await this.scanDir(dirItem.fullPath, newRoute, dirAttributes);
@@ -593,7 +578,8 @@ export function error401() {
 
     readonly routeAttributes: Record<string, RouteAttributes> = {};
 
-    registerRouteAttributes(newRoute: string, dirAttributes: RouteAttributes) {
+    registerRouteAttributes(dir: string, newRoute: string, dirAttributes: RouteAttributes) {
+        console.log("registerRouteAttributes", dir, newRoute);
         let current = this.routeAttributes[newRoute];
 
         if (!current) {
@@ -604,69 +590,44 @@ export function error401() {
         const currentPriority = current.priority || PriorityLevel.default;
         const newPriority = dirAttributes.priority || PriorityLevel.default;
 
-        if (currentPriority > newPriority) return;
+        if (newPriority > currentPriority) {
+            // > New one replace the old one.
 
-        if (dirAttributes.needRoles && (Object.keys(dirAttributes.needRoles).length > 0)) {
-            current.needRoles = dirAttributes.needRoles;
-        }
+            current.priority = newPriority;
 
-        if (dirAttributes.disableCache !== undefined) {
-            current.disableCache = dirAttributes.disableCache;
-        }
-
-        if (dirAttributes.pageData) {
-            current.pageData = dirAttributes.pageData;
-        }
-
-        if (dirAttributes.configFile) {
-            current.configFile = dirAttributes.configFile;
-        }
-
-        current.priority = newPriority;
-    }
-
-    /**
-     * Merges route configuration into the global config registry.
-     * Adheres to the strict replacement rule: if the new configuration has a higher priority,
-     * it completely replaces the existing one.
-     */
-    registerConfigFile(newRoute: string, dirAttributes: RouteAttributes) {
-        let currentItem = this.routeConfig[newRoute];
-
-        if (currentItem) {
-            const currentPriority = currentItem.priority || PriorityLevel.default;
-            const newPriority = dirAttributes.priority || PriorityLevel.default;
-
-            // Strict replacement for config.ts
-            // If the new config has higher priority, it replaces the old one entirely.
-            if (newPriority > currentPriority) {
-                this.routeConfig[newRoute] = dirAttributes;
+            if (dirAttributes.needRoles && (Object.keys(dirAttributes.needRoles).length > 0)) {
+                current.needRoles = dirAttributes.needRoles;
             }
 
-        } else {
-            this.routeConfig[newRoute] = dirAttributes;
-        }
-    }
-
-    /**
-     * Merges page data configuration into the global registry.
-     * Follows the strict replacement rule: higher priority overrides existing data completely.
-     */
-    private registerPageData(newRoute: string, dirAttributes: RouteAttributes) {
-        let currentItem = this.pageData[newRoute];
-
-        if (currentItem) {
-            const currentPriority = currentItem.priority || PriorityLevel.default;
-            const newPriority = dirAttributes.priority || PriorityLevel.default;
-
-            // Strict replacement for pageData.
-            // If the new config has higher priority, it replaces the old one entirely.
-            if (newPriority > currentPriority) {
-                this.pageData[newRoute] = dirAttributes;
+            if (dirAttributes.disableCache !== undefined) {
+                current.disableCache = dirAttributes.disableCache;
             }
 
+            if (dirAttributes.pageData) {
+                current.pageData = dirAttributes.pageData;
+            }
+
+            if (dirAttributes.configFile) {
+                current.configFile = dirAttributes.configFile;
+            }
         } else {
-            this.pageData[newRoute] = dirAttributes;
+            // The new one complet the old one but don't replace.
+
+            if (!current.needRoles || !Object.keys(current.needRoles).length) {
+                current.needRoles = dirAttributes.needRoles;
+            }
+
+            if (!current.disableCache) {
+                current.disableCache = dirAttributes.disableCache;
+            }
+
+            if (!current.pageData) {
+                current.pageData = dirAttributes.pageData;
+            }
+
+            if (!current.configFile) {
+                current.configFile = dirAttributes.configFile;
+            }
         }
     }
 }
