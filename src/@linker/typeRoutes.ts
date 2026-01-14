@@ -604,14 +604,23 @@ export function error401() {
         const currentPriority = current.priority || PriorityLevel.default;
         const newPriority = dirAttributes.priority || PriorityLevel.default;
 
-        // Si priorité actuelle > alors ignore.
         if (currentPriority > newPriority) return;
 
-        // Nouveau remplace needRoles si défini.
-        if (dirAttributes.needRoles) current.needRoles = dirAttributes.needRoles;
-        if (dirAttributes.disableCache !== undefined) current.disableCache = dirAttributes.disableCache;
-        if (dirAttributes.pageData) current.pageData = dirAttributes.pageData;
-        if (dirAttributes.configFile) current.configFile = dirAttributes.configFile;
+        if (dirAttributes.needRoles && (Object.keys(dirAttributes.needRoles).length > 0)) {
+            current.needRoles = dirAttributes.needRoles;
+        }
+
+        if (dirAttributes.disableCache !== undefined) {
+            current.disableCache = dirAttributes.disableCache;
+        }
+
+        if (dirAttributes.pageData) {
+            current.pageData = dirAttributes.pageData;
+        }
+
+        if (dirAttributes.configFile) {
+            current.configFile = dirAttributes.configFile;
+        }
 
         current.priority = newPriority;
     }
