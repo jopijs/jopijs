@@ -352,7 +352,9 @@ export class JopiWebSiteBuilder {
 
             for (let hook of this.beforeHook) await hook();
 
-            if (getSsgEnvValue()) {
+            if (getSsgEnvValueRaw() !== undefined) {
+                // This disable the cache, and also the automatic compression.
+                // It's needed because of a Node.js (v22) issue with fetch + compression. 
                 this.options.cache = new VoidPageCache();
             }
 
@@ -1438,26 +1440,25 @@ function executeCrawler() {
 //region Config
 
 export function getSsgEnvValue(): string | undefined {
-    if (gSsgEnvValue) return gSsgEnvValue.value;
-    gSsgEnvValue = {};
-
     // Disabled if we are inside the worker process.
     if (process.env.JOPI_WORKER_MODE === "1") return undefined;
+    return getSsgEnvValueRaw();
+}
 
+function getSsgEnvValueRaw(): string | undefined {
     for (let i = 0; i < process.argv.length; i++) {
         const arg = process.argv[i];
 
         if (arg === "--jopi-ssg") {
             const next = process.argv[i + 1];
-            if (next && !next.startsWith("-")) return gSsgEnvValue.value = next;
-            return gSsgEnvValue.value = "1";
+            if (next && !next.startsWith("-")) return next;
+            return "1";
         }
     }
 
-    return gSsgEnvValue.value = process.env.JOPI_SSG || process.env.JOPI_CRAWLER;
+    return process.env.JOPI_SSG || process.env.JOPI_CRAWLER;
 }
-//
-let gSsgEnvValue: any = undefined;
+
 
 /** List of allowed origins for CORS. */
 let gCorsConstraints: string[] = [];

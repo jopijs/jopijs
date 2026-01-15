@@ -401,8 +401,6 @@ export class WebSiteCrawler {
                     let urlToFetch = mappingResult.url;
                                     
                     if (isNodeJS) {
-                        logSsgCrawler.info(`Using nodeFetch for ${urlToFetch}`);
-
                         if (urlToFetch.includes("//localhost")) {
                             urlToFetch = urlToFetch.replace("//localhost", "//127.0.0.1");
                         }
@@ -483,9 +481,7 @@ export class WebSiteCrawler {
                     logSsgCrawler.spam(`Content-Type: ${contentType}`);
                     
                     if (contentType.startsWith("text/html")) {
-                        logSsgCrawler.spam(`DEBUG 1: requesting html`);
                         let html = await res.text();
-                        logSsgCrawler.spam(`DEBUG 2: html received`);
 
                         if (this.options.rewriteHtmlBeforeProcessing) {
                             let res = this.options.rewriteHtmlBeforeProcessing(html, sourceUrl.substring(this.newWebSite_basePath.length), mappingResult.url);
