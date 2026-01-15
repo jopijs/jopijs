@@ -136,7 +136,7 @@ const HTML_TEMPLATE = `<!doctype html>
   </body>
 </html>`;
 
-const REACT_TEMPLATE = `import React from "react";
+const REACT_TEMPLATE__OK = `import React from "react";
 import ReactDOM from "react-dom/client";
 import {PageContext, PageController_ExposePrivate} from "jopijs/ui";
 import C from "__PATH__";
@@ -198,6 +198,98 @@ if (document.readyState === "loading") {
   start();
 }
 `;
+
+const REACT_TEMPLATE_TEST = `import React from "react";
+import ReactDOM from "react-dom/client";
+import {PageContext, PageController_ExposePrivate} from "jopijs/ui";
+import C from "__PATH__";
+import {JopiUiApplication, useParams} from "jopijs/ui";
+
+import installer from "__INSTALL__";
+__EXTRA_IMPORTS__
+
+window["__JOPI_ROUTE__"] = __ROUTE__;
+window["__JOPI_OPTIONS__"] = __OPTIONS__;
+
+installer(new JopiUiApplication(undefined, __PAGE_EXTRA_PARAMS__));
+
+function Render(p) {
+    const [_, setCount] = React.useState(0);
+    p.controller.onRequireRefresh = () => setCount(old => old + 1);
+    
+    // We use useLayoutEffect because it runs synchronously after all DOM mutations
+    // but BEFORE the browser has a chance to paint. This is critical to avoid flickering.
+    React.useLayoutEffect(() => { 
+        if (p.onMounted) p.onMounted();
+    }, []);
+    
+    return <C params={p.params} searchParams={p.searchParams} />;
+}
+
+function start() {
+    const params = useParams();
+    
+    let searchParams;
+    const coreSearchParams = new URL(window.location).searchParams;
+    
+    if (coreSearchParams.toJSON) {
+        searchParams = coreSearchParams.toJSON();
+    }
+    else {
+        searchParams = {};
+        coreSearchParams.forEach((v,k) => searchParams[k] = v);
+    }
+    
+    const controller = new PageController_ExposePrivate();
+
+    // We capture the list of elements CURRENTLY in the body.
+    // These are the static HTML elements we want to remove once React is ready.
+    const staticElements = Array.from(document.body.children);
+    
+    let container = document.getElementById("jopi-app-root");
+    if (!container) {
+        container = document.createElement("div");
+        container.id = "jopi-app-root";
+        container.style.display = "none";
+        document.body.appendChild(container);
+    }
+
+    const onMounted = () => {
+        // Remove only the elements that were present BEFORE we started.
+        // This preserves any new elements added by React (like Portals).
+        staticElements.forEach(el => {
+            if (el.parentNode === document.body && el !== container) {
+                document.body.removeChild(el);
+            }
+        });
+        container.style.display = "";
+    };
+
+    const app = (
+        <React.StrictMode>
+            <PageContext.Provider value={controller}>
+                <Render controller={controller} params={params} searchParams={searchParams} onMounted={onMounted} />
+            </PageContext.Provider>
+        </React.StrictMode>
+    );
+    
+    if (import.meta.hot) {
+        const root = (import.meta.hot.data.root ??= ReactDOM.createRoot(container));
+        root.render(app);
+    } else {
+        ReactDOM.createRoot(container).render(app);
+    }
+}
+__SSE_EVENTS__
+if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", start);
+} else {
+  start();
+}
+`;
+
+//const REACT_TEMPLATE = REACT_TEMPLATE_OK;
+const REACT_TEMPLATE = REACT_TEMPLATE_TEST;
 
 /**
  * Allow knowing the route from the page file path.
