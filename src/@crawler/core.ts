@@ -8,12 +8,14 @@ import {getErrorMessage} from "jopi-toolkit/jk_tools";
 // @ts-ignore no ts definition
 import parseCssUrls from "css-url-parser";
 import {applyDefaults, tick} from "./utils.ts";
-import {logSsgCrawler} from "./_logs.ts";
+import { logSsgCrawler } from "./_logs.ts";
+import { isNodeJS } from "jopi-toolkit/jk_what";
 
 import {
     type CrawlerCache, type CrawlerFetchResponse,
     type OnCrawlingFinishedInfos, ProcessUrlResult, UrlSortTools, type WebSiteCrawlerOptions
 } from "./common.ts";
+import { nodeFetch } from "./nodeFetch.ts";
 
 interface UrlGroup {
     url: string;
@@ -396,34 +398,55 @@ export class WebSiteCrawler {
                 }
                 else {
                     logSsgCrawler.info(`Fetching url ${mappingResult.url}`);
-                    
-                    // noinspection JSUnusedGlobalSymbols
-                    res = await fetch(mappingResult.url, {
-                        // > This option allows avoiding SSL certificate check.
+                    let urlToFetch = mappingResult.url;
+                                    
+                    if (isNodeJS) {
+                        logSsgCrawler.info(`Using nodeFetch for ${urlToFetch}`);
 
-                        // @ts-ignore
-                        rejectUnauthorized: false,
-
-                        requestCert: false,
-
-                        tls: {
-                            rejectUnauthorized: false,
-                            checkServerIdentity: () => { return undefined }
-                        },
-
-                        // Allow avoiding automatic redirections.
-                        // @ts-ignore
-                        redirect: 'manual',
-
-                        headers: {
-                            "referer": requestedByUrl
+                        if (urlToFetch.includes("//localhost")) {
+                            urlToFetch = urlToFetch.replace("//localhost", "//127.0.0.1");
                         }
+                        
+                        res = await nodeFetch(urlToFetch, {
+                            headers: {
+                                "referer": requestedByUrl,
+                                "Accept-Encoding": "identity"
+                            },
+                            
+                            rejectUnauthorized: false
+                        });
+                    } else {
+                        // noinspection JSUnusedGlobalSymbols
+                        res = await fetch(urlToFetch, {
+                            // > This option allows avoiding SSL certificate check.
 
-                        //verbose: true
-                    });
+                            // @ts-ignore
+                            rejectUnauthorized: false,
+
+                            requestCert: false,
+
+                            tls: {
+                                rejectUnauthorized: false,
+                                checkServerIdentity: () => {
+                                    return undefined
+                                }
+                            },
+
+                            // Allow avoiding automatic redirections.
+                            // @ts-ignore
+                            redirect: 'manual',
+
+                            headers: {
+                                "referer": requestedByUrl,
+                                "Accept-Encoding": "identity"
+                            }
+
+                            //verbose: true
+                        }) as any;
+                    }
                 }
 
-                logSsgCrawler.info(`Status ${res.status} for url ${mappingResult.url}`);
+                logSsgCrawler.spam(`Status ${res.status} for url ${mappingResult.url}`);
 
                 if (res.status !== 200) {
                     if (res.status >= 300 && res.status < 400) {
@@ -457,8 +480,12 @@ export class WebSiteCrawler {
                 const contentType = res.headers.get("content-type");
 
                 if (contentType) {
+                    logSsgCrawler.spam(`Content-Type: ${contentType}`);
+                    
                     if (contentType.startsWith("text/html")) {
+                        logSsgCrawler.spam(`DEBUG 1: requesting html`);
                         let html = await res.text();
+                        logSsgCrawler.spam(`DEBUG 2: html received`);
 
                         if (this.options.rewriteHtmlBeforeProcessing) {
                             let res = this.options.rewriteHtmlBeforeProcessing(html, sourceUrl.substring(this.newWebSite_basePath.length), mappingResult.url);
@@ -488,6 +515,8 @@ export class WebSiteCrawler {
 
                         res = new Response(content, {status: 200, headers: res.headers});
                     }
+                } else {
+                    logSsgCrawler.spam(`No Content-Type found`);
                 }
 
                 if (this.cache) {

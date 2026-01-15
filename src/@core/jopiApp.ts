@@ -29,7 +29,7 @@ import {
     type CookieOptions
 } from "./jopiCoreWebSite.tsx";
 
-import type { PageCache } from "./caches/cache.ts";
+import { type PageCache, VoidPageCache } from "./caches/cache.ts";
 import { getServer, type SseEvent } from "./jopiServer.ts";
 import { initLinker } from "./linker.ts";
 import { addStaticEvent_ui, addStaticEvent_server } from "jopijs/linker";
@@ -351,6 +351,10 @@ export class JopiWebSiteBuilder {
             await initLinker(this, onWebSiteCreate);
 
             for (let hook of this.beforeHook) await hook();
+
+            if (getSsgEnvValue()) {
+                this.options.cache = new VoidPageCache();
+            }
 
             this.webSite = new CoreWebSite(this.origin, this.options);
 
@@ -1422,7 +1426,7 @@ function executeCrawler() {
             },
         
             // Allows waiting the website to be initialized.
-            2000
+            4000
         );
 
         jk_term.logBgBlue("JopiJS - SSG crawler waiting server init.");
@@ -1434,6 +1438,9 @@ function executeCrawler() {
 //region Config
 
 export function getSsgEnvValue(): string | undefined {
+    if (gSsgEnvValue) return gSsgEnvValue.value;
+    gSsgEnvValue = {};
+
     // Disabled if we are inside the worker process.
     if (process.env.JOPI_WORKER_MODE === "1") return undefined;
 
@@ -1442,13 +1449,15 @@ export function getSsgEnvValue(): string | undefined {
 
         if (arg === "--jopi-ssg") {
             const next = process.argv[i + 1];
-            if (next && !next.startsWith("-")) return next;
-            return "1";
+            if (next && !next.startsWith("-")) return gSsgEnvValue.value = next;
+            return gSsgEnvValue.value = "1";
         }
     }
 
-    return process.env.JOPI_SSG || process.env.JOPI_CRAWLER;
+    return gSsgEnvValue.value = process.env.JOPI_SSG || process.env.JOPI_CRAWLER;
 }
+//
+let gSsgEnvValue: any = undefined;
 
 /** List of allowed origins for CORS. */
 let gCorsConstraints: string[] = [];
