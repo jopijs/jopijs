@@ -1414,16 +1414,18 @@ function executeCrawler() {
         const crawler = new WebSiteCrawler(getWebSiteConfig().webSiteUrl, gCrawlerOptions);
         
         setTimeout(async () => {
-            jk_term.logBgBlue("JopiJS - Starting SSG crawler...");
-            await crawler.start();
+                jk_term.logBgBlue("JopiJS - Starting SSG crawler...");
+                await crawler.start();
 
-            jk_term.logBgGreen("JopiJS - SSG Finished.");
-            process.exit(0);
-        },
+                jk_term.logBgGreen("JopiJS - SSG Finished.");
+                process.exit(0);
+            },
         
             // Allows waiting the website to be initialized.
-            1000
+            2000
         );
+
+        jk_term.logBgBlue("JopiJS - SSG crawler waiting server init.");
     }
 }
 
@@ -1431,7 +1433,10 @@ function executeCrawler() {
 
 //region Config
 
-export function getSsgEnvValue() {
+export function getSsgEnvValue(): string | undefined {
+    // Disabled if we are inside the worker process.
+    if (process.env.JOPI_WORKER_MODE === "1") return undefined;
+
     for (let i = 0; i < process.argv.length; i++) {
         const arg = process.argv[i];
 

@@ -46,7 +46,6 @@ export function initProcessSupervisor(isSsgMode: boolean = false): boolean {
 }
 
 function spawnChild_noWatch() {
-    console.log("[Parent] Spawning child process...");
     const cmd = process.execPath;
     const args = [...process.execArgv, ...process.argv.slice(1)];
     const env = { ...process.env, JOPI_WORKER_MODE: "1" };
@@ -57,12 +56,11 @@ function spawnChild_noWatch() {
     });
 
     childProcess.on('close', (code: number) => {
-        console.log(`[Parent] Child process exited with code ${code}`);
         process.exit(code);
     });
     
     childProcess.on('error', (err) => {
-        console.error(`[Parent] Child process error:`, err);
+        console.error(`[Watcher] Child process error:`, err);
     });
 
     const cleanup = () => {

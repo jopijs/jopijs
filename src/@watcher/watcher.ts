@@ -81,7 +81,7 @@ export function watchProject(): WatcherController {
     const spawnWorker = () => {
         const cmd = process.execPath;
         const args = [...process.execArgv, ...process.argv.slice(1)];
-        const env = { ...process.env, JOPI_WORKER_MODE: 'true' };
+        const env = { ...process.env, JOPI_WORKER_MODE: "1" };
 
         childProcess = spawn(cmd, args, {
             stdio: 'inherit',
