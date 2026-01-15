@@ -66,15 +66,6 @@ export interface WatcherController {
  * @returns A controller object to manage listeners and the watcher.
  */
 export function watchProject(): WatcherController {
-    // Check if we are in "Worker Mode" (spawned by the watcher)
-    // If so, we just return a dummy controller and let the app run.
-    if (process.env.JOPI_WORKER_MODE === 'true') {
-        return {
-            addListener: () => () => {},
-            close: async () => {} 
-        };
-    }
-
     jk_term.logBgBlue("[Watcher] You are running in development mode. Set env var NODE_ENV to 'production' to disable this message.")
 
     // --- SUPERVISOR MODE ---
