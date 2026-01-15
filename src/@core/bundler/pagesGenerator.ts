@@ -136,7 +136,7 @@ const HTML_TEMPLATE = `<!doctype html>
   </body>
 </html>`;
 
-const REACT_TEMPLATE__OK = `import React from "react";
+const REACT_TEMPLATE_BASIC = `import React from "react";
 import ReactDOM from "react-dom/client";
 import {PageContext, PageController_ExposePrivate} from "jopijs/ui";
 import C from "__PATH__";
@@ -199,7 +199,8 @@ if (document.readyState === "loading") {
 }
 `;
 
-const REACT_TEMPLATE_TEST = `import React from "react";
+// Use a transition to reduct flickering.
+const REACT_TEMPLATE_TEST_FLICKERING = `import React from "react";
 import ReactDOM from "react-dom/client";
 import {PageContext, PageController_ExposePrivate} from "jopijs/ui";
 import C from "__PATH__";
@@ -217,9 +218,7 @@ function Render(p) {
     const [_, setCount] = React.useState(0);
     p.controller.onRequireRefresh = () => setCount(old => old + 1);
     
-    // We use useLayoutEffect because it runs synchronously after all DOM mutations
-    // but BEFORE the browser has a chance to paint. This is critical to avoid flickering.
-    React.useLayoutEffect(() => { 
+    React.useLayoutEffect(() => {
         if (p.onMounted) p.onMounted();
     }, []);
     
@@ -228,7 +227,8 @@ function Render(p) {
 
 function start() {
     const params = useParams();
-    
+    const FADE_DURATION = 0.5; // Seconds
+
     let searchParams;
     const coreSearchParams = new URL(window.location).searchParams;
     
@@ -242,27 +242,47 @@ function start() {
     
     const controller = new PageController_ExposePrivate();
 
-    // We capture the list of elements CURRENTLY in the body.
-    // These are the static HTML elements we want to remove once React is ready.
     const staticElements = Array.from(document.body.children);
     
     let container = document.getElementById("jopi-app-root");
+    //
     if (!container) {
         container = document.createElement("div");
         container.id = "jopi-app-root";
-        container.style.display = "none";
+        
+        // Initial state for fade-in: Absolute overlay hidden
+        container.style.opacity = "0";
+        container.style.position = "absolute";
+        container.style.top = "0";
+        container.style.left = "0";
+        container.style.width = "100%";
+        container.style.zIndex = "2147483647";
+        container.style.transition = "opacity " + FADE_DURATION + "s ease-in-out";
+        
         document.body.appendChild(container);
     }
 
     const onMounted = () => {
-        // Remove only the elements that were present BEFORE we started.
-        // This preserves any new elements added by React (like Portals).
-        staticElements.forEach(el => {
-            if (el.parentNode === document.body && el !== container) {
-                document.body.removeChild(el);
-            }
+        requestAnimationFrame(() => {
+             container.style.opacity = "1";
         });
-        container.style.display = "";
+
+        setTimeout(() => {
+            staticElements.forEach(el => {
+                if (el.parentNode === document.body && el !== container) {
+                    document.body.removeChild(el);
+                }
+            });
+            
+            container.style.position = "";
+            container.style.top = "";
+            container.style.left = "";
+            container.style.width = "";
+            container.style.zIndex = "";
+            container.style.transition = "";
+            container.style.opacity = "";
+            
+        }, FADE_DURATION * 1000);
     };
 
     const app = (
@@ -288,8 +308,8 @@ if (document.readyState === "loading") {
 }
 `;
 
-//const REACT_TEMPLATE = REACT_TEMPLATE_OK;
-const REACT_TEMPLATE = REACT_TEMPLATE_TEST;
+const REACT_TEMPLATE = REACT_TEMPLATE_BASIC;
+//const REACT_TEMPLATE = REACT_TEMPLATE_TEST_FLICKERING;
 
 /**
  * Allow knowing the route from the page file path.
