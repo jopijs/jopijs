@@ -579,7 +579,6 @@ export function error401() {
     readonly routeAttributes: Record<string, RouteAttributes> = {};
 
     registerRouteAttributes(dir: string, newRoute: string, dirAttributes: RouteAttributes) {
-        console.log("registerRouteAttributes", dir, newRoute);
         let current = this.routeAttributes[newRoute];
 
         if (!current) {
