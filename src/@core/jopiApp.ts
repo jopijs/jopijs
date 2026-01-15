@@ -6,6 +6,7 @@ import * as jk_app from "jopi-toolkit/jk_app";
 import * as jk_timer from "jopi-toolkit/jk_timer";
 import * as jk_term from "jopi-toolkit/jk_term";
 import * as jk_events from "jopi-toolkit/jk_events";
+import {WebSiteCrawler, type WebSiteCrawlerOptions} from "jopijs/crawler";
 
 import { type FetchOptions, type ServerDownResult, ServerFetch, type ServerFetchOptions } from "./serverFetch.ts";
 import { getLetsEncryptCertificate, type LetsEncryptParams, type OnTimeoutError } from "./letsEncrypt.ts";
@@ -250,6 +251,7 @@ export class JopiWebSiteBuilder {
 
     protected readonly internals: WebSiteInternal;
     protected _isWebSiteReady: boolean = false;
+    private _isCrawlerConfigured: boolean = false;
 
     protected fileServerOptions: FileServerOptions;
 
@@ -307,6 +309,10 @@ export class JopiWebSiteBuilder {
     }
 
     private async initWebSiteInstance(): Promise<void> {
+        if (!this._isCrawlerConfigured && getSsgEnvValue()) {
+            this.configure_crawler();
+        }
+
         const onWebSiteCreate = (h: (webSite: CoreWebSite) => void | Promise<void>) => {
             this.internals.afterHook.push(h);
         }
@@ -631,6 +637,14 @@ export class JopiWebSiteBuilder {
 
         return this;
     }
+
+    /**
+     * Configuration for the satic-site generator (SSG crawler).
+     */
+    configure_crawler(): WebSite_CrawlerBuilder {
+        this._isCrawlerConfigured = true;
+        return new WebSite_CrawlerBuilder(this, this.internals);
+    }
 }
 
 interface WebSiteInternal {
@@ -801,6 +815,159 @@ class WebSite_MiddlewareBuilder {
     }
 
     END_configure_middlewares(): JopiWebSiteBuilder {
+        return this.webSite;
+    }
+}
+
+/** Configuration builder for the satic-site generator (SSG crawler). */
+class WebSite_CrawlerBuilder {
+    private crawlerOptions: WebSiteCrawlerOptions = {
+        requireRelocatableUrl: true,
+        pauseDuration_ms: 0,
+        outputDir: "static"
+    };
+
+    constructor(private readonly webSite: JopiWebSiteBuilder, private readonly internals: WebSiteInternal) {
+        this.internals.afterHook.push(async (webSite) => {
+            webSite.onWebSiteReady(async () => {
+                const ssgEnv = getSsgEnvValue();
+
+                if (ssgEnv) {
+                    if (ssgEnv !== "1") {
+                        this.crawlerOptions.outputDir = ssgEnv;
+                    }
+                    
+                    const crawler = new WebSiteCrawler(getWebSiteConfig().webSiteUrl, this.crawlerOptions);
+                    
+                   setTimeout(async () => {
+                        jk_term.logBgBlue("JopiJS - Starting SSG crawler...");
+                        await crawler.start();
+
+                        jk_term.logBgGreen("JopiJS - SSG Finished.");
+                        process.exit(0);
+                    }, 2000);
+                }
+            });
+        });
+    }
+
+    /** Sets the directory where the crawler will save the files. */
+    set_outputDir(rootDir: string): this {
+        this.crawlerOptions.outputDir = rootDir;
+        return this;
+    }
+
+    /** Sets the cache engine to use for crawling. */
+    set_cache(cache: WebSiteCrawlerOptions["cache"]): this {
+        this.crawlerOptions.cache = cache;
+        return this;
+    }
+
+    /** Sets the duration of the pause between two calls to the server. */
+    set_pauseDuration(ms: number): this {
+        this.crawlerOptions.pauseDuration_ms = ms;
+        return this;
+    }
+
+    /** Sets the new website URL if it differs from the source. */
+    set_newWebSiteUrl(url: string): this {
+        this.crawlerOptions.newWebSiteUrl = url;
+        return this;
+    }
+
+    /** Sets the URL mapping for the crawler. */
+    set_urlMapping(mapping: WebSiteCrawlerOptions["urlMapping"]): this {
+        this.crawlerOptions.urlMapping = mapping;
+        return this;
+    }
+
+    /** Enables or disables the generation of relocatable URLs (using relative paths). */
+    enable_relocatableUrl(value: boolean = true): this {
+        this.crawlerOptions.requireRelocatableUrl = value;
+        return this;
+    }
+
+    /** Adds a URL that must be specifically scanned. */
+    add_scanUrl(url: string): this {
+        if (!this.crawlerOptions.scanThisUrls) this.crawlerOptions.scanThisUrls = [];
+        this.crawlerOptions.scanThisUrls.push(url);
+        return this;
+    }
+
+    /** Adds a URL prefix that should be rewritten during crawling. */
+    add_rewriteUrl(url: string): this {
+        if (!this.crawlerOptions.rewriteThisUrls) this.crawlerOptions.rewriteThisUrls = [];
+        this.crawlerOptions.rewriteThisUrls.push(url);
+        return this;
+    }
+
+    /** Callback to transform a URL found by the crawler. */
+    on_transformUrl(handler: WebSiteCrawlerOptions["transformUrl"]): this {
+        this.crawlerOptions.transformUrl = handler;
+        return this;
+    }
+
+    /** Callback to rewrite HTML before link extraction. */
+    on_rewriteHtmlBeforeProcessing(handler: WebSiteCrawlerOptions["rewriteHtmlBeforeProcessing"]): this {
+        this.crawlerOptions.rewriteHtmlBeforeProcessing = handler;
+        return this;
+    }
+
+    /** Callback to rewrite HTML after link extraction but before storing. */
+    on_rewriteHtmlBeforeStoring(handler: WebSiteCrawlerOptions["rewriteHtmlBeforeStoring"]): this {
+        this.crawlerOptions.rewriteHtmlBeforeStoring = handler;
+        return this;
+    }
+
+    /** Callback called once a page is entirely downloaded. */
+    on_pageFullyDownloaded(handler: WebSiteCrawlerOptions["onPageFullyDownloaded"]): this {
+        this.crawlerOptions.onPageFullyDownloaded = handler;
+        return this;
+    }
+
+    /** Callback called when a resource (.js, .css, .png, etc.) is downloaded. */
+    on_resourceDownloaded(handler: WebSiteCrawlerOptions["onResourceDownloaded"]): this {
+        this.crawlerOptions.onResourceDownloaded = handler;
+        return this;
+    }
+
+    /** Callback to sort or filter the list of pages to download. */
+    on_sortPagesToDownload(handler: WebSiteCrawlerOptions["sortPagesToDownload"]): this {
+        this.crawlerOptions.sortPagesToDownload = handler;
+        return this;
+    }
+
+    /** Callback to decide if a non-200 response should be retried. */
+    on_invalidResponseCodeFound(handler: WebSiteCrawlerOptions["onInvalidResponseCodeFound"]): this {
+        this.crawlerOptions.onInvalidResponseCodeFound = handler;
+        return this;
+    }
+
+    /** Callback to decide if a URL should be downloaded. */
+    on_canDownload(handler: WebSiteCrawlerOptions["canDownload"]): this {
+        this.crawlerOptions.canDownload = handler;
+        return this;
+    }
+
+    /** Callback called when a URL has been processed (useful for stats). */
+    on_urlProcessed(handler: WebSiteCrawlerOptions["onUrlProcessed"]): this {
+        this.crawlerOptions.onUrlProcessed = handler;
+        return this;
+    }
+
+    /** Callback called when the crawling process is finished. */
+    on_finished(handler: WebSiteCrawlerOptions["onFinished"]): this {
+        this.crawlerOptions.onFinished = handler;
+        return this;
+    }
+
+    /** Replace the default fetch implementation. */
+    do_fetch(handler: WebSiteCrawlerOptions["doFetch"]): this {
+        this.crawlerOptions.doFetch = handler;
+        return this;
+    }
+
+    END_configure_crawler(): JopiWebSiteBuilder {
         return this.webSite;
     }
 }
@@ -1223,6 +1390,20 @@ class JwtTokenAuth_Builder {
 //endregion
 
 //region Config
+
+function getSsgEnvValue() {
+    for (let i = 0; i < process.argv.length; i++) {
+        const arg = process.argv[i];
+
+        if (arg === "--jopi-ssg") {
+            const next = process.argv[i + 1];
+            if (next && !next.startsWith("-")) return next;
+            return "1";
+        }
+    }
+
+    return process.env.JOPI_SSG || process.env.JOPI_CRAWLER;
+}
 
 /** List of allowed origins for CORS. */
 let gCorsConstraints: string[] = [];

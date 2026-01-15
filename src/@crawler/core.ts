@@ -8,6 +8,7 @@ import {getErrorMessage} from "jopi-toolkit/jk_tools";
 // @ts-ignore no ts definition
 import parseCssUrls from "css-url-parser";
 import {applyDefaults, tick} from "./utils.ts";
+import {logSsgCrawler} from "./_logs.ts";
 
 import {
     type CrawlerCache, type CrawlerFetchResponse,
@@ -241,6 +242,7 @@ export class WebSiteCrawler {
      * Also, if it's CSS.
      */
     private async processGroup(group: UrlGroup): Promise<boolean> {
+        logSsgCrawler.spam(`Processing group ${group.url}`);
         this.currentGroup = group;
 
         // Process the group main url.
@@ -248,30 +250,35 @@ export class WebSiteCrawler {
 
         // Process the resource inside the group.
         if (group.stack) {
+            logSsgCrawler.spam(`Processing group stack. ${group.stack.length} entries found`);
+
             let isResource: string[]|undefined;
-            let isNotResource: string[]|undefined;
+            let isPage: string[]|undefined;
 
             group.stack.forEach(url => {
                 if (this.isResource(url)) {
+                    logSsgCrawler.spam(`Adding ${url} to resources`);
                     if (!isResource) isResource = [];
                     isResource.push(url);
                 } else {
-                    if (!isNotResource) isNotResource = [];
-                    isNotResource.push(url);
+                    logSsgCrawler.spam(`Adding ${url} to pages`);
+                    if (!isPage) isPage = [];
+                    isPage.push(url);
                 }
             });
 
             group.stack = undefined;
 
             // Stack the pages coming from the resources.
-            if (isNotResource) {
-                if ((isNotResource.length>1) && this.options.sortPagesToDownload) {
-                    const sortTools = new UrlSortTools(isNotResource);
+            if (isPage) {
+                if ((isPage.length>1) && this.options.sortPagesToDownload) {
+                    const sortTools = new UrlSortTools(isPage);
                     this.options.sortPagesToDownload(sortTools);
-                    isNotResource = sortTools.result();
+                    isPage = sortTools.result();
                 }
 
-                isNotResource.forEach(url => {
+                isPage.forEach(url => {
+                    logSsgCrawler.spam(`Adding new group ${url}`);
                     this.groupStack.push({url});
                 });
             }
@@ -283,8 +290,11 @@ export class WebSiteCrawler {
                 const resources = isResource;
                 isResource = undefined;
 
+                logSsgCrawler.spam(`Processing resources. ${resources.length} entries found`);
+
                 for (let i = 0; i < resources.length; i++) {
                     const resUrl = resources[i];
+                    logSsgCrawler.spam(`Processing resource ${resUrl}`);
                     const resState = await this.processUrl(resUrl);
 
                     if (this.options.onResourceDownloaded) {
@@ -385,6 +395,8 @@ export class WebSiteCrawler {
                     res = await this.options.doFetch(this, mappingResult.url, requestedByUrl);
                 }
                 else {
+                    logSsgCrawler.info(`Fetching url ${mappingResult.url}`);
+                    
                     // noinspection JSUnusedGlobalSymbols
                     res = await fetch(mappingResult.url, {
                         // > This option allows avoiding SSL certificate check.
@@ -410,6 +422,8 @@ export class WebSiteCrawler {
                         //verbose: true
                     });
                 }
+
+                logSsgCrawler.info(`Status ${res.status} for url ${mappingResult.url}`);
 
                 if (res.status !== 200) {
                     if (res.status >= 300 && res.status < 400) {
@@ -477,16 +491,17 @@ export class WebSiteCrawler {
                 }
 
                 if (this.cache) {
-                    let hRes = new Response(res.body, {status: res.status, headers: res.headers});
+                    const buffer = await res.arrayBuffer();
+                    let hRes = new Response(buffer, {status: res.status, headers: res.headers});
                     await this.cache.addToCache(transformedUrl, hRes, requestedByUrl);
                 }
 
                 return sendSignal(ProcessUrlResult.OK);
             }
             catch (e: any) {
-                console.error("Crawler - Error while fetching:", sourceUrl);
-                console.error("|--> Message:", getErrorMessage(e));
-                console.log(e);
+                logSsgCrawler.error(`Crawler - Error while fetching: ${sourceUrl}`);
+                logSsgCrawler.error(`|--> Message: ${getErrorMessage(e)}`);
+                logSsgCrawler.error(e);
 
                 return sendSignal(ProcessUrlResult.ERROR);
             }

@@ -175,6 +175,7 @@ export interface CrawlerFetchResponse {
     headers: Headers;
     body: ReadableStream<Uint8Array> | null;
     text(): Promise<string>;
+    arrayBuffer(): Promise<ArrayBuffer>;
 }
 
 export interface OnCrawlingFinishedInfos {

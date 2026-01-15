@@ -181,7 +181,7 @@ export class CoreWebSite {
     certificate?: SslCertificatePath;
 
     _onRebuildCertificate?: () => void;
-    private readonly _onWebSiteReady?: (() => void)[];
+    private readonly _onWebSiteReady: (() => void)[];
     public readonly data: any = {};
     public readonly loadBalancer = new LoadBalancer();
     public readonly events: EventGroup = jk_events.defaultEventGroup;
@@ -224,10 +224,14 @@ export class CoreWebSite {
         this.mustRemoveTrailingSlashes = options.removeTrailingSlash !== false;
         this.cookieDefaults = options.cookieDefaults;
 
-        this._onWebSiteReady = options.onWebSiteReady;
+        this._onWebSiteReady = options.onWebSiteReady || [];
 
         // Allow hooking the newly created websites.
         jk_events.sendEvent("jopi.webSite.created", this);
+    }
+
+    onWebSiteReady(listener: () => void) {
+        this._onWebSiteReady.push(listener);
     }
 
     /** Returns the public URL of the website. */
