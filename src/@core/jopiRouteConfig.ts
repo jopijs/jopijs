@@ -154,6 +154,19 @@ class RouteConfig_OnPage extends RouteConfig_Core {
     }
 
     /**
+     * Define a function which is called to read the cache.
+     * This allows replacing the default cache reading behavior.
+     * @param handler
+     */
+    cache_readCacheEntry(handler: (req: JopiRequest) => Promise<Response | undefined>): void {
+        let routeInfos = this.webSite.getRouteInfos("GET", this.route);
+        if (!routeInfos) return;
+
+        routeInfos.readCacheEntry = handler;
+    }
+
+    
+    /**
      * Defines a hook called after a response is retrieved from the cache.
      * Allows modifying or replacing the cached response before it is sent to the client.
      * @param handler An async function that can return a new Response.

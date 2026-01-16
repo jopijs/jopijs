@@ -142,6 +142,12 @@ export interface CacheRules {
     disableAutomaticCache?: boolean;
 
     /**
+     * Define a function which is called to read the cache.
+     * This allows replacing the default cache reading behavior.
+     */
+    readCacheEntry?(req: JopiRequest): Promise<Response | undefined>;
+
+    /**
      * Define a function which is called when the response is get from the cache.
      * If a value is returned, then this value is used as the new value,
      * allowing to replace what comes from the cache.
@@ -167,6 +173,29 @@ export interface CacheRules {
      * Define a function which is called when the response is not in the cache.
      */
     ifNotInCache?(req: JopiRequest, isPage: boolean): void;
+}
+
+export interface WebSiteRouteInfos {
+    route: string;
+    handler: (req: JopiRequest) => Promise<Response>;
+
+    requiredRoles?: string[];
+
+    middlewares?: { priority: PriorityLevel, value: JopiMiddleware }[];
+    postMiddlewares?: { priority: PriorityLevel, value: JopiPostMiddleware }[];
+
+    mustEnableAutomaticCache?: boolean;
+
+    /**
+     * Define a function which is called to read the cache.
+     * This allows replacing the default cache reading behavior.
+     */
+    readCacheEntry?(req: JopiRequest): Promise<Response | undefined>;
+
+    afterGetFromCache?: (req: JopiRequest, res: Response) => Promise<Response | undefined | void>;
+    beforeAddToCache?: (req: JopiRequest, res: Response) => Promise<Response | undefined | void>;
+    beforeCheckingCache?: (req: JopiRequest) => Promise<Response | undefined | void>;
+    ifNotInCache?: (req: JopiRequest, isPage: boolean) => void;
 }
 
 /**
@@ -491,6 +520,7 @@ export class CoreWebSite {
                 const afterGetFromCache = routeInfos.afterGetFromCache;
                 const beforeAddToCache = rootReq.routeInfos.beforeAddToCache;
                 const ifNotInCache = rootReq.routeInfos.ifNotInCache;
+                const readCacheEntry = rootReq.routeInfos.readCacheEntry;
 
                 const checkCacheMdw: JopiMiddleware = async function (localReq) {
                     if (beforeCheckingCache) {
@@ -515,7 +545,11 @@ export class CoreWebSite {
                     let res: Response | undefined;
 
                     if (!(localReq as JopiRequestImpl)._cache_ignoreCacheRead) {
-                        res = await localReq.cache_getFromCache();
+                        if (readCacheEntry) {
+                            res = await readCacheEntry(localReq);
+                        } else {
+                            res = await localReq.cache_getFromCache();
+                        }
 
                         if (res) {
                             if (afterGetFromCache) {
