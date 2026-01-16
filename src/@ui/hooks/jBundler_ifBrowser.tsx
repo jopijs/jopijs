@@ -13,6 +13,10 @@ export function useParams(): any {
     if (gPageParams === undefined) {
         const pathname = new URL(window.location.href).pathname;
         const routeInfos = ((window as any)["__JOPI_ROUTE__"]) as { route: string, catchAll?: string };
+        
+        // If no route infos are present (e.g. error page or static page without hydration),
+        // we return an empty object.
+        //
         if (!routeInfos) return gPageParams = {};
 
         const route = routeInfos.route;
@@ -20,6 +24,8 @@ export function useParams(): any {
         const pPathname = pathname.split("/");
         gPageParams = {};
 
+        // Extract parameters from the URL based on the route definition.
+        //
         for (let i = 0; i < pRoute.length; i++) {
             let p = pRoute[i];
             if (p[0] === ":") gPageParams[p.substring(1)] = pPathname[i];
@@ -98,34 +104,66 @@ export function useServerRequest(): ServerRequestInstance {
 
 //region Page Data
 
-export function usePageData(): UsePageDataResponse {
-    if (!gPageDataState) {
-        const rawPageData = (window as any)["JOPI_PAGE_DATA"];
+/**
+ * This hook allows accessing page data and optionally refreshing it with a new seed.
+ *
+ * @param useThisSeed If defined, it forces a refresh of the page data using this seed.
+ *                    This is useful for implementing filters or pagination where the client
+ *                    needs to request data different from the initial page load.
+ */
+export function usePageData(useThisSeed?: any): UsePageDataResponse {
+    // Data cache stored into the HTML himself.
+    const rawPageData = (window as any)["JOPI_PAGE_DATA"];
 
-        if (!rawPageData) {
-            gPageDataState = {
-                isLoading: false,
-                isStaled: false,
-                isError: false,
-                hasData: false
-            };
-        } else {
-            const pageData = rawPageData.d as PageDataProviderData;
+    if (!rawPageData) {
+        if (!gPageDataState) gPageDataState = {
+            hasData: false,
+            isLoading: false,
+            isStaled: true,
+            isError: false
+        };
 
-            gPageDataState = {
-                data: pageData,
-                hasData: pageData !== undefined,
-                isLoading: false,
-                isStaled: true,
-                isError: false
-            };
+        return gPageDataState;
+    }
 
-            // If not url (rawPageData.u) it means there is no getRefreshedData function defined.
+    // The data part.
+    const pageData = rawPageData.d as PageDataProviderData;
+
+    // Create the initial data object, with which we will merge the new data.
+    //
+    if (!gPageDataState) {    
+        gPageDataState = {
+            data: pageData,
+            hasData: pageData !== undefined,
+            isLoading: false,
+            isStaled: true,
+            isError: false
+        };
+    }
+    
+    if (useThisSeed) {
+        // If the seed changed, we must update the page data.
+        // Compare the object instance himself to detect changes.
+        //
+        // Note: Using reference equality means that creating a new object with the same content 
+        // will trigger a refresh (e.g., {...seed}). This gives the developer control over when to refresh.
+        //
+        if (useThisSeed !== gPageDataState.data?.seed) {
+            if (!gPageDataState.data) gPageDataState.data = {};
+            gPageDataState.data.seed = useThisSeed;
+
+            // There is an update API endpoint ?
             //
-            if (pageData && rawPageData.u) {
-                // Note: Using ".then(...)" allow avoiding blocking the current call.
+            // Note: 
+            // - rawPageData: store into the HTML (our static local cache).
+            // - rawPageData.u : the URL to the API endpoint.
+            //
+            if (rawPageData && rawPageData.u) {
+                // Trigger the refresh in the background.
+                // The UI will be updated via the 'jopi.page.dataRefreshed' event.
                 //
-                refreshPageData(rawPageData.u).then(() => {
+                refreshPageData(rawPageData.u, useThisSeed).then(() => {
+                    // Is nore more staled data, since refreshed.
                     gPageDataState!.isStaled = false;
 
                     jk_events.sendEvent("jopi.page.dataRefreshed", {
@@ -136,11 +174,36 @@ export function usePageData(): UsePageDataResponse {
                         isError: gPageDataState!.isError
                     });
                 });
+
+                // -> Will returns the current data, until the new one are ready.
             }
         }
     }
+    else {
+        // If not url (rawPageData.u) it means there is no getRefreshedData function defined.
+        //
+        if (rawPageData.u) {
+            // Note: Using ".then(...)" allow avoiding blocking the current call.
+            //
+            refreshPageData(rawPageData.u, useThisSeed).then(() => {
+                gPageDataState!.isStaled = false;
 
-    const [pageData, setPageData] = React.useState<UsePageDataResponse>({
+                jk_events.sendEvent("jopi.page.dataRefreshed", {
+                    ...gPageDataState!.data,
+
+                    isLoading: false,
+                    isStaled: false,
+                    isError: gPageDataState!.isError
+                });
+            });
+
+            // -> Will returns the current data, until the new one are ready.
+        }
+    }
+
+    // Create the final response, with state informations.
+    //
+    const [newPageData, setPageData] = React.useState<UsePageDataResponse>({
         ...gPageDataState.data,
 
         isLoading: gPageDataState.isLoading,
@@ -152,10 +215,18 @@ export function usePageData(): UsePageDataResponse {
         setPageData(data);
     });
 
-    return pageData;
+    return newPageData;
 }
 
-async function refreshPageData(url: string): Promise<void> {
+/**
+ * Refreshes the page data by sending a request to the server.
+ *
+ * @param url The URL endpoint to fetch data from (typically provided in initial page data).
+ * @param useThisSeed Optional seed to use for the request. If provided, it overrides the current seed.
+ */
+async function refreshPageData(url: string, useThisSeed: any): Promise<void> {
+    // We defined mergeItems helper directly here to avoid polluting the module scope.
+    //
     function mergeItems(itemKey: string, newItems: any[], oldItems: any[]): any[] {
         let res: any[] = [];
 
@@ -177,8 +248,15 @@ async function refreshPageData(url: string): Promise<void> {
         return res;
     }
 
+    // This function will merge the new data with the old one.
+    // Please note that it mutates neither newData nor oldData.
+    //
     function mergeResponse(newData: PageDataProviderData, oldData?: PageDataProviderData): PageDataProviderData {
         if (!newData) return oldData!;
+
+        // Preserve existing values if they are missing in the new response.
+        // This allows the server to send partial updates (e.g. just the list of items).
+        //
 
         if (!newData.seed) {
             newData.seed = oldData!.seed;
@@ -196,6 +274,9 @@ async function refreshPageData(url: string): Promise<void> {
             newData.items = oldData!.items;
         } else {
             if (oldData!.items) {
+                // If we have new items and old items, we try to merge them smartly by ID
+                // to preserve object references where possible or just update fields.
+                //
                 if (!newData.itemKey) {
                     console.log("Page data: no itemKey defined. Cannot merge items.")
                 } else {
@@ -210,6 +291,8 @@ async function refreshPageData(url: string): Promise<void> {
     gPageDataState!.isLoading = true;
     gPageDataState!.isError = false;
 
+    // Fetching the new data.
+    //
     let res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -220,7 +303,11 @@ async function refreshPageData(url: string): Promise<void> {
 
     if (res.ok) {
         let data = (await res.json()) as PageDataProviderData;
-        data = mergeResponse(data, gPageDataState!.data);
+        
+        // We merge the response with the previous data to keep the properties that were not present in the response.
+        //
+        data = mergeResponse(data, useThisSeed!==undefined ? useThisSeed : gPageDataState!.data);
+
 
         gPageDataState!.data = data;
         gPageDataState!.isError = false;

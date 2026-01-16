@@ -54,7 +54,16 @@ export function useStaticEvent(event: jk_events.StaticEvent): ReactStaticEvent {
     return gFakeEvent;
 }
 
-export function usePageData(): UsePageDataResponse {
+/**
+ * This hook allows accessing page data and optionally refreshing it with a new seed.
+ *
+ * @param useThisSeed If defined, it forces a refresh of the page data using this seed.
+ *                    (Note: ignored on server side).
+ */
+export function usePageData(useThisSeed?: any): UsePageDataResponse {
+    // Note: here useThisSeed is ignored, since we are server side
+    // and we aren't not building something dynamic.
+
     const req = useServerRequest();
 
     return {
