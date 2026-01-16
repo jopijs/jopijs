@@ -229,6 +229,7 @@ export class CoreWebSite {
      * @param options Configuration options for the website.
      */
     constructor(url: string, options?: WebSiteOptions) {
+        gWebsite = this;
         if (!options) options = {};
 
         url = url.trim().toLowerCase();
@@ -1086,6 +1087,12 @@ export class CoreWebSite {
     //endregion
 
     //endregion
+}
+//
+let gWebsite: CoreWebSite|undefined;
+
+export function getCoreWebSite(): CoreWebSite {
+    return gWebsite!;
 }
 
 const gVoidRouteHandler = () => Promise.resolve(new Response("void", { status: 200 }));

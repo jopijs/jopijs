@@ -18,5 +18,6 @@ export * from "./browserCacheControl.ts";
 
 export * from "./dataSources.ts";
 export * from "./bundler/config.ts";
+export * from "./cacheObject/def.ts";
 
 export {type CreateBundleParams, type BundlerConfig} from "./bundler/index.ts";

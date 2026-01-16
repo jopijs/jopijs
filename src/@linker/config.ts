@@ -13,6 +13,7 @@ import {TypeLib} from "./typeLib.ts";
 import {TypeUI} from "./typeUI.ts";
 import {TypeStyles} from "./typeStyles.ts";
 import TypeServerEvents from "./typeServerEvents.ts";
+import { TypeDataProvider } from "./typeDataProvider.ts";
 
 // Here it's ASYNC.
 let gServerInstallFileTemplate_TS = `__AI_INSTRUCTIONS
@@ -61,6 +62,7 @@ export function getDefaultLinkerConfig(): LinkerConfig {
             new TypeInDirChunk("schemes"),
             new TypeInDirChunk("hooks"),
             new TypeInDirChunk("res"),
+            new TypeDataProvider("dataProviders"),
             //
             new TypeUI("ui"),
             new TypeStyles("styles"),
