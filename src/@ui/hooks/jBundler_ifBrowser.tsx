@@ -112,16 +112,20 @@ export function useServerRequest(): ServerRequestInstance {
  *                    needs to request data different from the initial page load.
  */
 export function usePageData(useThisSeed?: any): UsePageDataResponse {
+    //region Static checking.
+
     // Data cache stored into the HTML himself.
     const rawPageData = (window as any)["JOPI_PAGE_DATA"];
 
     if (!rawPageData) {
-        if (!gPageDataState) gPageDataState = {
-            hasData: false,
-            isLoading: false,
-            isStaled: true,
-            isError: false
-        };
+        if (!gPageDataState) {
+            gPageDataState = {
+                hasData: false,
+                isLoading: false,
+                isStaled: true,
+                isError: false
+            };
+        }
 
         return gPageDataState;
     }
@@ -131,7 +135,7 @@ export function usePageData(useThisSeed?: any): UsePageDataResponse {
 
     // Create the initial data object, with which we will merge the new data.
     //
-    if (!gPageDataState) {    
+    if (!gPageDataState) {
         gPageDataState = {
             data: pageData,
             hasData: pageData !== undefined,
@@ -140,30 +144,18 @@ export function usePageData(useThisSeed?: any): UsePageDataResponse {
             isError: false
         };
     }
-    
-    if (useThisSeed) {
-        // If the seed changed, we must update the page data.
-        // Compare the object instance himself to detect changes.
-        //
-        // Note: Using reference equality means that creating a new object with the same content 
-        // will trigger a refresh (e.g., {...seed}). This gives the developer control over when to refresh.
-        //
-        if (useThisSeed !== gPageDataState.data?.seed) {
-            if (!gPageDataState.data) gPageDataState.data = {};
-            gPageDataState.data.seed = useThisSeed;
 
-            // There is an update API endpoint ?
-            //
-            // Note: 
-            // - rawPageData: store into the HTML (our static local cache).
-            // - rawPageData.u : the URL to the API endpoint.
-            //
+    //endregion
+
+    useEffect(() => {
+        const performRefresh = () => {
             if (rawPageData && rawPageData.u) {
-                // Trigger the refresh in the background.
-                // The UI will be updated via the 'jopi.page.dataRefreshed' event.
+                // Prevent duplicate requests if we are already loading processing the same intention.
+                if (gPageDataState!.isLoading) return;
+
+                // The "then" avoid blocking the current call.
                 //
                 refreshPageData(rawPageData.u, useThisSeed).then(() => {
-                    // Is nore more staled data, since refreshed.
                     gPageDataState!.isStaled = false;
 
                     jk_events.sendEvent("jopi.page.dataRefreshed", {
@@ -174,32 +166,28 @@ export function usePageData(useThisSeed?: any): UsePageDataResponse {
                         isError: gPageDataState!.isError
                     });
                 });
+            }
+        };
 
-                // -> Will returns the current data, until the new one are ready.
+        if (useThisSeed) {
+            // If the seed changed, we must update the page data.
+            // Compare the object instance himself to detect changes.
+            //
+            if (useThisSeed !== gPageDataState!.data?.seed) {
+                if (!gPageDataState!.data) gPageDataState!.data = {};
+                gPageDataState!.data.seed = useThisSeed;
+
+                performRefresh();
+            }
+        } else {
+            // If no seed provided, we just refresh if an endpoint exists,
+            // effectively acting as a stale-while-revalidate / initial fetch.
+            //
+            if (rawPageData?.u) {
+                performRefresh();
             }
         }
-    }
-    else {
-        // If not url (rawPageData.u) it means there is no getRefreshedData function defined.
-        //
-        if (rawPageData.u) {
-            // Note: Using ".then(...)" allow avoiding blocking the current call.
-            //
-            refreshPageData(rawPageData.u, useThisSeed).then(() => {
-                gPageDataState!.isStaled = false;
-
-                jk_events.sendEvent("jopi.page.dataRefreshed", {
-                    ...gPageDataState!.data,
-
-                    isLoading: false,
-                    isStaled: false,
-                    isError: gPageDataState!.isError
-                });
-            });
-
-            // -> Will returns the current data, until the new one are ready.
-        }
-    }
+    }, [useThisSeed]);
 
     // Create the final response, with state informations.
     //
