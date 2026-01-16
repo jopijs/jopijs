@@ -223,8 +223,9 @@ async function refreshPageData(url: string, useThisSeed: any): Promise<void> {
 
             for (let old of oldItems) {
                 let oldId = old[itemKey];
-
-                if (id === oldId) {
+   
+                // Use loose comparison to handle number vs string ID mismatches
+                if (id == oldId) {
                     item = { ...old, ...item };
                     break;
                 }
