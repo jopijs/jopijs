@@ -3,7 +3,7 @@ import * as jk_fs from "jopi-toolkit/jk_fs";
 import type {JopiRequest} from "../jopiRequest.tsx";
 import fs from "node:fs/promises";
 import {makeIterable} from "../internalTools.ts";
-import type {CacheEntry, PageCache} from "./cache.ts";
+import type {CacheEntry, CacheMeta, PageCache} from "./cache.ts";
 import {SBPE_NotAuthorizedException} from "../jopiCoreWebSite.tsx";
 
 export class WebSiteMirrorCache implements PageCache {
@@ -77,6 +77,17 @@ export class WebSiteMirrorCache implements PageCache {
     getFromCache(req: JopiRequest, url: URL): Promise<Response | undefined> {
         const filePath = this.calcFilePath(url);
         return req.file_tryReturnFile(filePath);
+    }
+
+    async getFromCacheWithMeta(req: JopiRequest, url: URL): Promise<{ response: Response; meta?: CacheMeta } | undefined> {
+        const filePath = this.calcFilePath(url);
+        const res = await req.file_tryReturnFile(filePath);
+        if (!res) return undefined;
+        return {response: res, meta: undefined};
+    }
+
+    getCacheMeta(_url: URL): Promise<CacheMeta | undefined> {
+        return Promise.resolve(undefined);
     }
 
     createSubCache(name: string): PageCache {

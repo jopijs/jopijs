@@ -1,4 +1,4 @@
-import type {CacheEntry} from "./caches/cache.ts";
+import type {CacheEntry, CacheMeta} from "./caches/cache.ts";
 
 export function parseCookies(headers: Headers): { [name: string]: string } {
     const cookies: { [name: string]: string } = {};
@@ -25,7 +25,12 @@ export function readContentLength(headers: Headers): number {
     return parseInt(cl);
 }
 
-const gDefaultHeadersToCache: string[] = [ "content-type", "etag", "last-modified"];
+const gDefaultHeadersToCache: string[] = ["content-type", "etag", "last-modified"];
+
+export function addHeadersToCache(header: string) {
+    header = header.trim().toLowerCase();
+    if (!gDefaultHeadersToCache.includes(header)) gDefaultHeadersToCache.push(header);
+}
 
 export function cacheAddBrowserCacheValues(cacheEntry: CacheEntry, etag: string) {
     if (!cacheEntry.headers) cacheEntry.headers = {};
@@ -54,20 +59,17 @@ export function cacheEntryToResponse(entry: CacheEntry) {
     return new Response("", {status: entry.status, headers: entry.headers});
 }
 
-export function responseToCacheEntry(url: string, response: Response, headersToInclude: string[]|undefined): CacheEntry {
+export function responseToCacheEntry(url: string, response: Response, meta: CacheMeta|undefined): CacheEntry {
     const status = response.status;
-    const entry: CacheEntry = {status, url};
+
+    if (!meta) meta = {};
+    meta.addedDate = new Date().getTime();
+    const entry: CacheEntry = { status, url, meta: meta};
 
     if (status===200) {
         const headers = {};
         entry.headers = headers;
-
-        // "content-type", "etag", "last-modified"
-        if (!headersToInclude) {
-            headersToInclude = gDefaultHeadersToCache;
-        }
-
-        headersToInclude.forEach(header => addHeaderIfExist(headers, header, response.headers));
+        gDefaultHeadersToCache.forEach(header => addHeaderIfExist(headers, header, response.headers));
     }
 
     if ((status>=300)&&(status<400)) {

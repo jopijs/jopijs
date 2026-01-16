@@ -11,7 +11,11 @@ export interface PageCache {
 
     getFromCache(req: JopiRequest, url: URL): Promise<Response | undefined>;
 
-    addToCache(req: JopiRequest, url: URL, response: Response, headersToInclude: string[] | undefined): Promise<Response>;
+    getFromCacheWithMeta(req: JopiRequest, url: URL): Promise<{ response: Response, meta?: CacheMeta } | undefined>;
+    
+    getCacheMeta(url: URL): Promise<CacheMeta | undefined>;
+
+    addToCache(req: JopiRequest, url: URL, response: Response, meta?: CacheMeta): Promise<Response>;
 
     hasInCache(url: URL): Promise<boolean>;
 
@@ -29,7 +33,15 @@ export class VoidPageCache implements PageCache {
         return Promise.resolve(undefined);
     }
 
-    addToCache(_req: JopiRequest, _url: URL, response: Response): Promise<Response> {
+    getFromCacheWithMeta(): Promise<{ response: Response; meta?: CacheMeta } | undefined> {
+        return Promise.resolve(undefined);
+    }
+
+    getCacheMeta(_url: URL): Promise<CacheMeta | undefined> {
+        return Promise.resolve(undefined);
+    }
+
+    addToCache(_req: JopiRequest, _url: URL, response: Response, _meta: CacheMeta): Promise<Response> {
         return Promise.resolve(response);
     }
 
@@ -62,6 +74,11 @@ export class VoidPageCache implements PageCache {
     }
 }
 
+export interface CacheMeta {
+    addedDate?: number;
+    [key: string]: any;
+}
+
 export interface CacheEntry {
     url: string;
     binary?: Uint8Array<ArrayBuffer>;
@@ -69,9 +86,7 @@ export interface CacheEntry {
     isGzipped?: boolean;
 
     headers?: {[key:string]: string};
-
     status?: number;
-
-    _refCount?: number;
-    _refCountSinceGC?: number;
+    
+    meta: CacheMeta;
 }

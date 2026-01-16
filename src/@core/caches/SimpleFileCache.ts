@@ -2,7 +2,7 @@ import {gzipFile} from "../gzip.ts";
 import path from "node:path";
 import fs from "node:fs/promises";
 import fss from "node:fs";
-import type {CacheEntry, PageCache} from "./cache.ts";
+import type {CacheEntry, CacheMeta, PageCache} from "./cache.ts";
 import {
     cacheAddBrowserCacheValues,
     cacheEntryToResponse,
@@ -39,7 +39,7 @@ export class SimpleFileCache implements PageCache {
 
     private gzipMaxSize = 20 * ONE_MEGA_OCTET;
 
-    async addToCache(req: JopiRequest, url: URL, response: Response, headersToInclude: string[]|undefined): Promise<Response> {
+    async addToCache(req: JopiRequest, url: URL, response: Response, meta?: CacheMeta): Promise<Response> {
         if ((response.status!==200) || (!response.body)) {
             return response;
         }
@@ -51,7 +51,7 @@ export class SimpleFileCache implements PageCache {
         const byteLength = fileState.size;
         const canCompress = byteLength < this.gzipMaxSize;
 
-        await this.saveNewCacheEntry(url, response, headersToInclude, canCompress, filePath);
+        await this.saveNewCacheEntry(url, response, meta, canCompress, filePath);
 
         if (canCompress) {
             // Compress the file and remove the uncompressed one.
@@ -99,6 +99,29 @@ export class SimpleFileCache implements PageCache {
         return cacheEntryToResponse(cacheEntry);
     }
 
+    async getFromCacheWithMeta(req: JopiRequest, url: URL): Promise<{ response: Response; meta?: CacheMeta } | undefined> {
+        const cacheEntry = await this.getCacheEntry(url);
+        if (!cacheEntry) return undefined;
+
+        if (cacheEntry.status===200) {
+            let toReturn = req.file_validateCacheHeadersWith(cacheEntry.headers);
+            if (toReturn) return {response: toReturn, meta: cacheEntry.meta};
+
+            let filePath = this.calcFilePath(url);
+            if (cacheEntry.isGzipped) filePath += " gz";
+
+            const fileBytes = await jk_fs.readFileToBytes(filePath);
+            cacheEntry.binary = new Uint8Array(fileBytes.buffer as ArrayBuffer);
+            cacheEntry.binarySize = fileBytes.length;
+        }
+
+        return {response: cacheEntryToResponse(cacheEntry), meta: cacheEntry.meta};
+    }
+
+    async getCacheMeta(url: URL): Promise<CacheMeta | undefined> {
+        return (await this.getCacheEntry(url))?.meta;
+    }
+
     async hasInCache(url: URL, requireUncompressedVersion?: boolean|undefined): Promise<boolean> {
         const cacheEntry = await this.getCacheEntry(url);
         if (!cacheEntry) return false;
@@ -120,8 +143,8 @@ export class SimpleFileCache implements PageCache {
         }
     }
 
-    private async saveNewCacheEntry(url: URL, response: Response, headersToInclude: string[]|undefined, isGzipped: boolean, filePath: string) {
-        const cacheEntry = responseToCacheEntry(url.href, response, headersToInclude);
+    private async saveNewCacheEntry(url: URL, response: Response, meta: CacheMeta|undefined, isGzipped: boolean, filePath: string) {
+        const cacheEntry = responseToCacheEntry(url.href, response, meta);
         cacheEntry.isGzipped = isGzipped;
 
         const etag = (await jk_fs.calcFileHash(filePath))!;

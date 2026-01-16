@@ -2,7 +2,7 @@ import * as jk_app from "jopi-toolkit/jk_app";
 import * as jk_crypto from "jopi-toolkit/jk_crypto";
 import * as jk_compress from "jopi-toolkit/jk_compress";
 
-import type {CacheEntry, PageCache} from "./cache.ts";
+import type {CacheEntry, CacheMeta, PageCache} from "./cache.ts";
 import {octetToMo, ONE_KILO_OCTET, ONE_MEGA_OCTET} from "../publicTools.ts";
 import {
     cacheAddBrowserCacheValues,
@@ -61,6 +61,9 @@ interface MyCacheEntry extends CacheEntry {
 
     gzipBinary?: Uint8Array<ArrayBuffer>;
     gzipBinarySize?: number;
+
+    _refCount?: number;
+    _refCountSinceGC?: number;
 }
 
 class InMemoryCache implements PageCache {
@@ -109,8 +112,8 @@ class InMemoryCache implements PageCache {
         this.maxMemoryUsageDelta = Math.trunc(options.maxMemoryUsageDela_mo * ONE_MEGA_OCTET);
     }
 
-    async addToCache(_req: JopiRequest, url: URL, response: Response, headersToInclude: string[]|undefined): Promise<Response> {
-        return this.key_addToCache("", url.toString(), response, headersToInclude);
+    async addToCache(_req: JopiRequest, url: URL, response: Response, meta?: CacheMeta): Promise<Response> {
+        return this.key_addToCache("", url.toString(), response, meta);
     }
 
     async removeFromCache(url: URL): Promise<void> {
@@ -123,6 +126,14 @@ class InMemoryCache implements PageCache {
 
     async getFromCache(req: JopiRequest, url: URL): Promise<Response|undefined> {
         return this.key_getFromCache(req, ':' + url.href);
+    }
+
+    async getFromCacheWithMeta(req: JopiRequest, url: URL): Promise<{ response: Response; meta?: CacheMeta } | undefined> {
+        return this.key_getFromCacheWithMeta(req, ':' + url.href);
+    }
+
+    getCacheMeta(url: URL): Promise<CacheMeta | undefined> {
+        return this.key_getCacheMeta(':' + url.href);
     }
 
     async hasInCache(url: URL): Promise<boolean> {
@@ -212,12 +223,17 @@ class InMemoryCache implements PageCache {
         return !!cacheEntry;
     }
 
-    async key_addToCache(subCacheName: string, url: string, response: Response, headersToInclude: string[]|undefined) {
+    async key_getCacheMeta(key: string): Promise<CacheMeta | undefined> {
+        const cacheEntry = this.key_getValueFromCache(key);
+        return cacheEntry?.meta;
+    }
+
+    async key_addToCache(subCacheName: string, url: string, response: Response, meta: CacheMeta|undefined) {
         if ((response.status!==200) || (!response.body)) {
             return response;
         }
 
-        const cacheEntry = responseToCacheEntry("", response, headersToInclude) as MyCacheEntry;
+        const cacheEntry = responseToCacheEntry("", response, meta) as MyCacheEntry;
         const key = subCacheName + ':' + url;
 
         const contentLength = readContentLength(response.headers);
@@ -279,6 +295,19 @@ class InMemoryCache implements PageCache {
             if (cacheRes) return cacheRes;
 
             return cacheEntryToResponse(res);
+        }
+
+        return undefined;
+    }
+
+    key_getFromCacheWithMeta(req: JopiRequest, key: string): { response: Response; meta?: CacheMeta } | undefined {
+        const res = this.key_getValueFromCache(key);
+
+        if (res) {
+            let cacheRes = req.file_validateCacheHeadersWith(res.headers)
+            if (cacheRes) return {response: cacheRes, meta: res.meta};
+
+            return {response: cacheEntryToResponse(res), meta: res.meta};
         }
 
         return undefined;
@@ -447,12 +476,16 @@ class InMemorySubCache implements PageCache {
         this.prefix = name + " : ";
     }
 
-    async addToCache(_req: JopiRequest, url: URL, response: Response, headersToInclude: string[]|undefined): Promise<Response> {
-        return this.parent.key_addToCache(this.prefix, url.href, response, headersToInclude);
+    async addToCache(_req: JopiRequest, url: URL, response: Response, meta?: CacheMeta): Promise<Response> {
+        return this.parent.key_addToCache(this.prefix, url.href, response, meta);
     }
 
     async hasInCache(url: URL): Promise<boolean> {
         return this.parent.key_hasInCache(this.prefix + ':' + url.href);
+    }
+
+    async getCacheMeta(url: URL): Promise<CacheMeta | undefined> {
+        return this.parent.key_getCacheMeta(this.prefix + ':' + url.href);
     }
 
     removeFromCache(url: URL): Promise<void> {
@@ -461,6 +494,10 @@ class InMemorySubCache implements PageCache {
 
     async getFromCache(req: JopiRequest, url: URL): Promise<Response|undefined> {
         return this.parent.key_getFromCache(req, this.prefix + ':' + url.href);
+    }
+
+    async getFromCacheWithMeta(req: JopiRequest, url: URL): Promise<{ response: Response; meta?: CacheMeta } | undefined> {
+        return this.parent.key_getFromCacheWithMeta(req, this.prefix + ':' + url.href);
     }
 
     createSubCache(name: string): PageCache {

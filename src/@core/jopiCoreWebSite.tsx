@@ -34,6 +34,7 @@ import { PriorityLevel, sortByPriority, type ValueWithPriority } from "jopi-tool
 import { logCache_notInCache, logServer_request } from "./_logs.ts";
 import type { TryReturnFileParams } from "./browserCacheControl.ts";
 import { installDataSourcesServer, type JopiPageDataProvider } from "./dataSources.ts";
+import { addHeadersToCache } from "./internalTools.ts";
 
 export type RouteHandler = (req: JopiRequest) => Promise<Response>;
 
@@ -650,8 +651,7 @@ export class CoreWebSite {
     mainCache: PageCache;
     mustUseAutomaticCache: boolean = true;
     private cacheRules: CacheRules[] = [];
-    private headersToCache: string[] = ["content-type", "etag", "last-modified"];
-
+    
     /** Returns the current cache engine instance. */
     getCache(): PageCache {
         return this.mainCache;
@@ -670,18 +670,12 @@ export class CoreWebSite {
         this.mustUseAutomaticCache = false;
     }
 
-    /** Returns the list of standard headers that are preserved in the cache. */
-    getHeadersToCache(): string[] {
-        return this.headersToCache;
-    }
-
     /**
      * Adds a header name to the list of headers that should be cached along with the response.
      * @param header The name of the HTTP header.
      */
     addHeaderToCache(header: string) {
-        header = header.trim().toLowerCase();
-        if (!this.headersToCache.includes(header)) this.headersToCache.push(header);
+        addHeadersToCache(header);
     }
 
     /**

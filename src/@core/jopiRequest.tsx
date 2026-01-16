@@ -13,7 +13,7 @@ import * as jk_fs from "jopi-toolkit/jk_fs";
 import Page from "./PageComponent.tsx";
 
 import { initCheerio } from "./jQuery.ts";
-import { type CacheEntry, type PageCache } from "./caches/cache.ts";
+import { type CacheEntry, type CacheMeta, type PageCache } from "./caches/cache.ts";
 import {
     type AuthResult,
     type CookieOptions, SBPE_DirectSendThisResponseException,
@@ -695,15 +695,16 @@ export class JopiRequest {
      * Manually adds a response to the cache for the current request.
      * Prevents duplicate additions within the same request lifecycle.
      * @param response The response object to cache.
+     * @params cacheMeta Optional metadata to store with the cache entry. Must be JSON serializable.
      */
-    cache_addToCache(response: Response) {
+    cache_addToCache(response: Response, cacheMeta?: Record<string, any>) {
         // Avoid adding two times in the same request.
         // This is required with automatic add functionnality.
         //
         if (this._isAddedToCache) return;
         this._isAddedToCache = false;
 
-        return this.cache.addToCache(this, this.req_urlInfos, response, this.webSite.getHeadersToCache());
+        return this.cache.addToCache(this, this.req_urlInfos, response, cacheMeta);
     }
 
     /**
