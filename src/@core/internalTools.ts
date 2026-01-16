@@ -1,4 +1,4 @@
-import type {CacheEntry, CacheMeta} from "./caches/cache.ts";
+import type {CacheEntry, CacheMeta} from "./cacheHtml/cache.ts";
 
 export function parseCookies(headers: Headers): { [name: string]: string } {
     const cookies: { [name: string]: string } = {};

@@ -131,7 +131,14 @@ export interface ServerRequestInstance {
 
     react_getPageData(): PageDataProviderData | undefined;
 
-    cache_ignoreCacheWrite(): void;
+    objectCache_get<T>(key: string): Promise<T | undefined>;
+    objectCache_getWithMeta<T>(key: string): Promise<{ value: T; meta: any } | undefined>;
+    objectCache_set<T>(key: string, value: T, meta?: any): Promise<void>;
+    objectCache_delete(key: string): Promise<void>;
+    objectCache_has(key: string): Promise<boolean>;
+
+    htmlCache_ignoreCacheWrite(): void;
+    htmlCache_ignoreDefaultBehaviors(): void;
     get customData(): any;
 
     cookie_reqHasCookie(name: string, value?: string): boolean;

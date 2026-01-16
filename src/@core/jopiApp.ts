@@ -12,8 +12,16 @@ import { type FetchOptions, type ServerDownResult, ServerFetch, type ServerFetch
 import { getLetsEncryptCertificate, type LetsEncryptParams, type OnTimeoutError } from "./letsEncrypt.ts";
 import { type UserInfos_WithLoginPassword, UserStore_WithLoginPassword } from "./userStores.ts";
 import { getBundlerConfig, type PostCssInitializer } from "./bundler/index.ts";
-import { getInMemoryCache, initMemoryCache, type InMemoryCacheOptions } from "./caches/InMemoryCache.ts";
-import { SimpleFileCache } from "./caches/SimpleFileCache.ts";
+import { getInMemoryCache, initMemoryCache, type InMemoryCacheOptions } from "./cacheHtml/InMemoryCache.ts";
+import { SimpleFileCache } from "./cacheHtml/SimpleFileCache.ts";
+import { type PageCache, VoidPageCache } from "./cacheHtml/cache.ts";
+import type { ObjectCache } from "./cacheObject/def.ts";
+import {
+    getInMemoryObjectCache,
+    initMemoryObjectCache,
+    type InMemoryObjectCacheOptions
+} from "./cacheObject/inMemoryObjectCache.ts";
+import { FileObjectCache } from "./cacheObject/fileObjectCache.ts";
 import { JopiRequest } from "./jopiRequest.ts";
 
 import {
@@ -29,7 +37,6 @@ import {
     type CookieOptions
 } from "./jopiCoreWebSite.tsx";
 
-import { type PageCache, VoidPageCache } from "./caches/cache.ts";
 import { getServer, type SseEvent } from "./jopiServer.ts";
 import { initLinker } from "./linker.ts";
 import { addStaticEvent_ui, addStaticEvent_server } from "jopijs/linker";
@@ -579,9 +586,15 @@ export class JopiWebSiteBuilder {
     }
 
     /** Configuration for the page/API cache engine. */
-    configure_cache(): WebSite_CacheBuilder {
-        return new WebSite_CacheBuilder(this, this.internals);
+    configure_htmlCache(): WebSite_HtmlCacheBuilder {
+        return new WebSite_HtmlCacheBuilder(this, this.internals);
     }
+
+    /** Configuration for the object cache engine. */
+    configure_objectCache(): WebSite_ObjectCacheBuilder {
+        return new WebSite_ObjectCacheBuilder(this, this.internals);
+    }
+
 
     /** Configuration for global middlewares (hooks executed on every request). */
     configure_middlewares(): WebSite_MiddlewareBuilder {
@@ -857,22 +870,22 @@ class WebSite_MiddlewareBuilder {
 }
 
 /** Configuration builder for the page and API cache system. */
-class WebSite_CacheBuilder {
+class WebSite_HtmlCacheBuilder {
     private cache?: PageCache;
     private readonly rules: CacheRules[] = [];
 
     constructor(private readonly webSite: JopiWebSiteBuilder, private readonly internals: WebSiteInternal) {
         this.internals.afterHook.push(async webSite => {
-            webSite.setCacheRules(this.rules);
+            webSite.setHtmlCacheRules(this.rules);
 
             if (this.cache) {
-                webSite.setCache(this.cache);
+                webSite.setHtmlCache(this.cache);
             }
         });
     }
 
     /** Use a standard RAM-based cache. */
-    use_inMemoryCache(options?: InMemoryCacheOptions): WebSite_CacheBuilder {
+    use_inMemoryCache(options?: InMemoryCacheOptions): WebSite_HtmlCacheBuilder {
         if (options) initMemoryCache(options);
         this.cache = getInMemoryCache();
 
@@ -880,21 +893,53 @@ class WebSite_CacheBuilder {
     }
 
     /** Use a disk-based cache stored in a specific directory. */
-    use_fileSystemCache(rootDir: string): WebSite_CacheBuilder {
+    use_fileSystemCache(rootDir: string): WebSite_HtmlCacheBuilder {
         this.cache = new SimpleFileCache(rootDir);
         return this;
     }
 
     /** Defines custom rules for what should or shouldn't be cached. */
-    add_cacheRules(rules: CacheRules): WebSite_CacheBuilder {
+    add_cacheRules(rules: CacheRules): WebSite_HtmlCacheBuilder {
         this.rules.push(rules);
         return this;
     }
 
-    END_configure_cache(): JopiWebSiteBuilder {
+    END_configure_htmlCache(): JopiWebSiteBuilder {
         return this.webSite;
     }
 }
+
+/** Configuration builder for the object cache system. */
+class WebSite_ObjectCacheBuilder {
+    private cache?: ObjectCache;
+
+    constructor(private readonly webSite: JopiWebSiteBuilder, private readonly internals: WebSiteInternal) {
+        this.internals.afterHook.push(async webSite => {
+            if (this.cache) {
+                webSite.setObjectCache(this.cache);
+            }
+        });
+    }
+
+    /** Use a standard RAM-based object cache. */
+    use_inMemoryCache(options?: InMemoryObjectCacheOptions): WebSite_ObjectCacheBuilder {
+        if (options) initMemoryObjectCache(options);
+        this.cache = getInMemoryObjectCache();
+
+        return this;
+    }
+
+    /** Use a disk-based object cache stored in a specific directory. */
+    use_fileSystemCache(rootDir: string): WebSite_ObjectCacheBuilder {
+        this.cache = new FileObjectCache(rootDir);
+        return this;
+    }
+
+    END_configure_objectCache(): JopiWebSiteBuilder {
+        return this.webSite;
+    }
+}
+
 
 interface WebSite_ConfigureBehaviors {
     /**

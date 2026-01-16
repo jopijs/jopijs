@@ -13,7 +13,8 @@ import * as jk_fs from "jopi-toolkit/jk_fs";
 import Page from "./PageComponent.tsx";
 
 import { initCheerio } from "./jQuery.ts";
-import { type CacheEntry, type CacheMeta, type PageCache } from "./caches/cache.ts";
+import { type CacheEntry, type PageCache } from "./cacheHtml/cache.ts";
+import type { ObjectCache, ObjectCacheMeta } from "./cacheObject/def.ts";
 import {
     type AuthResult,
     type CookieOptions, SBPE_DirectSendThisResponseException,
@@ -30,7 +31,7 @@ import {getWebSiteConfig} from "jopijs/coreconfig";
 import { isNodeJS } from "jopi-toolkit/jk_what";
 import { createBundleForPage } from "./bundler/index.ts";
 import { type BrowserCacheValidationInfos, type ReqReturnFileParams } from "./browserCacheControl.ts";
-import { WebSiteMirrorCache } from "./caches/webSiteMirrorCache.ts";
+import { WebSiteMirrorCache } from "./cacheHtml/webSiteMirrorCache.ts";
 import type { PageDataProviderData } from "jopijs/ui";
 
 /**
@@ -54,9 +55,9 @@ export class JopiRequest {
     /**
      * The cache used for the current request.
      */
-    private cache: PageCache;
+    private htmlCache: PageCache;
 
-    private readonly mainCache: PageCache;
+    private objectCache: ObjectCache;
 
     private _req_headers: Headers;
     private _req_urlParts?: Record<string, string | string[]>;
@@ -69,13 +70,52 @@ export class JopiRequest {
         public readonly routeInfos: WebSiteRouteInfos,
         req_urlParts: Record<string, string | string[]> | undefined,
     ) {
-        this.cache = webSite.mainCache;
-        this.mainCache = this.cache;
+        this.htmlCache = webSite.htmlCache;
+        this.objectCache = webSite.objectCache;
         this._req_headers = this.coreRequest.headers;
 
         this._req_urlParts = req_urlParts;
         this._req_urlParts_done = false;
     }
+
+    //region Object Cache
+
+    async objectCache_get<T>(key: string): Promise<T | undefined> {
+        return this.objectCache.get(key);
+    }
+
+    async objectCache_getWithMeta<T>(key: string): Promise<{ value: T; meta: ObjectCacheMeta } | undefined> {
+        return this.objectCache.getWithMeta(key);
+    }
+
+    async objectCache_set<T>(key: string, value: T, meta?: ObjectCacheMeta): Promise<void> {
+        return this.objectCache.set(key, value, meta);
+    }
+
+    async objectCache_delete(key: string): Promise<void> {
+        return this.objectCache.delete(key);
+    }
+
+    async objectCache_has(key: string): Promise<boolean> {
+        return this.objectCache.has(key);
+    }
+
+    objectCache_keys(): Iterable<string> {
+        return this.objectCache.keys();
+    }
+    
+    objectCache_useCache(cache: ObjectCache) {
+        this.objectCache = cache;
+    }
+
+    objectCache_getSubCache(name: string): ObjectCache {
+        return this.objectCache.createSubCache(name);
+    }
+
+    objectCache_getSubCacheIterator(): Iterable<string> {
+        return this.objectCache.getSubCacheIterator();
+    }
+    //endregion
 
     //region Custom data
 
@@ -628,7 +668,7 @@ export class JopiRequest {
 
     //endregion
 
-    //region Cache
+    //region Html Cache
 
     protected _isAddedToCache = false;
     protected _cache_ignoreDefaultBehaviors = false;
@@ -639,7 +679,7 @@ export class JopiRequest {
      * Disables the default automatic caching behavior for this request.
      * Useful when you want manual control over when to cache.
      */
-    cache_ignoreDefaultBehaviors() {
+    htmlCache_ignoreDefaultBehaviors() {
         this._cache_ignoreDefaultBehaviors = true;
     }
 
@@ -647,14 +687,14 @@ export class JopiRequest {
      * Forces the request to bypass the cache read step.
      * The request will be processed as if the cache entry does not exist.
      */
-    cache_ignoreCacheRead() {
+    htmlCache_ignoreCacheRead() {
         this._cache_ignoreCacheRead = true;
     }
 
     /**
      * Prevents the response from being written to the cache.
      */
-    cache_ignoreCacheWrite() {
+    htmlCache_ignoreCacheWrite() {
         this._cache_ignoreCacheWrite = true;
     }
 
@@ -663,15 +703,15 @@ export class JopiRequest {
      * Manually retrieves the cache entry for the current URL.
      * @returns The cached response if found, otherwise undefined.
      */
-    async cache_getFromCache(): Promise<Response | undefined> {
-        return await this.cache.getFromCache(this, this.req_urlInfos);
+    async htmlCache_getFromCache(): Promise<Response | undefined> {
+        return await this.htmlCache.getFromCache(this, this.req_urlInfos);
     }
 
     /**
      * Checks if a valid cache entry exists for the current URL.
      */
-    async cache_hasInCache(): Promise<boolean> {
-        return await this.cache.hasInCache(this.req_urlInfos);
+    async htmlCache_hasInCache(): Promise<boolean> {
+        return await this.htmlCache.hasInCache(this.req_urlInfos);
     }
 
     /**
@@ -679,7 +719,7 @@ export class JopiRequest {
      * Normalizes the URL hostname and pathname to lowercase before removal.
      * @param url Optional URL to invalidate. Defaults to the current request URL.
      */
-    cache_removeFromCache(url?: URL): Promise<void> {
+    htmlCache_removeFromCache(url?: URL): Promise<void> {
         // Avoid double.
         //
         if (!url) {
@@ -688,7 +728,7 @@ export class JopiRequest {
             url.pathname = url.pathname.toLowerCase();
         }
 
-        return this.cache.removeFromCache(url);
+        return this.htmlCache.removeFromCache(url);
     }
 
     /**
@@ -697,14 +737,14 @@ export class JopiRequest {
      * @param response The response object to cache.
      * @params cacheMeta Optional metadata to store with the cache entry. Must be JSON serializable.
      */
-    cache_addToCache(response: Response, cacheMeta?: Record<string, any>) {
+    htmlCache_addToCache(response: Response, cacheMeta?: Record<string, any>) {
         // Avoid adding two times in the same request.
         // This is required with automatic add functionnality.
         //
         if (this._isAddedToCache) return;
         this._isAddedToCache = false;
 
-        return this.cache.addToCache(this, this.req_urlInfos, response, cacheMeta);
+        return this.htmlCache.addToCache(this, this.req_urlInfos, response, cacheMeta);
     }
 
     /**
@@ -712,23 +752,23 @@ export class JopiRequest {
      * Useful for implementing user-specific or segmented caches.
      * @param cache The new PageCache instance to use.
      */
-    cache_useCache(cache: PageCache) {
-        this.cache = cache;
+    htmlCache_useCache(cache: PageCache) {
+        this.htmlCache = cache;
     }
 
     /**
      * Creates and returns a sub-cache derived from the current cache.
      * @param name The name/namespace of the sub-cache.
      */
-    cache_getSubCache(name: string): PageCache {
-        return this.cache.createSubCache(name);
+    htmlCache_getSubCache(name: string): PageCache {
+        return this.htmlCache.createSubCache(name);
     }
 
     /**
      * Returns an iterator over all entries in the current cache.
      */
-    cache_getCacheEntryIterator(): Iterable<CacheEntry> {
-        return this.cache.getCacheEntryIterator();
+    htmlCache_getCacheEntryIterator(): Iterable<CacheEntry> {
+        return this.htmlCache.getCacheEntryIterator();
     }
 
     //endregion

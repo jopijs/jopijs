@@ -16,11 +16,11 @@ import {
     PageController,
     type UiUserInfos
 } from "jopijs/ui";
-import type { PageCache } from "./caches/cache.ts";
-import { VoidPageCache } from "./caches/cache.ts";
+import type { PageCache } from "./cacheHtml/cache.ts";
+import { VoidPageCache } from "./cacheHtml/cache.ts";
 import { ONE_DAY } from "./publicTools.ts";
 
-import { getInMemoryCache } from "./caches/InMemoryCache.ts";
+import { getInMemoryCache } from "./cacheHtml/InMemoryCache.ts";
 import { installBundleServer } from "./bundler/index.ts";
 import { createBundle } from "./bundler/index.ts";
 import * as jk_webSocket from "jopi-toolkit/jk_webSocket";
@@ -35,6 +35,8 @@ import { logCache_notInCache, logServer_request } from "./_logs.ts";
 import type { TryReturnFileParams } from "./browserCacheControl.ts";
 import { installDataSourcesServer, type JopiPageDataProvider } from "./dataSources.ts";
 import { addHeadersToCache } from "./internalTools.ts";
+import type { ObjectCache } from "./cacheObject/def.ts";
+import { getInMemoryObjectCache } from "./cacheObject/inMemoryObjectCache.ts";
 
 export type RouteHandler = (req: JopiRequest) => Promise<Response>;
 
@@ -249,7 +251,8 @@ export class CoreWebSite {
         }
 
         this.host = urlInfos.host;
-        this.mainCache = options.cache || getInMemoryCache();
+        this.htmlCache = options.cache || getInMemoryCache();
+        this.objectCache = options.objectCache || getInMemoryObjectCache();
         this.serverInstanceBuilder = getNewServerInstanceBuilder(this);
         this.mustRemoveTrailingSlashes = options.removeTrailingSlash !== false;
         this.cookieDefaults = options.cookieDefaults;
@@ -548,7 +551,7 @@ export class CoreWebSite {
                         if (readCacheEntry) {
                             res = await readCacheEntry(localReq);
                         } else {
-                            res = await localReq.cache_getFromCache();
+                            res = await localReq.htmlCache_getFromCache();
                         }
 
                         if (res) {
@@ -586,9 +589,9 @@ export class CoreWebSite {
                     if (!(localReq as JopiRequestImpl)._cache_ignoreCacheWrite) {
                         if (beforeAddToCache) {
                             let r = await beforeAddToCache(localReq, res);
-                            if (r) return await localReq.cache_addToCache(r)!;
+                            if (r) return await localReq.htmlCache_addToCache(r)!;
                         } else {
-                            return await localReq.cache_addToCache(res)!;
+                            return await localReq.htmlCache_addToCache(res)!;
                         }
                     }
 
@@ -682,25 +685,39 @@ export class CoreWebSite {
 
     //region Cache
 
-    mainCache: PageCache;
+    htmlCache: PageCache;
+    objectCache: ObjectCache;
     mustUseAutomaticCache: boolean = true;
     private cacheRules: CacheRules[] = [];
     
     /** Returns the current cache engine instance. */
-    getCache(): PageCache {
-        return this.mainCache;
+    getHtmlCache(): PageCache {
+        return this.htmlCache;
     }
 
     /**
      * Sets a custom cache engine.
      * @param pageCache The cache implementation to use.
      */
-    setCache(pageCache: PageCache) {
-        this.mainCache = pageCache || gVoidCache;
+    setHtmlCache(pageCache: PageCache) {
+        this.htmlCache = pageCache || gVoidCache;
+    }
+
+    /** Returns the current object cache engine instance. */
+    getObjectCache(): ObjectCache {
+        return this.objectCache;
+    }
+
+    /**
+     * Sets a custom object cache engine.
+     * @param objectCache The cache implementation to use.
+     */
+    setObjectCache(objectCache: ObjectCache) {
+        this.objectCache = objectCache;
     }
 
     /** Disables the entire automatic caching system. */
-    disableAutomaticCache() {
+    disableHtmlCache() {
         this.mustUseAutomaticCache = false;
     }
 
@@ -716,7 +733,7 @@ export class CoreWebSite {
      * Sets the global cache rules.
      * @param rules An array of rules to determine caching behavior.
      */
-    setCacheRules(rules: CacheRules[]) {
+    setHtmlCacheRules(rules: CacheRules[]) {
         this.cacheRules = rules;
     }
 
@@ -1097,6 +1114,11 @@ export class WebSiteOptions {
      * Allow defining our own cache for this website and don't use the common one.
      */
     cache?: PageCache;
+    
+    /**
+     * Allow defining our own object cache for this website.
+     */
+    objectCache?: ObjectCache;
 
     /**
      * A list of listeners which must be called when the website is fully operational.

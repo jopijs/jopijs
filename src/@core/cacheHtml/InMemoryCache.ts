@@ -12,6 +12,8 @@ import {
     responseToCacheEntry
 } from "../internalTools.ts";
 import type {JopiRequest} from "../jopiRequest.tsx";
+import { runGarbageCollector } from "./garbageCollector.js";
+import type { GCEntry } from "./garbageCollector.js";
 
 const clearHotReloadKey = jk_app.clearHotReloadKey;
 const keepOnHotReload = jk_app.keepOnHotReload;
@@ -349,121 +351,59 @@ class InMemoryCache implements PageCache {
     }
 
     private garbageCollector() {
-        const removeEntry = (key: string, cacheEntry: MyCacheEntry) => {
-            keyToRemove.push(key);
-            this.statItemCount--;
-
-            let size = 0;
-            if (cacheEntry.ucpBinarySize) size += cacheEntry.ucpBinarySize;
-            if (cacheEntry.gzipBinarySize) size += cacheEntry.gzipBinarySize;
-
-            if (size) {
-                this.statMemoryUsage -= size;
-
-                console.log("|->  ... gc has removed " + key + " / size:", octetToMo(size), "mb");
-            } else {
-                console.log("|->  ... gc has removed " + key);
-            }
-        }
-
-        const purge = () => {
-            for (const key of keyToRemove) {
-                this.cache.delete(key);
-            }
-
-            keyToRemove.splice(0);
-        }
-
-        function isHtml(cacheEntry: MyCacheEntry) {
-            if (!cacheEntry.headers) return false;
-            if (!cacheEntry.gzipBinary && !cacheEntry.ucpBinary) return false;
-
-            const contentType = cacheEntry.headers["content-type"];
-            return contentType.startsWith("text/html");
-        }
-
-        const remove_NotUsedSince = (avoidHtml: boolean) => {
-            const limit = this.maxItemCount - this.maxItemCountDelta;
-            if (this.statItemCount < limit) return;
-
-            for (const [key, cacheEntry] of this.cache.entries()) {
-                if (!cacheEntry._refCountSinceGC) {
-                    if (avoidHtml && isHtml(cacheEntry)) {
-                        // Avoid removing HTML items since they need calculation.
-                        continue;
-                    }
-
-                    removeEntry(key, cacheEntry);
-                    if (this.statItemCount < limit) return;
-                }
-            }
-
-            purge();
-        }
-
-        const remove_WeighterEntries = (avoidHtml: boolean) => {
-            const exec = (): boolean => {
-                let maxWeight = 0;
-                let maxEntry: CacheEntry | undefined;
-                let maxKey = "";
-
-                for (const [key, cacheEntry] of this.cache.entries()) {
-                    if (avoidHtml && isHtml(cacheEntry)) {
-                        // Avoid removing HTML items since they need calculation.
-                        continue;
-                    }
-
-                    let size = 0;
-                    if (cacheEntry.ucpBinarySize) size += cacheEntry.ucpBinarySize;
-                    if (cacheEntry.gzipBinarySize) size += cacheEntry.gzipBinarySize;
-
-                    if (size > maxWeight) {
-                        maxWeight = size;
-                        maxEntry = cacheEntry;
-                        maxKey = key;
-                    }
-
-                    cacheEntry._refCountSinceGC = 0;
-                }
-
-                if (maxEntry) {
-                    removeEntry(maxKey, maxEntry);
-                    purge();
-
-                    return true;
-                }
-
-                return false;
-            }
-
-            const limit = this.maxMemoryUsage - this.maxMemoryUsageDelta;
-
-            while (this.statMemoryUsage > limit) {
-                if (!exec()) break;
-            }
-        }
-
-        const keyToRemove: string[] = [];
         const itemCountBefore = this.statItemCount;
         const memoryUsageBefore = this.statMemoryUsage;
 
-        console.log("====== InMemory cache is executing garbage collector ======");
+        runGarbageCollector({
+            cache: this.cache as unknown as Map<string, GCEntry>,
+            currentItemCount: this.statItemCount,
+            currentMemoryUsage: this.statMemoryUsage,
+            maxItemCount: this.maxItemCount,
+            maxItemCountDelta: this.maxItemCountDelta!,
+            maxMemoryUsage: this.maxMemoryUsage,
+            maxMemoryUsageDelta: this.maxMemoryUsageDelta!,
+            
+            getEntrySize: (entry) => {
+                let size = 0;
+                // We must cast here because GCEntry doesn't know about specific props
+                // Ideally MyCacheEntry should extend GCEntry
+                const e = entry as unknown as MyCacheEntry;
+                if (e.ucpBinarySize) size += e.ucpBinarySize;
+                if (e.gzipBinarySize) size += e.gzipBinarySize;
+                return size;
+            },
+            
+            isProtected: (entry) => {
+                const e = entry as unknown as MyCacheEntry;
+                if (!e.headers || !e.headers["content-type"]) return false;
+                const contentType = e.headers["content-type"];
+                return contentType.startsWith("text/html");
+            },
 
-        remove_WeighterEntries(true);
-        remove_WeighterEntries(false);
+            onEntryRemoved: (key, entry) => {
+                const e = entry as unknown as MyCacheEntry;
+                this.statItemCount--;
+                
+                let size = 0;
+                if (e.ucpBinarySize) size += e.ucpBinarySize;
+                if (e.gzipBinarySize) size += e.gzipBinarySize;
+                
+                this.statMemoryUsage -= size;
+            },
 
-        remove_NotUsedSince(true);
-        remove_NotUsedSince(false);
-
-        for (const [_, cacheEntry] of this.cache.entries()) {
-            cacheEntry._refCountSinceGC = 0;
-        }
-
-        console.log("===========================================================");
-        console.log("Item count ----> before:", itemCountBefore + ", after:", this.statItemCount, " [limit: " + this.maxItemCount + " items]");
-        console.log("Memory usage --> before:", octetToMo(memoryUsageBefore) + "Mb, after:", octetToMo(this.statMemoryUsage), "mb [limit: " + octetToMo(this.maxMemoryUsage) + "mb]");
-        console.log("===========================================================");
-        console.log();
+            log: (msg) => {
+                // To match original behavior which only logged start/end with specific formatting
+                if (msg === "====== GC Started ======") {
+                    console.log("====== InMemory cache is executing garbage collector ======");
+                } else if (msg === "====== GC Finished ======") {
+                    console.log("===========================================================");
+                    console.log("Item count ----> before:", itemCountBefore + ", after:", this.statItemCount, " [limit: " + this.maxItemCount + " items]");
+                    console.log("Memory usage --> before:", octetToMo(memoryUsageBefore) + "Mb, after:", octetToMo(this.statMemoryUsage), "mb [limit: " + octetToMo(this.maxMemoryUsage) + "mb]");
+                    console.log("===========================================================");
+                    console.log();
+                }
+            }
+        });
     }
 
     //endregion
