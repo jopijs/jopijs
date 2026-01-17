@@ -87,15 +87,20 @@ function initializeRules(watcher: WatcherController) {
     });
 
     watcher.addListener({
-        name: "exclude-public-folder",
+        name: "exclude-static-folders",
         callback: async (event) => {
-            if (event.path.includes("/public/") || event.path.startsWith("public/")) return false;
+            const excludedFolders = ["public", "data", "log", "logs", "temp", "temps"];
+            const normalizedPath = event.path.replace(/\\/g, '/');
+
+            for (const folder of excludedFolders) {
+                // Exclude folders at the root only.
+                if (normalizedPath === folder || normalizedPath.startsWith(`${folder}/`) || normalizedPath.startsWith(`./${folder}/`)) return false;
+            }
             return true;
         }
     });
 
     // UI dev mode: don't restart on update.
-
     // But restart on file created/deleted, which is required for new routes.
     //
     if (gWebSiteConfig.hasJopiDevUiFlag) {
@@ -115,12 +120,13 @@ function initializeRules(watcher: WatcherController) {
     const ssgEnv = getSsgEnvValue();
     //
     if (ssgEnv && ssgEnv.length > 1) {
-        const ignoredDir = ssgEnv.startsWith("./") ? ssgEnv.substring(2) : ssgEnv;
+        const ignoredDir = (ssgEnv.startsWith("./") ? ssgEnv.substring(2) : ssgEnv).replace(/\\/g, '/');
         
         watcher.addListener({
             name: "ignore-ssg-output",
             callback: async (event) => {
-                if (event.path.includes(ignoredDir)) return false;
+                const normalizedPath = event.path.replace(/\\/g, '/');
+                if (normalizedPath.includes(ignoredDir)) return false;
                 return true;
             }
         });
