@@ -86,7 +86,16 @@ function initializeRules(watcher: WatcherController) {
         }
     });
 
+    watcher.addListener({
+        name: "exclude-public-folder",
+        callback: async (event) => {
+            if (event.path.includes("/public/") || event.path.startsWith("public/")) return false;
+            return true;
+        }
+    });
+
     // UI dev mode: don't restart on update.
+
     // But restart on file created/deleted, which is required for new routes.
     //
     if (gWebSiteConfig.hasJopiDevUiFlag) {
