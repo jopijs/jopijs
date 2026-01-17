@@ -20,14 +20,16 @@ export function htmlNodeToText(node: HtmlNode): string {
     const tag = node.tag;
     let text = "<" + tag;
 
+    const isMeta = tag === "meta";
+
     for (let key in node) {
-        if (key==="content") continue;
+        if (!isMeta && key==="content") continue;
         if (key==="tag") continue;
 
         text += " " + key + "=" + JSON.stringify((node as any)[key]);
     }
 
-    if (node.content) {
+    if (!isMeta && node.content) {
         text += ">" + node.content + "</" + tag + ">";
     } else {
         switch (node.tag) {
