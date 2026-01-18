@@ -10,6 +10,26 @@ export function setPageDataProvider(webSite: any, route: string, allowedRoles: s
         throw declareLinkerError(`Page data : Invalid data provider for route ${route}`, filePath);
     }
 
+    // Don't allow calling the data provider if not allowed.
+    //
+    if (allowedRoles && (allowedRoles.length > 0)) {
+        const originalGetDataForCache = provider.getDataForCache;
+        //
+        provider.getDataForCache = async function (params) {
+            params.req.role_assertUserHasOneOfThisRoles(allowedRoles);
+            return originalGetDataForCache.call(this, params);
+        };
+
+        if (provider.getRefreshedData) {
+            const originalGetRefreshedData = provider.getRefreshedData;
+            //
+            provider.getRefreshedData = async function (params) {
+                params.req.role_assertUserHasOneOfThisRoles(allowedRoles);
+                return originalGetRefreshedData.call(this, params);
+            };
+        }
+    }
+
     let routeInfos = webSite.getRouteInfos("GET", route);
 
     if (!routeInfos) {
