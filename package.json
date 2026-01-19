@@ -1,6 +1,6 @@
 {
   "name": "jopijs",
-  "version": "3.1.29",
+  "version": "3.1.30",
   "publishedDate": "1/19/2026",
   "publicPublishedDate": "1/12/2026",
   "license": "MIT",
@@ -72,47 +72,38 @@
   "exports": {
     ".": {
       "types": "./src/@core/index.ts",
-      "bun": "./src/@core/index.ts",
       "default": "./dist/@core/index.js"
     },
     "./ui": {
       "types": "./src/@ui/index.ts",
-      "bun": "./src/@ui/index.ts",
       "default": "./dist/@ui/index.js"
     },
     "./uikit-old": {
       "types": "./src/@uikit/index.ts",
-      "bun": "./src/@uikit/index.ts",
       "default": "./dist/@uikit/index.js"
     },
     "./bundler": {
       "types": "./src/@bundler/index.ts",
-      "bun": "./src/@bundler/index.ts",
       "default": "./dist/@bundler/index.js"
     },
     "./postcss": {
       "types": "./src/@postcss/index.ts",
-      "bun": "./src/@postcss/index.ts",
       "default": "./dist/@postcss/index.js"
     },
     "./crawler": {
       "types": "./src/@crawler/index.ts",
-      "bun": "./src/@crawler/index.ts",
       "default": "./dist/@crawler/index.js"
     },
     "./generated": {
       "types": "./src/@generated/index.ts",
-      "bun": "./src/@generated/index.ts",
       "default": "./dist/@generated/index.js"
     },
     "./coreconfig": {
       "types": "./src/@coreconfig/index.ts",
-      "bun": "./src/@coreconfig/index.ts",
       "default": "./dist/@coreconfig/index.js"
     },
     "./loader": {
       "types": "./src/@loader/index.ts",
-      "bun": "./src/@loader/index.ts",
       "default": "./dist/@loader/index.js"
     },
     "./loader/loader.mjs": "./src/@loader/loader.mjs",
@@ -120,22 +111,18 @@
     "./bun-loader-plugin": "./src/@loader/bunLoaderPlugin.mjs",
     "./loader-tools": {
       "types": "./src/@loader-tools/index.ts",
-      "bun": "./src/@loader-tools/index.ts",
       "default": "./dist/@loader-tools/index.js"
     },
     "./linker": {
       "types": "./src/@linker/index.ts",
-      "bun": "./src/@linker/index.ts",
       "default": "./dist/@linker/index.js"
     },
     "./modules": {
       "types": "./src/@modules/index.ts",
-      "bun": "./src/@modules/index.ts",
       "default": "./dist/@modules/index.js"
     },
     "./watcher": {
       "types": "./src/@watcher/index.ts",
-      "bun": "./src/@watcher/index.ts",
       "default": "./dist/@watcher/index.js"
     },
     "./types": "./src/@loader-types/extensions.d.ts"

@@ -1760,9 +1760,10 @@ export class JopiRequestImpl extends JopiRequest {
             }
 
             const html = ReactServer.renderToStaticMarkup(
-                <Page controller={controller} >
-                    <C params={params} searchParams={jsonSearchParams} />
-                </Page>);
+                React.createElement(Page, {
+                    controller: controller,
+                    children: React.createElement(C, { params: params, searchParams: jsonSearchParams })
+                }));
 
             return new Response(html, { status: 200, headers: { "content-type": "text/html;charset=utf-8" } });
         }
