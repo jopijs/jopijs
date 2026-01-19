@@ -66,7 +66,7 @@ export interface GetRefreshedDataParams {
 
 export function exposeDataSource_PageData(route: string, securityUid: string, dataProvider: JopiPageDataProvider, allowedRoles: string[]|undefined): string {
     toExpose.push({securityUid, onCall: async (req) => {
-        if (allowedRoles) {
+        if (allowedRoles && allowedRoles.length) {
             req.role_assertUserHasOneOfThisRoles(allowedRoles);
         }
         

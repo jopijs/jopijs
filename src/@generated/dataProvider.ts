@@ -14,7 +14,7 @@ interface DataProviderValue {
     value: any;
 }
 
-type ValueProviderFunction = (id?: any) => Promise<DataProviderValue|undefined>;
+type ValueProviderFunction = (id?: any, subCacheName?: string) => Promise<DataProviderValue|undefined>;
 
 export class DataProvider {
     private pendingRequests = new Map<string, Promise<any>>();
@@ -24,6 +24,7 @@ export class DataProvider {
     }
 
     useSubCache(cacheName: string): DataProvider {
+        if (this.subCacheName===cacheName) return this;
         let clone = new DataProvider(this.key, this.valueProvider);
         clone.subCacheName = cacheName;
         return clone;
@@ -55,7 +56,7 @@ export class DataProvider {
                 //       adding cache rules & behaviors into the
                 //       response for futur versions.
                 //
-                let res = await this.valueProvider(id);
+                let res = await this.valueProvider(id, this.subCacheName);
                 //
                 if (res && res.value !== undefined) {
                     await cache.set(fullKey, res.value);

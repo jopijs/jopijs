@@ -1191,11 +1191,13 @@ export class JopiRequest {
     /**
      * Retrieves the value of a cookie from the request.
      * @param name The name of the cookie.
+     * @param defaultValue The value to return if the cookie is not found.
      */
-    cookie_getReqCookie(name: string): string | undefined {
-        if (this.isFakingNoCookies) return undefined;
+    cookie_getReqCookie(name: string, defaultValue: any = undefined): string | undefined {
+        if (this.isFakingNoCookies) return defaultValue;
         const cookies = this.cookie_getAllCookies();
-        return cookies[name];
+        let res = cookies[name];
+        return (res === undefined) ? defaultValue : res;
     }
 
     /**
