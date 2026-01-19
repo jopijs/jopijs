@@ -225,6 +225,6 @@ interface MenuItemForRouteConfig {
     icon?: string,
     /** Sorting order in the menu. */
     priority?: number,
-    /** Translations for the menu title. Key is language code (e.g. 'en_us'). */
+    /** Translations for the menu title. Key is language code (e.g. 'en-us'). */
     translations?: Record<string, string>
 }
