@@ -58,7 +58,7 @@ export async function addNameIntoFile(filePath: string, name: string = jk_fs.bas
  */
 export async function writeTextToFileIfMismatch(filePath: string, content: string) {
     if (!await jk_fs.isFile(filePath)) {
-        await jk_fs.writeTextToFile(filePath, content);
+        await jk_fs.writeTextToFile(filePath, content, true);
         return;
     }
 
@@ -1076,6 +1076,9 @@ export async function compile(importMeta: any, config: LinkerConfig, isRefresh =
 
 
     await collector_end(gCodeGenWriter);
+
+    await jk_fs.mkDir(gDir_outputSrc);
+    await jk_fs.mkDir(gDir_outputDst);
 
     await jk_fs.writeTextToFile(timestampFile, currentHash);
 

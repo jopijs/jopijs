@@ -233,7 +233,7 @@ export default class TypeRoutes extends AliasType {
                 this.sourceCode_header_TS += `\nimport pageData${count} from "${relPathTS}";`;
                 this.sourceCode_header_JS += `\nimport pageData${count} from "${relPathJS}";`;
                 
-                let line = `\n    setPageDataProvider(webSite, ${JSON.stringify(route)}, ${roles.length ? JSON.stringify(roles) : "undefined"}, pageData${count}, ${JSON.stringify(srcFilePath)});`;
+                let line = `\n    setPageDataProvider(webSite, ${JSON.stringify(route)}, ${roles.length ? JSON.stringify(roles) : "[]"}, pageData${count}, ${JSON.stringify(srcFilePath)});`;
                 this.sourceCode_body_TS += line;
                 this.sourceCode_body_JS += line;
 
