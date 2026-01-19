@@ -11,10 +11,10 @@ function getObjectCache(): ObjectCache {
 let gObjectCache: ObjectCache | undefined;
 
 interface DataProviderValue {
-    value: any;
+    value?: any;
 }
 
-type ValueProviderFunction = (id?: any, subCacheName?: string) => Promise<DataProviderValue|undefined>;
+type ValueProviderFunction = (id?: any, subCacheName?: string) => Promise<DataProviderValue>;
 
 export class DataProvider {
     private pendingRequests = new Map<string, Promise<any>>();

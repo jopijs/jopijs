@@ -579,9 +579,7 @@ export class CoreWebSite {
                     } else {
                         if (isPage) {
                             // Allows creating anonymous pages.
-                            //
                             localReq.user_fakeNoUsers();
-                            localReq.cookie_fakeNoCookies();
                         }
                     }
 
