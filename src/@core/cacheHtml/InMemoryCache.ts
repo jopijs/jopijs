@@ -2,14 +2,14 @@ import * as jk_app from "jopi-toolkit/jk_app";
 import * as jk_crypto from "jopi-toolkit/jk_crypto";
 import * as jk_compress from "jopi-toolkit/jk_compress";
 
-import type {CacheEntry, CacheMeta, PageCache} from "./cache.ts";
+import type {CacheMeta, PageCache, CacheEntry, CacheItemProps} from "./cache.ts";
 import {octetToMo, ONE_KILO_OCTET, ONE_MEGA_OCTET} from "../publicTools.ts";
 import {
     cacheAddBrowserCacheValues,
-    cacheEntryToResponse,
+    cacheItemToResponse,
     makeIterable,
     readContentLength,
-    responseToCacheEntry
+    responseToCacheItem
 } from "../internalTools.ts";
 import type {JopiRequest} from "../jopiRequest.ts";
 import { runGarbageCollector } from "./garbageCollector.js";
@@ -57,7 +57,7 @@ export interface InMemoryCacheOptions {
     maxMemoryUsageDela_mo?: number;
 }
 
-interface MyCacheEntry extends CacheEntry {
+interface MyCacheEntry extends CacheItemProps {
     ucpBinary?: Uint8Array<ArrayBuffer>;
     ucpBinarySize?: number;
 
@@ -130,7 +130,7 @@ class InMemoryCache implements PageCache {
         return this.key_getFromCache(req, ':' + url.href);
     }
 
-    async getFromCacheWithMeta(req: JopiRequest, url: URL): Promise<{ response: Response; meta?: CacheMeta } | undefined> {
+    async getFromCacheWithMeta(req: JopiRequest, url: URL): Promise<CacheEntry | undefined> {
         return this.key_getFromCacheWithMeta(req, ':' + url.href);
     }
 
@@ -176,12 +176,20 @@ class InMemoryCache implements PageCache {
                 let result = iterator.next();
 
                 while (!result.done) {
-                    let v = result.value[0];
-                    let idx = v.indexOf(":");
+                    let vUrl = result.value[0];
+                    let vEntry = result.value[1];
+                    
+                    let idx = vUrl.indexOf(":");
 
-                    if (subCacheName===v.substring(0, idx)) {
-                        const entry = {...result.value[1], url: v.substring(idx+1)};
-                        return {value: entry, done: false};
+                    if (subCacheName===vUrl.substring(0, idx)) {
+                        const entry = {...vEntry, url: vUrl.substring(idx+1)};
+                        const cacheEntry: CacheEntry = {
+                            url: entry.url,
+                            meta: entry.meta,
+                            response: cacheItemToResponse(entry)
+                        };
+                        
+                        return {value: cacheEntry, done: false};
                     }
 
                     result = iterator.next();
@@ -235,7 +243,7 @@ class InMemoryCache implements PageCache {
             return response;
         }
 
-        const cacheEntry = responseToCacheEntry("", response, meta) as MyCacheEntry;
+        const cacheEntry = responseToCacheItem("", response, meta) as MyCacheEntry;
         const key = subCacheName + ':' + url;
 
         const contentLength = readContentLength(response.headers);
@@ -259,7 +267,7 @@ class InMemoryCache implements PageCache {
         const etag = jk_crypto.fastHash(cacheEntry.binary!);
         cacheAddBrowserCacheValues(cacheEntry, etag);
 
-        response = cacheEntryToResponse(cacheEntry);
+        response = cacheItemToResponse(cacheEntry);
 
         this.cache.set(key, cacheEntry);
 
@@ -296,26 +304,26 @@ class InMemoryCache implements PageCache {
             let cacheRes = req.file_validateCacheHeadersWith(res.headers)
             if (cacheRes) return cacheRes;
 
-            return cacheEntryToResponse(res);
+            return cacheItemToResponse(res);
         }
 
         return undefined;
     }
 
-    key_getFromCacheWithMeta(req: JopiRequest, key: string): { response: Response; meta?: CacheMeta } | undefined {
+    key_getFromCacheWithMeta(req: JopiRequest, key: string): CacheEntry | undefined {
         const res = this.key_getValueFromCache(key);
 
         if (res) {
-            let cacheRes = req.file_validateCacheHeadersWith(res.headers)
-            if (cacheRes) return {response: cacheRes, meta: res.meta};
+            let cacheRes = req.file_validateCacheHeadersWith(res.headers);
+            if (cacheRes) return {url: res.url, response: cacheRes, meta: res.meta};
 
-            return {response: cacheEntryToResponse(res), meta: res.meta};
+            return {url: res.url, response: cacheItemToResponse(res), meta: res.meta};
         }
 
         return undefined;
     }
 
-    private key_getValueFromCache(key: string): CacheEntry|undefined {
+    private key_getValueFromCache(key: string): CacheItemProps|undefined {
         const cacheEntry = this.cache.get(key);
         if (!cacheEntry) return undefined;
 
@@ -436,7 +444,7 @@ class InMemorySubCache implements PageCache {
         return this.parent.key_getFromCache(req, this.prefix + ':' + url.href);
     }
 
-    async getFromCacheWithMeta(req: JopiRequest, url: URL): Promise<{ response: Response; meta?: CacheMeta } | undefined> {
+    async getFromCacheWithMeta(req: JopiRequest, url: URL): Promise<CacheEntry | undefined> {
         return this.parent.key_getFromCacheWithMeta(req, this.prefix + ':' + url.href);
     }
 

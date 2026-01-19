@@ -1,4 +1,4 @@
-import type {CacheEntry, CacheMeta} from "./cacheHtml/cache.ts";
+import type {CacheItemProps, CacheMeta} from "./cacheHtml/cache.ts";
 
 export function parseCookies(headers: Headers): { [name: string]: string } {
     const cookies: { [name: string]: string } = {};
@@ -32,13 +32,13 @@ export function addHeadersToCache(header: string) {
     if (!gDefaultHeadersToCache.includes(header)) gDefaultHeadersToCache.push(header);
 }
 
-export function cacheAddBrowserCacheValues(cacheEntry: CacheEntry, etag: string) {
-    if (!cacheEntry.headers) cacheEntry.headers = {};
-    cacheEntry.headers["etag"] = etag;
-    cacheEntry.headers["last-modified-since"] = new Date().toUTCString();
+export function cacheAddBrowserCacheValues(cacheItem: CacheItemProps, etag: string) {
+    if (!cacheItem.headers) cacheItem.headers = {};
+    cacheItem.headers["etag"] = etag;
+    cacheItem.headers["last-modified-since"] = new Date().toUTCString();
 }
 
-export function cacheEntryToResponse(entry: CacheEntry) {
+export function cacheItemToResponse(entry: CacheItemProps) {
     if (entry.binary) {
         let headers = entry.headers;
         if (!headers) headers = {};
@@ -59,12 +59,12 @@ export function cacheEntryToResponse(entry: CacheEntry) {
     return new Response("", {status: entry.status, headers: entry.headers});
 }
 
-export function responseToCacheEntry(url: string, response: Response, meta: CacheMeta|undefined): CacheEntry {
+export function responseToCacheItem(url: string, response: Response, meta: CacheMeta|undefined): CacheItemProps {
     const status = response.status;
 
     if (!meta) meta = {};
     meta.addedDate = new Date().getTime();
-    const entry: CacheEntry = { status, url, meta: meta};
+    const entry: CacheItemProps = { status, url, meta: meta};
 
     if (status===200) {
         const headers = {};

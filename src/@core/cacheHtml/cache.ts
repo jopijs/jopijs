@@ -11,7 +11,7 @@ export interface PageCache {
 
     getFromCache(req: JopiRequest, url: URL): Promise<Response | undefined>;
 
-    getFromCacheWithMeta(req: JopiRequest, url: URL): Promise<{ response: Response, meta?: CacheMeta } | undefined>;
+    getFromCacheWithMeta(req: JopiRequest, url: URL): Promise<CacheEntry | undefined>;
     
     getCacheMeta(url: URL): Promise<CacheMeta | undefined>;
 
@@ -33,7 +33,7 @@ export class VoidPageCache implements PageCache {
         return Promise.resolve(undefined);
     }
 
-    getFromCacheWithMeta(): Promise<{ response: Response; meta?: CacheMeta } | undefined> {
+    getFromCacheWithMeta(): Promise<CacheEntry | undefined> {
         return Promise.resolve(undefined);
     }
 
@@ -79,7 +79,16 @@ export interface CacheMeta {
     [key: string]: any;
 }
 
+/**
+ * An item stored into the cache.
+ */
 export interface CacheEntry {
+    url: string;
+    meta?: CacheMeta;
+    response: Response;
+}
+
+export interface CacheItemProps {
     url: string;
     binary?: Uint8Array<ArrayBuffer>;
     binarySize?: number;

@@ -2,12 +2,12 @@ import {gzipFile} from "../gzip.ts";
 import path from "node:path";
 import fs from "node:fs/promises";
 import fss from "node:fs";
-import type {CacheEntry, CacheMeta, PageCache} from "./cache.ts";
+import type {CacheItemProps, CacheMeta, PageCache, CacheEntry} from "./cache.ts";
 import {
     cacheAddBrowserCacheValues,
-    cacheEntryToResponse,
+    cacheItemToResponse,
     makeIterable,
-    responseToCacheEntry
+    responseToCacheItem
 } from "../internalTools.ts";
 
 import * as jk_fs from "jopi-toolkit/jk_fs";
@@ -96,16 +96,16 @@ export class SimpleFileCache implements PageCache {
             cacheEntry.binarySize = fileBytes.length;
         }
 
-        return cacheEntryToResponse(cacheEntry);
+        return cacheItemToResponse(cacheEntry);
     }
 
-    async getFromCacheWithMeta(req: JopiRequest, url: URL): Promise<{ response: Response; meta?: CacheMeta } | undefined> {
+    async getFromCacheWithMeta(req: JopiRequest, url: URL): Promise<CacheEntry | undefined> {
         const cacheEntry = await this.getCacheEntry(url);
         if (!cacheEntry) return undefined;
 
         if (cacheEntry.status===200) {
             let toReturn = req.file_validateCacheHeadersWith(cacheEntry.headers);
-            if (toReturn) return {response: toReturn, meta: cacheEntry.meta};
+            if (toReturn) return {url: url.href, response: toReturn, meta: cacheEntry.meta};
 
             let filePath = this.calcFilePath(url);
             if (cacheEntry.isGzipped) filePath += " gz";
@@ -115,7 +115,7 @@ export class SimpleFileCache implements PageCache {
             cacheEntry.binarySize = fileBytes.length;
         }
 
-        return {response: cacheEntryToResponse(cacheEntry), meta: cacheEntry.meta};
+        return {url: url.href, response: cacheItemToResponse(cacheEntry), meta: cacheEntry.meta};
     }
 
     async getCacheMeta(url: URL): Promise<CacheMeta | undefined> {
@@ -131,7 +131,7 @@ export class SimpleFileCache implements PageCache {
         return cacheEntry.isGzipped===true;
     }
 
-    private async getCacheEntry(url: URL): Promise<CacheEntry|undefined> {
+    private async getCacheEntry(url: URL): Promise<CacheItemProps|undefined> {
         const filePath = this.calcFilePath(url);
 
         try {
@@ -144,7 +144,7 @@ export class SimpleFileCache implements PageCache {
     }
 
     private async saveNewCacheEntry(url: URL, response: Response, meta: CacheMeta|undefined, isGzipped: boolean, filePath: string) {
-        const cacheEntry = responseToCacheEntry(url.href, response, meta);
+        const cacheEntry = responseToCacheItem(url.href, response, meta);
         cacheEntry.isGzipped = isGzipped;
 
         const etag = (await jk_fs.calcFileHash(filePath))!;
@@ -168,8 +168,8 @@ export class SimpleFileCache implements PageCache {
     }
 
     getCacheEntryIterator() {
-        function getCacheEntryFrom(filePath: string): CacheEntry|undefined {
-            return jk_fs.readJsonFromFileSync<CacheEntry>(filePath);
+        function getCacheEntryFrom(filePath: string): CacheItemProps|undefined {
+            return jk_fs.readJsonFromFileSync<CacheItemProps>(filePath);
         }
 
         const rootDir = this.rootDir;
@@ -181,8 +181,17 @@ export class SimpleFileCache implements PageCache {
                     let nextFile = nextFileProvider.next();
                     if (nextFile.done) return {done: true, value: undefined};
 
-                    const cacheEntry = getCacheEntryFrom(path.join(rootDir, nextFile.value));
-                    if (cacheEntry) return {done: false, value: cacheEntry};
+                    const cacheItem = getCacheEntryFrom(path.join(rootDir, nextFile.value));
+
+                    if (cacheItem) {
+                        const cacheEntry: CacheEntry = {
+                            url: cacheItem.url,
+                            meta: cacheItem.meta,
+                            response: cacheItemToResponse(cacheItem)
+                        };
+                        
+                        return {done: false, value: cacheEntry};
+                    }
                 }
             }
         });

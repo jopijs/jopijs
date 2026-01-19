@@ -13,7 +13,7 @@ import * as jk_fs from "jopi-toolkit/jk_fs";
 import Page from "./PageComponent.ts";
 
 import { initCheerio } from "./jQuery.ts";
-import { type CacheEntry, type PageCache } from "./cacheHtml/cache.ts";
+import { type PageCache, type CacheEntry } from "./cacheHtml/cache.ts";
 import type { ObjectCache, ObjectCacheMeta } from "./cacheObject/def.ts";
 import {
     type AuthResult,
@@ -705,6 +705,10 @@ export class JopiRequest {
      */
     async htmlCache_getFromCache(): Promise<Response | undefined> {
         return await this.htmlCache.getFromCache(this, this.req_urlInfos);
+    }
+
+    async htmlCache_getFromCacheWithMeta(): Promise<CacheEntry | undefined> {
+        return await this.htmlCache.getFromCacheWithMeta(this, this.req_urlInfos);
     }
 
     /**
