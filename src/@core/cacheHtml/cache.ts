@@ -1,5 +1,5 @@
 import {makeIterable} from "../internalTools.js";
-import type {JopiRequest} from "../jopiRequest.tsx";
+import type {JopiRequest} from "../jopiRequest.ts";
 
 export interface CacheRole {
     isUserCache?: boolean;

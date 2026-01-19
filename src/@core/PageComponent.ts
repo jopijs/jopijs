@@ -4,9 +4,7 @@ import * as ReactServer from "react-dom/server";
 
 export default function({children, controller}: { children: React.ReactNode|React.ReactNode[], controller: PageController_ExposePrivate<unknown> }) {
     let body = ReactServer.renderToStaticMarkup(
-        <PageContext.Provider value={controller}>
-            {children}
-        </PageContext.Provider>
+        React.createElement(PageContext.Provider, { value: controller }, children)
     );
 
     const state = controller.getOptions();
@@ -24,9 +22,8 @@ export default function({children, controller}: { children: React.ReactNode|Reac
     if (state.pageTitle!==undefined) headText += `<title>${state.pageTitle}</title>`;
 
     // noinspection HtmlRequiredTitleElement
-    return <html {...state.htmlProps}>
-        <head {...state.headProps} dangerouslySetInnerHTML={{__html: headText}}>
-        </head>
-        <body {...state.bodyProps} dangerouslySetInnerHTML={{ __html: body }} />
-    </html>
+    return React.createElement("html", state.htmlProps,
+        React.createElement("head", { ...state.headProps, dangerouslySetInnerHTML: { __html: headText } }),
+        React.createElement("body", { ...state.bodyProps, dangerouslySetInnerHTML: { __html: body } })
+    );
 }

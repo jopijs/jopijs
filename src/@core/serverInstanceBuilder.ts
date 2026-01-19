@@ -1,13 +1,13 @@
 import type {CoreServer, SseEvent, WebSocketConnectionInfos} from "./jopiServer.ts";
 import {isBunJS} from "jopi-toolkit/jk_what";
-import {BunJsServerInstanceBuilder} from "./serverImpl/server_bunjs.tsx";
+import {BunJsServerInstanceBuilder} from "./serverImpl/server_bunjs.ts";
 import {NodeJsServerInstanceBuilder} from "./serverImpl/server_nodejs.ts";
 import {
     type HttpMethod,
-    JopiWebSocket,
+    type JopiWebSocket,
     CoreWebSite,
     type WebSiteRouteInfos
-} from "./jopiCoreWebSite.tsx";
+} from "./jopiCoreWebSite.ts";
 import React from "react";
 import type {TryReturnFileParams} from "./browserCacheControl.ts";
 

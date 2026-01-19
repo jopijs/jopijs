@@ -2,7 +2,7 @@ import { isBrowser } from "jopi-toolkit/jk_what";
 
 export * from "./user.ts";
 export * from "./pageController.ts";
-export * from "./cssModules.tsx";
+export * from "./cssModules.ts";
 export * from "./interfaces.ts";
 
 export * from "./hooks/index.ts";

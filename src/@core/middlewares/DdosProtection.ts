@@ -1,5 +1,5 @@
-import {JopiRequest} from "../jopiRequest.tsx";
-import type {JopiMiddleware} from "../jopiCoreWebSite.tsx";
+import {JopiRequest} from "../jopiRequest.ts";
+import type {JopiMiddleware} from "../jopiCoreWebSite.ts";
 import {getServerStartOptions} from "../jopiServer.ts";
 import * as jk_tools from "jopi-toolkit/jk_tools";
 import * as jk_timer from "jopi-toolkit/jk_timer";

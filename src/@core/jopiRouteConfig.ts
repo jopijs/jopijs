@@ -1,5 +1,5 @@
-import type { JopiMiddleware, JopiPostMiddleware, CoreWebSite } from "./jopiCoreWebSite.tsx";
-import type { JopiRequest } from "./jopiRequest.tsx";
+import type { JopiMiddleware, JopiPostMiddleware, CoreWebSite } from "./jopiCoreWebSite.ts";
+import type { JopiRequest } from "./jopiRequest.ts";
 import { PriorityLevel } from "jopi-toolkit/jk_tools";
 import type { MenuItemForExtraPageParams } from "jopijs/ui";
 

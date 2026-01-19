@@ -3,7 +3,7 @@
 import path from "node:path";
 
 import fs from "node:fs/promises";
-import { ServerAlreadyStartedError, type SslCertificatePath, CoreWebSite } from "./jopiCoreWebSite.tsx";
+import { ServerAlreadyStartedError, type SslCertificatePath, CoreWebSite } from "./jopiCoreWebSite.ts";
 
 import * as jk_app from "jopi-toolkit/jk_app";
 import * as jk_fs from "jopi-toolkit/jk_fs";

@@ -1,10 +1,10 @@
 import path from "node:path";
 import * as jk_fs from "jopi-toolkit/jk_fs";
-import type {JopiRequest} from "../jopiRequest.tsx";
+import type {JopiRequest} from "../jopiRequest.ts";
 import fs from "node:fs/promises";
 import {makeIterable} from "../internalTools.ts";
 import type {CacheEntry, CacheMeta, PageCache} from "./cache.ts";
-import {SBPE_NotAuthorizedException} from "../jopiCoreWebSite.tsx";
+import {SBPE_NotAuthorizedException} from "../jopiCoreWebSite.ts";
 
 export class WebSiteMirrorCache implements PageCache {
     public readonly rootDir: string;

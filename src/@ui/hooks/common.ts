@@ -2,8 +2,8 @@
 
 import React, {useEffect, useState} from "react";
 import {PageContext, PageController} from "../pageController.ts";
-import {type UseCssModuleContextProps} from "../cssModules.tsx";
-import {PageModifier} from "../pageModifier.tsx";
+import {type UseCssModuleContextProps} from "../cssModules.ts";
+import {PageModifier} from "../pageModifier.ts";
 import type {CookieOptions} from "../cookies/index.ts";
 import type {UiUserInfos} from "../user.ts";
 import type {IsValueStore} from "../valueStore.ts";

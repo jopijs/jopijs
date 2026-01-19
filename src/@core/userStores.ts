@@ -1,4 +1,4 @@
-import {type UserInfos, type CoreWebSite} from "./jopiCoreWebSite.tsx";
+import {type UserInfos, type CoreWebSite} from "./jopiCoreWebSite.ts";
 
 export interface UserLoginPassword {
     login: string;

@@ -11,7 +11,7 @@ import {
     readContentLength,
     responseToCacheEntry
 } from "../internalTools.ts";
-import type {JopiRequest} from "../jopiRequest.tsx";
+import type {JopiRequest} from "../jopiRequest.ts";
 import { runGarbageCollector } from "./garbageCollector.js";
 import type { GCEntry } from "./garbageCollector.js";
 

@@ -1,5 +1,5 @@
 import * as acme from 'acme-client';
-import {type SslCertificatePath, CoreWebSite} from "./jopiCoreWebSite.tsx";
+import {type SslCertificatePath, CoreWebSite} from "./jopiCoreWebSite.ts";
 import path from "node:path";
 import * as jk_timer from "jopi-toolkit/jk_timer";
 import * as jk_fs from "jopi-toolkit/jk_fs";

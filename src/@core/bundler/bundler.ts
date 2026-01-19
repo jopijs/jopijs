@@ -1,4 +1,4 @@
-import {CoreWebSite} from "../jopiCoreWebSite.tsx";
+import {CoreWebSite} from "../jopiCoreWebSite.ts";
 import * as jk_fs from "jopi-toolkit/jk_fs";
 import * as jk_events from "jopi-toolkit/jk_events";
 import {getBundleDirPath} from "./config.ts";

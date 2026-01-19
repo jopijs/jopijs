@@ -12,7 +12,7 @@ import {
 
 import * as jk_fs from "jopi-toolkit/jk_fs";
 import * as jk_crypto from "jopi-toolkit/jk_crypto";
-import type {JopiRequest} from "../jopiRequest.tsx";
+import type {JopiRequest} from "../jopiRequest.ts";
 import {ONE_MEGA_OCTET} from "../publicTools.ts";
 
 export class SimpleFileCache implements PageCache {

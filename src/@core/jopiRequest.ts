@@ -10,7 +10,7 @@ import type { SearchParamFilterFunction } from "./searchParamFilter.ts";
 import * as jk_schema from "jopi-toolkit/jk_schema";
 import * as jk_what from "jopi-toolkit/jk_what";
 import * as jk_fs from "jopi-toolkit/jk_fs";
-import Page from "./PageComponent.tsx";
+import Page from "./PageComponent.ts";
 
 import { initCheerio } from "./jQuery.ts";
 import { type CacheEntry, type PageCache } from "./cacheHtml/cache.ts";
@@ -23,7 +23,7 @@ import {
     type ResponseModifier, type ServeFileOptions, type TestCookieValue, type TextModifier, type UserInfos,
     CoreWebSite,
     type WebSiteRouteInfos, SBPE_ServerByPassException
-} from "./jopiCoreWebSite.tsx";
+} from "./jopiCoreWebSite.ts";
 
 import { parseCookies } from "./internalTools.ts";
 import * as jk_term from "jopi-toolkit/jk_term";

@@ -1,4 +1,4 @@
-import {CoreWebSite} from "../jopiCoreWebSite.tsx";
+import {CoreWebSite} from "../jopiCoreWebSite.ts";
 import {getVirtualUrlMap, type VirtualUrlEntry} from "jopijs/loader-tools";
 
 /**

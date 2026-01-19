@@ -35,7 +35,7 @@ import {
     CoreWebSite,
     WebSiteOptions,
     type CookieOptions
-} from "./jopiCoreWebSite.tsx";
+} from "./jopiCoreWebSite.ts";
 
 import { getServer, type SseEvent } from "./jopiServer.ts";
 import { initLinker } from "./linker.ts";

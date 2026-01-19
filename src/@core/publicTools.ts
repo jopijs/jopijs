@@ -1,4 +1,4 @@
-import type {HttpMethod} from "./jopiCoreWebSite.tsx";
+import type {HttpMethod} from "./jopiCoreWebSite.ts";
 
 export function octetToMo(size: number) {
     const res = size / ONE_MEGA_OCTET;

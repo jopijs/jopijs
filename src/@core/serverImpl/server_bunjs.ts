@@ -2,14 +2,14 @@ import type {CoreServer, SseEvent, SseEventController, WebSocketConnectionInfos}
 import {
     type HttpMethod, type JopiWebSocket,
     SBPE_DirectSendThisResponseException , CoreWebSite, type WebSiteRouteInfos
-} from "../jopiCoreWebSite.tsx";
+} from "../jopiCoreWebSite.ts";
 import type {ServerInstanceBuilder} from "../serverInstanceBuilder.ts";
 import React from "react";
 import * as jk_fs from "jopi-toolkit/jk_fs";
 import {getBundleDirPath} from "../bundler/index.ts";
 import {getWebSiteConfig} from "jopijs/coreconfig";
 import {addBrowserCacheControlHeaders, type TryReturnFileParams} from "../browserCacheControl.ts";
-import {JopiRequestImpl} from "../jopiRequest.tsx";
+import {JopiRequestImpl} from "../jopiRequest.ts";
 
 //region SSE Events
 

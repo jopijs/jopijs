@@ -7,7 +7,7 @@ import {
     _usePage,
     type ReactStaticEvent,
     type ServerRequestInstance, type UsePageDataResponse
-} from "./common.tsx";
+} from "./common.ts";
 
 export function useParams(): any {
     return useServerRequest().req_urlParts;

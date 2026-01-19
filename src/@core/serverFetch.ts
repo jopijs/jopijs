@@ -1,6 +1,6 @@
 // noinspection JSUnusedGlobalSymbols
 
-import {type SendingBody} from "./jopiCoreWebSite.tsx";
+import {type SendingBody} from "./jopiCoreWebSite.ts";
 import type {LoadBalancer} from "./loadBalancing.ts";
 import {AutomaticStartStop} from "./automaticStartStop.js";
 import {JopiRequest} from "./jopiRequest.js";
