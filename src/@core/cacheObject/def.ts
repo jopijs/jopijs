@@ -25,5 +25,9 @@ export interface ObjectCache {
 
     getSubCacheIterator(): Iterable<string>;
 
+    /**
+     * Create or retrieve a sub-cache with the given name.
+     * The implementation must store the created sub-caches and return the existing one if it was already created.
+     */
     createSubCache(name: string): ObjectCache; 
 }

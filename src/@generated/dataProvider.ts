@@ -18,12 +18,21 @@ type ValueProviderFunction = (id?: any) => Promise<DataProviderValue|undefined>;
 
 export class DataProvider {
     private pendingRequests = new Map<string, Promise<any>>();
+    private subCacheName?: string;
 
     constructor(public readonly key: string, private readonly valueProvider: ValueProviderFunction) {
+    }
+
+    useSubCache(cacheName: string): DataProvider {
+        let clone = new DataProvider(this.key, this.valueProvider);
+        clone.subCacheName = cacheName;
+        return clone;
     }
     
     async getValue(id?: any): Promise<any> {
         let cache = getObjectCache();
+        if (this.subCacheName) cache = cache.createSubCache(this.subCacheName);
+
         let fullKey = this.key + (id ? ":" + id : "");
         
         let entry = await cache.get(fullKey);
@@ -65,7 +74,10 @@ export class DataProvider {
     }
 
     async delete(id?: any): Promise<void> {
-        return await getObjectCache().delete(this.key + (id ? ":" + id : ""));
+        let cache = getObjectCache();
+        if (this.subCacheName) cache = cache.createSubCache(this.subCacheName);
+        
+        return await cache.delete(this.key + (id ? ":" + id : ""));
     }
 
     async refresh(id?: any): Promise<any> {

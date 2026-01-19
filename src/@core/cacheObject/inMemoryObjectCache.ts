@@ -146,11 +146,7 @@ export class InMemoryObjectCache implements ObjectCache {
                     if (key.startsWith(prefix)) {
                         const remaining = key.substring(prefixLen);
                         const idx = remaining.indexOf(":");
-                        
-                        // Direct child only (not A:B from prefix "")
-                        // But also not "" (which would be the cache itself if listed?)
-                        // If prefix is "A:", key "A:B" -> remaining "B". idx = -1. OK.
-                        // Key "A:B:C" -> remaining "B:C". idx = 1. Skip.
+
                         if (remaining.length > 0 && idx === -1) {
                             return { value: remaining, done: false };
                         }
@@ -277,21 +273,15 @@ class InMemorySubObjectCache implements ObjectCache {
         this.prefix = name + ":";
     }
 
+    private readonly subCaches: Record<string, ObjectCache> = {};
+
     createSubCache(name: string): ObjectCache {
-        return this.parent.createSubCache(this.prefix + name); // Chained subcaches?
-        // Note: The InMemoryCache implementation flattens subcaches in the map with "name:".
-        // Here if we want recursive subcaches, we should be careful.
-        // The previous implementation of InMemoryCache:
-        // createSubCache(name) => new InMemorySubCache(this, name) where prefix = name + ":"
-        // SubCache.createSubCache(name) => parent.createSubCache(name) ?? No.
-        // In PageCache implementation:
-        // class InMemorySubCache {
-        //    createSubCache(name: string): PageCache {
-        //        return this.parent.createSubCache(name);
-        //    }
-        // }
-        // This implies subcaches are flat in PageCache (siblings, not children).
-        // Let's stick to flat for now unless requested otherwise.
+        let cache = this.subCaches[name];
+        if (cache) return cache;
+        
+        cache = this.parent.createSubCache(this.prefix + name);
+        this.subCaches[name] = cache;
+        return cache;
     }
 
     async get<T>(key: string): Promise<T | undefined> {
