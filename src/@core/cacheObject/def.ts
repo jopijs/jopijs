@@ -7,12 +7,19 @@ export interface ObjectCacheEntry<T = any> {
     meta: ObjectCacheMeta;
 }
 
+export interface ObjectCacheSetParams {
+    meta?: ObjectCacheMeta;
+    ttl?: number;
+    expireAt?: number;
+    importance?: number;
+}
+
 export interface ObjectCache {
     get<T = any>(key: string): Promise<T | undefined>;
     
     getWithMeta<T = any>(key: string): Promise<{ value: T; meta: ObjectCacheMeta } | undefined>;
     
-    set<T = any>(key: string, value: T, meta?: ObjectCacheMeta): Promise<void>;
+    set<T = any>(key: string, value: T, params?: ObjectCacheSetParams): Promise<void>;
     
     delete(key: string): Promise<void>;
     

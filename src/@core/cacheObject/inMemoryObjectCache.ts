@@ -2,7 +2,7 @@
 import * as jk_app from "jopi-toolkit/jk_app";
 import { makeIterable } from "../internalTools.js";
 import { ONE_MEGA_OCTET as oneMo } from "../publicTools.js";
-import type { ObjectCache, ObjectCacheMeta } from "./def.ts";
+import type { ObjectCache, ObjectCacheMeta, ObjectCacheSetParams } from "./def.ts";
 import { JkMemCache } from "jopi-toolkit/jk_memcache";
 
 const keepOnHotReload = jk_app.keepOnHotReload;
@@ -60,8 +60,8 @@ export class InMemoryObjectCache implements ObjectCache {
         return cache;
     }
 
-    async set<T>(key: string, value: T, meta?: ObjectCacheMeta): Promise<void> {
-        return this.key_set("", key, value, meta);
+    async set<T>(key: string, value: T, params?: ObjectCacheSetParams): Promise<void> {
+        return this.key_set("", key, value, params);
     }
 
     async delete(key: string): Promise<void> {
@@ -140,16 +140,17 @@ export class InMemoryObjectCache implements ObjectCache {
         return { value: wrapper.v, meta: wrapper.m };
     }
 
-    async key_set<T>(subCacheName: string, key: string, value: T, meta: ObjectCacheMeta | undefined) {
-        if (!meta) meta = {};
+    async key_set<T>(subCacheName: string, key: string, value: T, params?: ObjectCacheSetParams) {
+        if (!params) params = {};
+        const meta = params.meta || {};
 
         const fullKey = subCacheName ? subCacheName + key : key;
         
         // Prepare options for JkMemCache
         const opts: any = {};
-        if (meta.expireAt) {
-            opts.expiresAt = meta.expireAt;
-        }
+        if (params.ttl) opts.ttl = params.ttl;
+        if (params.expireAt) opts.expiresAt = params.expireAt;
+        if (params.importance) opts.importance = params.importance;
 
         // Store wrapper
         const wrapper: StoredWrapper<T> = { v: value, m: meta };
@@ -194,9 +195,9 @@ class InMemorySubObjectCache implements ObjectCache {
         return this.parent.key_getWithMeta(this.prefix + key);
     }
 
-    async set<T>(key: string, value: T, meta?: ObjectCacheMeta): Promise<void> {
+    async set<T>(key: string, value: T, params?: ObjectCacheSetParams): Promise<void> {
         // Note: passing prefix as subCacheName
-        return this.parent.key_set(this.prefix, key, value, meta);
+        return this.parent.key_set(this.prefix, key, value, params);
     }
 
     async delete(key: string): Promise<void> {

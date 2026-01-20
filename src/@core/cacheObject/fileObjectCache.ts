@@ -39,7 +39,6 @@ export class FileObjectCache implements ObjectCache {
 
     async set<T>(key: string, value: T, meta?: ObjectCacheMeta | undefined): Promise<void> {
         if (!meta) meta = {};
-        if (!meta.addedDate) meta.addedDate = Date.now();
 
         const entry: ObjectCacheEntry<T> = { key, value, meta };
         const content = JSON.stringify(entry);
