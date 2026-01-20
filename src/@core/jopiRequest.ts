@@ -14,7 +14,7 @@ import Page from "./PageComponent.ts";
 
 import { initCheerio } from "./jQuery.ts";
 import { type PageCache, type CacheEntry } from "./cacheHtml/cache.ts";
-import type { ObjectCache, ObjectCacheMeta } from "./cacheObject/def.ts";
+import type { ObjectCache } from "./cacheObject/def.ts";
 import {
     type AuthResult,
     type CookieOptions, SBPE_DirectSendThisResponseException,
@@ -57,8 +57,6 @@ export class JopiRequest {
      */
     private htmlCache: PageCache;
 
-    private objectCache: ObjectCache;
-
     private _req_headers: Headers;
     private _req_urlParts?: Record<string, string>;
     private _req_urlParts_done: boolean;
@@ -71,51 +69,11 @@ export class JopiRequest {
         req_urlParts: Record<string, string> | undefined,
     ) {
         this.htmlCache = webSite.htmlCache;
-        this.objectCache = webSite.objectCache;
         this._req_headers = this.coreRequest.headers;
 
         this._req_urlParts = req_urlParts;
         this._req_urlParts_done = false;
     }
-
-    //region Object Cache
-
-    async objectCache_get<T>(key: string): Promise<T | undefined> {
-        return this.objectCache.get(key);
-    }
-
-    async objectCache_getWithMeta<T>(key: string): Promise<{ value: T; meta: ObjectCacheMeta } | undefined> {
-        return this.objectCache.getWithMeta(key);
-    }
-
-    async objectCache_set<T>(key: string, value: T, meta?: ObjectCacheMeta): Promise<void> {
-        return this.objectCache.set(key, value, meta);
-    }
-
-    async objectCache_delete(key: string): Promise<void> {
-        return this.objectCache.delete(key);
-    }
-
-    async objectCache_has(key: string): Promise<boolean> {
-        return this.objectCache.has(key);
-    }
-
-    objectCache_keys(): Iterable<string> {
-        return this.objectCache.keys();
-    }
-    
-    objectCache_useCache(cache: ObjectCache) {
-        this.objectCache = cache;
-    }
-
-    objectCache_getSubCache(name: string): ObjectCache {
-        return this.objectCache.createSubCache(name);
-    }
-
-    objectCache_getSubCacheIterator(): Iterable<string> {
-        return this.objectCache.getSubCacheIterator();
-    }
-    //endregion
 
     //region Custom data
 
