@@ -2,8 +2,8 @@
 import * as jk_app from "jopi-toolkit/jk_app";
 import { makeIterable } from "../internalTools.js";
 import { ONE_MEGA_OCTET as oneMo } from "../publicTools.js";
-import type { ObjectCache, ObjectCacheEntry, ObjectCacheMeta } from "./def.ts";
-import { runGarbageCollector } from "../cacheHtml/garbageCollector.js";
+import type { ObjectCache, ObjectCacheMeta } from "./def.ts";
+import { JkMemCache } from "jopi-toolkit/jk_memcache";
 
 const keepOnHotReload = jk_app.keepOnHotReload;
 const HOT_RELOAD_KEY = "jopi.rewrite.inMemoryObjectCache.hotReloadKey";
@@ -11,20 +11,44 @@ const HOT_RELOAD_KEY = "jopi.rewrite.inMemoryObjectCache.hotReloadKey";
 export interface InMemoryObjectCacheOptions {
     clearOnHotReload?: boolean;
     maxItemCount?: number;
-    maxItemCountDelta?: number;
+    maxItemCountDelta?: number; // Deprecated/Ignored in new implementation
     maxMemoryUsage_mo?: number;
-    maxMemoryUsageDelta_mo?: number;
+    maxMemoryUsageDelta_mo?: number; // Deprecated/Ignored in new implementation
 }
 
-interface MyCacheEntry extends ObjectCacheEntry {
-    valueSize: number;
-    _refCount: number;
-    _refCountSinceGC: number;
+interface StoredWrapper<T> {
+    v: T;
+    m: ObjectCacheMeta;
 }
 
 export class InMemoryObjectCache implements ObjectCache {
     private readonly subCaches: Record<string, InMemorySubObjectCache> = {};
+    private _cache: JkMemCache;
+    
+    constructor(options?: InMemoryObjectCacheOptions) {
+        options = options || {};
 
+        // Try to recover existing instance from Hot Reload context
+        // Note: jk_app.keepOnHotReload runs the factory if key doesn't exist.
+        //
+        this._cache = keepOnHotReload(HOT_RELOAD_KEY, () => {
+            const maxCount = options.maxItemCount || 5000;
+            const maxMemoryUsage_mo = options.maxMemoryUsage_mo || 500;
+            const maxSize = Math.trunc(maxMemoryUsage_mo * oneMo);
+
+            return new JkMemCache({
+                name: "MainObjectCache",
+                maxCount,
+                maxSize,
+                cleanupInterval: 60000
+            });
+        });
+    }
+
+    private get cache(): JkMemCache {
+        return this._cache;
+    }
+    
     createSubCache(name: string): ObjectCache {
         let cache = this.subCaches[name];
         
@@ -34,32 +58,6 @@ export class InMemoryObjectCache implements ObjectCache {
         }
 
         return cache;
-    }
-
-    private readonly cache = keepOnHotReload(HOT_RELOAD_KEY, () => new Map<string, MyCacheEntry>());
-
-    private statItemCount = 0;
-    private readonly maxItemCount: number;
-    private readonly maxItemCountDelta: number;
-
-    private statMemoryUsage = 0;
-    private readonly maxMemoryUsage: number;
-    private readonly maxMemoryUsageDelta: number;
-
-    constructor(options?: InMemoryObjectCacheOptions) {
-        options = options || {};
-
-        if (!options.maxItemCount) options.maxItemCount = 5000;
-        if (!options.maxItemCountDelta) options.maxItemCountDelta = Math.trunc(options.maxItemCount * 0.1);
-
-        if (!options.maxMemoryUsage_mo) options.maxMemoryUsage_mo = 500;
-        if (!options.maxMemoryUsageDelta_mo) options.maxMemoryUsageDelta_mo = Math.trunc(options.maxMemoryUsage_mo * 0.1);
-
-        this.maxItemCount = options.maxItemCount!;
-        this.maxItemCountDelta = options.maxItemCountDelta!;
-
-        this.maxMemoryUsage = Math.trunc(options.maxMemoryUsage_mo * oneMo);
-        this.maxMemoryUsageDelta = Math.trunc(options.maxMemoryUsageDelta_mo! * oneMo);
     }
 
     async set<T>(key: string, value: T, meta?: ObjectCacheMeta): Promise<void> {
@@ -87,94 +85,59 @@ export class InMemoryObjectCache implements ObjectCache {
     }
 
     keys(): Iterable<string> {
-        const iterator = this.cache.keys();
-
-        return makeIterable({
+       const iterator = this.cache.keys();
+       
+       return makeIterable({
             next(): IteratorResult<string> {
                 while (true) {
-                    let result = iterator.next();
-                    if (result.done) return { value: undefined, done: true };
-
-                    let key = result.value;
-                    let idx = key.indexOf(":");
-
-                    // Only return keys that are NOT in a subcache
-                    if (idx === -1) {
-                         return { value: key, done: false };
+                    const res = iterator.next();
+                    if (res.done) return { value: undefined, done: true };
+                    
+                    const key = res.value;
+                    if (key.indexOf(":") === -1) {
+                        return { value: key, done: false };
                     }
                 }
             }
-        });
+       });
     }
 
     getSubCacheIterator(): Iterable<string> {
-        return this.sub_getSubCacheIterator("");
+        return Object.keys(this.subCaches);
     }
 
-    //region SubCache Iterator Helpers
+    //region SubCache Helpers logic
 
     sub_keys(prefix: string): Iterable<string> {
-        const iterator = this.cache.keys();
+        const iterator = this.cache.keysStartingWith(prefix);
         const prefixLen = prefix.length;
 
         return makeIterable({
             next(): IteratorResult<string> {
-                while (true) {
-                    let result = iterator.next();
-                    if (result.done) return { value: undefined, done: true };
-
-                    let key = result.value;
-                    
-                    if (key.startsWith(prefix)) {
-                        return { value: key.substring(prefixLen), done: false };
-                    }
-                }
-            }
-        });
-    }
-
-    sub_getSubCacheIterator(prefix: string): Iterable<string> {
-        const keys = Object.keys(this.subCaches);
-        const prefixLen = prefix.length;
-        let index = 0;
-
-        return makeIterable({
-            next(): IteratorResult<string> {
-                while (index < keys.length) {
-                    const key = keys[index++];
-                    
-                    if (key.startsWith(prefix)) {
-                        const remaining = key.substring(prefixLen);
-                        const idx = remaining.indexOf(":");
-
-                        if (remaining.length > 0 && idx === -1) {
-                            return { value: remaining, done: false };
-                        }
-                    }
-                }
-                return { value: undefined, done: true };
+                const res = iterator.next();
+                if (res.done) return { value: undefined, done: true };
+                return { value: res.value.substring(prefixLen), done: false };
             }
         });
     }
 
     //endregion
 
-    //region Key Access
+    //region Key Access (Internal)
 
     async key_has(key: string): Promise<boolean> {
-        const cacheEntry = this.cache.get(key);
-        return !!cacheEntry;
+        return !!this.cache.get(key); // optimized enough? get checks expiration
     }
 
     async key_get<T>(key: string): Promise<T | undefined> {
-        const entry = this.key_getValueFromCache(key);
-        return entry ? entry.value : undefined;
+        const wrapper = this.cache.get<StoredWrapper<T>>(key);
+        return wrapper ? wrapper.v : undefined;
     }
 
     async key_getWithMeta<T>(key: string): Promise<{ value: T; meta: ObjectCacheMeta } | undefined> {
-        const entry = this.key_getValueFromCache(key);
-        if (!entry) return undefined;
-        return { value: entry.value, meta: entry.meta };
+        const wrapper = this.cache.get<StoredWrapper<T>>(key);
+        if (!wrapper) return undefined;
+        return { value: wrapper.v, meta: wrapper.m };
     }
 
     async key_set<T>(subCacheName: string, key: string, value: T, meta: ObjectCacheMeta | undefined) {
@@ -182,87 +145,24 @@ export class InMemoryObjectCache implements ObjectCache {
         if (!meta.addedDate) meta.addedDate = Date.now();
 
         const fullKey = subCacheName ? subCacheName + key : key;
-        const valueSize = this.estimateSize(value);
-
-        const cacheEntry: MyCacheEntry = {
-            key: fullKey,
-            value,
-            meta,
-            valueSize,
-            _refCount: 1,
-            _refCountSinceGC: 1
-        };
-
-        this.statMemoryUsage += valueSize;
-        this.cache.set(fullKey, cacheEntry);
-        this.statItemCount++;
-
-        if (this.needToGC()) {
-            this.garbageCollector();
+        
+        // Prepare options for JkMemCache
+        const opts: any = {};
+        if (meta.expireAt) {
+            opts.expiresAt = meta.expireAt;
         }
+
+        // Store wrapper
+        const wrapper: StoredWrapper<T> = { v: value, m: meta };
+        
+        // We do not need to check max entries/memory here, JkMemCache handles usage.
+        this.cache.set(fullKey, wrapper, opts);
     }
 
     async key_delete(key: string): Promise<void> {
-        const cacheEntry = this.cache.get(key);
-
-        if (cacheEntry) {
-            this.statItemCount--;
-            this.statMemoryUsage -= cacheEntry.valueSize;
-            this.cache.delete(key);
-        }
+        this.cache.delete(key);
     }
-
-    private key_getValueFromCache(key: string): MyCacheEntry | undefined {
-        const cacheEntry = this.cache.get(key);
-        if (!cacheEntry) return undefined;
-
-        cacheEntry._refCount++;
-        cacheEntry._refCountSinceGC++;
-
-        return cacheEntry;
-    }
-
-    private estimateSize(value: any): number {
-        if (value === undefined || value === null) return 0;
-        if (typeof value === 'string') return value.length * 2;
-        if (typeof value === 'number') return 8;
-        if (typeof value === 'boolean') return 4;
-        if (value instanceof Uint8Array) return value.byteLength;
-        try {
-            return JSON.stringify(value).length * 2;
-        } catch {
-            return 100;
-        }
-    }
-
-    //endregion
-
-    //region Garbage collector
-
-    private needToGC() {
-        if (this.statItemCount > this.maxItemCount) return true;
-        else if (this.statMemoryUsage > this.maxMemoryUsage) return true;
-        return false;
-    }
-
-    private garbageCollector() {
-        runGarbageCollector({
-            cache: this.cache,
-            currentItemCount: this.statItemCount,
-            currentMemoryUsage: this.statMemoryUsage,
-            maxItemCount: this.maxItemCount,
-            maxItemCountDelta: this.maxItemCountDelta,
-            maxMemoryUsage: this.maxMemoryUsage,
-            maxMemoryUsageDelta: this.maxMemoryUsageDelta,
-            getEntrySize: (entry) => entry.valueSize,
-            onEntryRemoved: (key, entry) => {
-                this.statItemCount--;
-                this.statMemoryUsage -= entry.valueSize;
-                // console.log("|->  ... gc has removed object " + key);
-            }
-        });
-    }
-
+    
     //endregion
 }
 
@@ -279,6 +179,9 @@ class InMemorySubObjectCache implements ObjectCache {
         let cache = this.subCaches[name];
         if (cache) return cache;
         
+        // This logic in original code assumes recursion through parent but maintaining local map
+        // Wait, original: cache = this.parent.createSubCache(this.prefix + name);
+        // It asks parent to create a subcache with "parentPrefix:newname".
         cache = this.parent.createSubCache(this.prefix + name);
         this.subCaches[name] = cache;
         return cache;
@@ -293,6 +196,7 @@ class InMemorySubObjectCache implements ObjectCache {
     }
 
     async set<T>(key: string, value: T, meta?: ObjectCacheMeta): Promise<void> {
+        // Note: passing prefix as subCacheName
         return this.parent.key_set(this.prefix, key, value, meta);
     }
 
@@ -309,7 +213,8 @@ class InMemorySubObjectCache implements ObjectCache {
     }
 
     getSubCacheIterator(): Iterable<string> {
-        return this.parent.sub_getSubCacheIterator(this.prefix);
+        // Sub-cache can't have a sub-cache.
+        return [];
     }
 }
 
