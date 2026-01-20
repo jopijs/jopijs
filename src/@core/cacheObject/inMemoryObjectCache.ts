@@ -142,7 +142,6 @@ export class InMemoryObjectCache implements ObjectCache {
 
     async key_set<T>(subCacheName: string, key: string, value: T, meta: ObjectCacheMeta | undefined) {
         if (!meta) meta = {};
-        if (!meta.addedDate) meta.addedDate = Date.now();
 
         const fullKey = subCacheName ? subCacheName + key : key;
         

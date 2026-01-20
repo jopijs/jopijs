@@ -1,8 +1,5 @@
 
-export interface ObjectCacheMeta {
-    addedDate?: number;
-    [key: string]: any;
-}
+export type ObjectCacheMeta = Record<string, string>;
 
 export interface ObjectCacheEntry<T = any> {
     key: string;
