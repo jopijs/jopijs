@@ -16,10 +16,6 @@ export interface InMemoryObjectCacheOptions {
     maxMemoryUsageDelta_mo?: number; // Deprecated/Ignored in new implementation
 }
 
-interface StoredWrapper<T> {
-    v: T;
-    m: ObjectCacheMeta;
-}
 
 export class InMemoryObjectCache implements ObjectCache {
     private readonly subCaches: Record<string, InMemorySubObjectCache> = {};
@@ -130,14 +126,13 @@ export class InMemoryObjectCache implements ObjectCache {
     }
 
     async key_get<T>(key: string): Promise<T | undefined> {
-        const wrapper = this.cache.get<StoredWrapper<T>>(key);
-        return wrapper ? wrapper.v : undefined;
+        return this.cache.get<T>(key) || undefined;
     }
 
     async key_getWithMeta<T>(key: string): Promise<{ value: T; meta: ObjectCacheMeta } | undefined> {
-        const wrapper = this.cache.get<StoredWrapper<T>>(key);
-        if (!wrapper) return undefined;
-        return { value: wrapper.v, meta: wrapper.m };
+        const entry = this.cache.getWithMeta<T>(key);
+        if (!entry) return undefined;
+        return { value: entry.value, meta: entry.meta as ObjectCacheMeta };
     }
 
     async key_set<T>(subCacheName: string, key: string, value: T, params?: ObjectCacheSetParams) {
@@ -151,12 +146,14 @@ export class InMemoryObjectCache implements ObjectCache {
         if (params.ttl) opts.ttl = params.ttl;
         if (params.expireAt) opts.expiresAt = params.expireAt;
         if (params.importance) opts.importance = params.importance;
-
-        // Store wrapper
-        const wrapper: StoredWrapper<T> = { v: value, m: meta };
         
+        // Pass meta directly to JkMemCache
+        if (Object.keys(meta).length > 0) {
+            opts.meta = meta;
+        }
+
         // We do not need to check max entries/memory here, JkMemCache handles usage.
-        this.cache.set(fullKey, wrapper, opts);
+        this.cache.set(fullKey, value as any, opts);
     }
 
     async key_delete(key: string): Promise<void> {
