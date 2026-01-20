@@ -24,7 +24,7 @@ export class ImplObjectProvider {
         return clone;
     }
     
-    async getValue(id?: any): Promise<any> {
+    async getValue(id?: string | number): Promise<any> {
         if (this.objectProvider.getFromCache) {
             return await this.objectProvider.getFromCache(id, this.subCacheName);
         }
@@ -77,9 +77,9 @@ export class ImplObjectProvider {
         return promise;
     }
 
-    async delete(id?: any): Promise<void> {
-        if (this.objectProvider.deleteFromCache) {
-            await this.objectProvider.deleteFromCache(id, this.subCacheName);
+    async removeFromCache(id?: string | number): Promise<void> {
+        if (this.objectProvider.removeFromCache) {
+            await this.objectProvider.removeFromCache(id, this.subCacheName);
         } else {
             let cache = getObjectCache();
             if (this.subCacheName) cache = cache.createSubCache(this.subCacheName);
@@ -87,12 +87,20 @@ export class ImplObjectProvider {
         }
     }
 
-    async refresh(id?: any): Promise<any> {
+    async refreshValue(id?: string | number): Promise<any> {
         if (this.objectProvider.refreshValue) {
             return this.objectProvider.refreshValue(id, this.subCacheName);
         }
 
-        await this.delete(id);
+        await this.removeFromCache(id);
         return await this.getValue(id);
+    }
+
+    async deleteValue(id?: string | number): Promise<void> {
+        await this.removeFromCache(id);
+        
+        if (this.objectProvider.deleteValue) {
+            await this.objectProvider.deleteValue(id, this.subCacheName);
+        }
     }
 }
