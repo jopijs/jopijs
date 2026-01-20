@@ -150,21 +150,6 @@ export class InMemoryCache implements PageCache {
                     if (!storedMeta) continue; // Should not happen
                     
                     const url = storedMeta.url;
-                    
-                    // Check subcache filter
-                    // We need to parse the key or check the url? 
-                    // Url in meta is just the url suffix.
-                    // The key contains the subcache prefix.
-                    
-                    // Logic from old iterator:
-                    /*
-                        let vUrl = result.value[0]; // key
-                        let idx = vUrl.indexOf(":");
-                        if (subCacheName === vUrl.substring(0, idx)) {
-                            // match
-                        }
-                    */
-
                     const idx = key.indexOf(":");
                     const currentSubCacheName = key.substring(0, idx);
 
