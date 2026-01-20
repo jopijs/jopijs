@@ -74,10 +74,7 @@ export class VoidPageCache implements PageCache {
     }
 }
 
-export interface CacheMeta {
-    addedDate?: number;
-    [key: string]: any;
-}
+export type CacheMeta = Record<string, any>;
 
 /**
  * An item stored into the cache.

@@ -1,75 +1,70 @@
 import * as jk_app from "jopi-toolkit/jk_app";
 import * as jk_crypto from "jopi-toolkit/jk_crypto";
 import * as jk_compress from "jopi-toolkit/jk_compress";
+import { JkMemCache } from "jopi-toolkit/jk_memcache";
 
 import type {CacheMeta, PageCache, CacheEntry, CacheItemProps} from "./cache.ts";
-import {octetToMo, ONE_KILO_OCTET, ONE_MEGA_OCTET} from "../publicTools.ts";
+import {ONE_KILO_OCTET, ONE_MEGA_OCTET} from "../publicTools.ts";
 import {
     cacheAddBrowserCacheValues,
     cacheItemToResponse,
     makeIterable,
-    readContentLength,
-    responseToCacheItem
+    readContentLength
 } from "../internalTools.ts";
 import type {JopiRequest} from "../jopiRequest.ts";
-import { runGarbageCollector } from "./garbageCollector.js";
-import type { GCEntry } from "./garbageCollector.js";
 
 const clearHotReloadKey = jk_app.clearHotReloadKey;
 const keepOnHotReload = jk_app.keepOnHotReload;
 const HOT_RELOAD_KEY = "jopi.rewrite.inMemoryCache.hotReloadKey";
 
 export interface InMemoryCacheOptions {
-    /**
-     * The memory cache survives hot-reload.
-     * If a hot-reload occurs, the cache contact is kept as-is.
-     * This option allows changing this behavior and automatically clearing
-     * the memory cache if a hot-reload is detected.
-     */
     clearOnHotReload?: boolean;
-
-    /**
-     * If an item is larger than this value, then he will not be added to the cache.
-     * Default value is 600 ko.
-     */
     maxContentLength?: number;
-
-    /**
-     * The max number of items in the cache.
-     * Default is 5000.
-     */
     maxItemCount?: number;
-
-    /**
-     * A delta which allows not triggering garbage collector too soon.
-     */
-    maxItemCountDelta?: number;
-
-    /**
-     * The max memory usage (mesure is Mo).
-     * Default is 500Mo
-     */
     maxMemoryUsage_mo?: number;
-
-    /**
-     * A delta which allows not triggering garbage collector too soon.
-     */
-    maxMemoryUsageDela_mo?: number;
 }
 
-interface MyCacheEntry extends CacheItemProps {
-    ucpBinary?: Uint8Array<ArrayBuffer>;
-    ucpBinarySize?: number;
-
-    gzipBinary?: Uint8Array<ArrayBuffer>;
-    gzipBinarySize?: number;
-
-    _refCount?: number;
-    _refCountSinceGC?: number;
+/**
+ * Metadata stored alongside the binary content in JkMemCache.
+ */
+interface StoredCacheMeta {
+    url: string;
+    isGzipped?: boolean;
+    headers?: {[key:string]: string};
+    status?: number;
+    meta?: CacheMeta;
 }
 
-class InMemoryCache implements PageCache {
+export class InMemoryCache implements PageCache {
     private readonly subCaches: Record<string, InMemorySubCache> = {};
+    private gzipMaxSize = 20 * ONE_MEGA_OCTET;
+    private readonly maxContentLength: number;
+
+    private _cache: JkMemCache;
+
+    constructor(options?: InMemoryCacheOptions) {
+        options = options || {};
+
+        if (options.clearOnHotReload) {
+            clearHotReloadKey(HOT_RELOAD_KEY);
+        }
+
+        const maxContentLength = options.maxContentLength || ONE_KILO_OCTET * 600;
+        this.maxContentLength = maxContentLength;
+
+        this._cache = keepOnHotReload(HOT_RELOAD_KEY, () => {
+            const maxCount = options.maxItemCount || 5000;
+            const maxMemoryUsage_mo = options.maxMemoryUsage_mo || 500;
+            const maxSize = Math.trunc(maxMemoryUsage_mo * ONE_MEGA_OCTET);
+
+            return new JkMemCache({
+                name: "HtmlCache",
+                maxCount,
+                maxSize,
+                cleanupInterval: 60000
+            });
+        });
+    }
 
     createSubCache(name: string): PageCache {
         let cache = this.subCaches[name];
@@ -80,38 +75,6 @@ class InMemoryCache implements PageCache {
         }
 
         return cache;
-    }
-
-    private readonly cache = keepOnHotReload(HOT_RELOAD_KEY, () => new Map<string, MyCacheEntry>());
-
-    private readonly maxContentLength: number;
-
-    private statItemCount = 0;
-    private readonly maxItemCount: number;
-    private readonly maxItemCountDelta: number;
-
-    private statMemoryUsage = 0;
-    private readonly maxMemoryUsage: number;
-    private readonly maxMemoryUsageDelta: number;
-
-    constructor(options?: InMemoryCacheOptions) {
-        options = options || {};
-
-        if (!options.maxContentLength) options.maxContentLength = ONE_KILO_OCTET * 600;
-
-        if (!options.maxItemCount) options.maxItemCount = 5000;
-        if (!options.maxItemCountDelta) options.maxItemCountDelta = Math.trunc(options.maxItemCount * 0.1);
-
-        if (!options.maxMemoryUsage_mo) options.maxMemoryUsage_mo = 500;
-        if (!options.maxMemoryUsageDela_mo) options.maxMemoryUsageDela_mo = Math.trunc(options.maxMemoryUsageDela_mo! * 0.1);
-
-        this.maxContentLength = options.maxContentLength!;
-
-        this.maxItemCount = options.maxItemCount!;
-        this.maxItemCountDelta = options.maxItemCountDelta!;
-
-        this.maxMemoryUsage = Math.trunc(options.maxMemoryUsage_mo * ONE_MEGA_OCTET);
-        this.maxMemoryUsageDelta = Math.trunc(options.maxMemoryUsageDela_mo * ONE_MEGA_OCTET);
     }
 
     async addToCache(_req: JopiRequest, url: URL, response: Response, meta?: CacheMeta): Promise<Response> {
@@ -142,85 +105,113 @@ class InMemoryCache implements PageCache {
         return this.key_hasInCache(':' + url.href);
     }
 
-    private gzipMaxSize = 20 * ONE_MEGA_OCTET;
-
     /**
      * Set the binary value inside the cache entry.
      * This by compressing the binary if needed.
      */
-    private async storeBinary(cacheEntry: MyCacheEntry, response: Response): Promise<boolean> {
+    private async prepareBinary(response: Response): Promise<{ binary: Uint8Array, isGzipped: boolean }> {
         const asBinary = new Uint8Array(await response.arrayBuffer());
         const byteLength = asBinary.byteLength;
         const canCompress = byteLength < this.gzipMaxSize;
 
         if (!canCompress) {
-            cacheEntry.ucpBinary = new Uint8Array(await response.arrayBuffer());
-            cacheEntry.ucpBinarySize = cacheEntry.ucpBinary.byteLength;
-            return false;
+            return { binary: asBinary, isGzipped: false };
         }
 
         const bufferGzip = jk_compress.gzipSync(asBinary);
-        cacheEntry.gzipBinary = new Uint8Array(bufferGzip.buffer as ArrayBuffer);
-        cacheEntry.gzipBinarySize = cacheEntry.gzipBinary.byteLength;
-        cacheEntry.isGzipped = true;
-
-        return true;
+        return { binary: new Uint8Array(bufferGzip.buffer as ArrayBuffer), isGzipped: true };
     }
 
     getCacheEntryIterator(subCacheName?: string): Iterable<CacheEntry> {
-        const iterator = this.cache.entries();
+        const iterator = this._cache.keys();
         if (!subCacheName) subCacheName = "";
+        const that = this;
+
+        /*
+            Keys logic:
+            key_addToCache(subCacheName, url) -> key = subCacheName + ":" + url
+            if subCacheName="API : " -> key = "API : :url"
+            
+            We iterate keys. We check if key starts with prefix.
+            Wait, we need to extract the entry to build CacheEntry.
+        */
 
         return makeIterable({
             next(): IteratorResult<CacheEntry> {
-                let result = iterator.next();
-
-                while (!result.done) {
-                    let vUrl = result.value[0];
-                    let vEntry = result.value[1];
+                while (true) {
+                    const res = iterator.next();
+                    if (res.done) return { value: undefined, done: true };
                     
-                    let idx = vUrl.indexOf(":");
+                    const key = res.value;
+                    let vEntry = that._cache.getWithMeta<Uint8Array>(key);
+                    if (!vEntry) continue; // Should not happen unless expired between key and get
+                    
+                    const storedMeta = vEntry.meta as StoredCacheMeta;
+                    if (!storedMeta) continue; // Should not happen
+                    
+                    const url = storedMeta.url;
+                    
+                    // Check subcache filter
+                    // We need to parse the key or check the url? 
+                    // Url in meta is just the url suffix.
+                    // The key contains the subcache prefix.
+                    
+                    // Logic from old iterator:
+                    /*
+                        let vUrl = result.value[0]; // key
+                        let idx = vUrl.indexOf(":");
+                        if (subCacheName === vUrl.substring(0, idx)) {
+                            // match
+                        }
+                    */
 
-                    if (subCacheName===vUrl.substring(0, idx)) {
-                        const entry = {...vEntry, url: vUrl.substring(idx+1)};
-                        const cacheEntry: CacheEntry = {
-                            url: entry.url,
-                            meta: entry.meta,
-                            response: cacheItemToResponse(entry)
+                    const idx = key.indexOf(":");
+                    const currentSubCacheName = key.substring(0, idx);
+
+                    if (subCacheName === currentSubCacheName) {
+                         const cacheEntry: CacheEntry = {
+                            url: url,
+                            meta: storedMeta.meta,
+                            response: that.reconstructResponse(vEntry.value, storedMeta)
                         };
-                        
-                        return {value: cacheEntry, done: false};
+                        return { value: cacheEntry, done: false };
                     }
-
-                    result = iterator.next();
                 }
-
-                return { value: undefined, done: true };
             }
         });
     }
 
     getSubCacheIterator(): Iterable<string> {
-        const alreadyReturned: string[] = [];
-        const iterator = this.cache.entries();
+        // Since we don't maintain a list of dynamic subcaches in memory anymore (we only have the ones created via createSubCache in `this.subCaches`),
+        // we could just return `Object.keys(this.subCaches)`.
+        // However, the original implementation iterated over ALL keys in the cache to find prefixes.
+        // This implies that if a subcache was populated, then the app restarted (hot reload kept cache), 
+        // we might want to recover known subcaches?
+        // But `subCaches` property is initialized empty on restart unless hot reload logic handles it?
+        // `InMemoryCache` hot reload key handles the MAP. 
+        // `subCaches` is NOT preserved in hot reload in the original code.
+        // BUT `getSubCacheIterator` scanned the MAP. So it dynamically found subcaches present in data.
+        
+        // We can replicate scanning keys.
+        const alreadyReturned = new Set<string>();
+        const iterator = this._cache.keys();
 
         return makeIterable({
             next(): IteratorResult<string> {
                 while (true) {
-                    let result = iterator.next();
-                    if (result.done) return { value: undefined, done: true };
-
-                    let key = result.value[0];
-                    let idx = key.indexOf(":");
-
-                    if (idx===0) continue;
-
-                    let subCacheName = key.substring(0, idx);
-
-                    if (!alreadyReturned.includes(subCacheName)) {
-                        alreadyReturned.push(subCacheName);
-                        return { value: subCacheName, done: false };
-                    }
+                     const res = iterator.next();
+                     if (res.done) return { value: undefined, done: true };
+                     
+                     const key = res.value;
+                     const idx = key.indexOf(":");
+                     if (idx <= 0) continue; // No prefix or empty prefix?
+                     // old code: if (idx===0) continue;
+                     
+                     const subCacheName = key.substring(0, idx);
+                     if (!alreadyReturned.has(subCacheName)) {
+                         alreadyReturned.add(subCacheName);
+                         return { value: subCacheName, done: false };
+                     }
                 }
             }
         });
@@ -229,191 +220,102 @@ class InMemoryCache implements PageCache {
     //region With a key
 
     async key_hasInCache(key: string): Promise<boolean> {
-        const cacheEntry = this.cache.get(key);
-        return !!cacheEntry;
+        return !!this._cache.get(key);
     }
 
     async key_getCacheMeta(key: string): Promise<CacheMeta | undefined> {
-        const cacheEntry = this.key_getValueFromCache(key);
-        return cacheEntry?.meta;
+        const entry = this._cache.getWithMeta(key);
+        if (!entry) return undefined;
+        return (entry.meta as StoredCacheMeta).meta;
     }
 
     async key_addToCache(subCacheName: string, url: string, response: Response, meta: CacheMeta|undefined) {
-        if ((response.status!==200) || (!response.body)) {
+        if ((response.status !== 200) || (!response.body)) {
             return response;
         }
-
-        const cacheEntry = responseToCacheItem("", response, meta) as MyCacheEntry;
-        const key = subCacheName + ':' + url;
-
+       
         const contentLength = readContentLength(response.headers);
-        if (contentLength>this.maxContentLength) return response;
+        if (contentLength > this.maxContentLength) return response;
 
-        let isGzipped = await this.storeBinary(cacheEntry, response);
+        const { binary, isGzipped } = await this.prepareBinary(response);
 
-        if (cacheEntry.ucpBinary) this.statMemoryUsage += cacheEntry.ucpBinarySize!;
-        if (cacheEntry.gzipBinary) this.statMemoryUsage += cacheEntry.gzipBinarySize!;
+        // Reconstruct basic headers/props
+        const headers: {[key: string]: string} = {};
+        response.headers.forEach((v, k) => headers[k] = v);
 
-        if (isGzipped) {
-            cacheEntry.binary = cacheEntry.gzipBinary;
-            cacheEntry.binarySize = cacheEntry.gzipBinarySize;
-        }
-        else {
-            cacheEntry.binary = cacheEntry.ucpBinary;
-            cacheEntry.binarySize = cacheEntry.ucpBinarySize;
-        }
+        const etag = jk_crypto.fastHash(binary);
+        cacheAddBrowserCacheValues(headers, etag);
+        
+        // Prepare meta for storage
+        const storedMeta: StoredCacheMeta = {
+            url,
+            isGzipped,
+            headers,
+            status: response.status,
+            meta: meta || {}
+        };
 
-        // Add special headers for browser cache control.
-        const etag = jk_crypto.fastHash(cacheEntry.binary!);
-        cacheAddBrowserCacheValues(cacheEntry, etag);
-
-        response = cacheItemToResponse(cacheEntry);
-
-        this.cache.set(key, cacheEntry);
-
-        this.statItemCount++;
-        cacheEntry._refCount = 1;
-        cacheEntry._refCountSinceGC = 1;
-
-        if (this.needToGC()) {
-            this.garbageCollector();
-        }
-
-        return response;
+        const key = subCacheName + ':' + url;
+        
+        // Allows keeping HTML in cache longer than other types of content.
+        //
+        let importance = 1;
+        if (headers["content-type"]?.startsWith("text/html")) importance = 10;
+        
+        this._cache.set(key, binary, { importance, meta: storedMeta });
+        
+        // Return a fresh response from the stored data.
+        return this.reconstructResponse(binary, storedMeta);
     }
 
     key_removeFromCache(key: string): Promise<void> {
-        const cacheEntry = this.cache.get(key);
-
-        if (cacheEntry) {
-            this.statItemCount--;
-
-            let size = 0;
-            if (cacheEntry.ucpBinarySize) size += cacheEntry.ucpBinarySize;
-            if (cacheEntry.gzipBinarySize) size += cacheEntry.gzipBinarySize;
-            if (size) this.statMemoryUsage -= size;
-        }
-
+        this._cache.delete(key);
         return Promise.resolve();
     }
 
     key_getFromCache(req: JopiRequest, key: string): Response|undefined {
-        const res = this.key_getValueFromCache(key);
+        const entry = this._cache.getWithMeta<Uint8Array>(key);
+        if (!entry) return undefined;
+        
+        const storedMeta = entry.meta as StoredCacheMeta;
+        
+        // Validate headers (304 Not Modified etc)
+        let cacheRes = req.file_validateCacheHeadersWith(storedMeta.headers || {});
+        if (cacheRes) return cacheRes;
 
-        if (res) {
-            let cacheRes = req.file_validateCacheHeadersWith(res.headers)
-            if (cacheRes) return cacheRes;
-
-            return cacheItemToResponse(res);
-        }
-
-        return undefined;
+        return this.reconstructResponse(entry.value, storedMeta);
     }
 
     key_getFromCacheWithMeta(req: JopiRequest, key: string): CacheEntry | undefined {
-        const res = this.key_getValueFromCache(key);
+        const entry = this._cache.getWithMeta<Uint8Array>(key);
+        if (!entry) return undefined;
 
-        if (res) {
-            let cacheRes = req.file_validateCacheHeadersWith(res.headers);
-            if (cacheRes) return {url: res.url, response: cacheRes, meta: res.meta};
-
-            return {url: res.url, response: cacheItemToResponse(res), meta: res.meta};
-        }
-
-        return undefined;
+        const storedMeta = entry.meta as StoredCacheMeta;
+        
+        let cacheRes = req.file_validateCacheHeadersWith(storedMeta.headers || {});
+        const response = cacheRes || this.reconstructResponse(entry.value, storedMeta);
+        
+        return {
+            url: storedMeta.url,
+            response,
+            meta: storedMeta.meta
+        };
     }
 
-    private key_getValueFromCache(key: string): CacheItemProps|undefined {
-        const cacheEntry = this.cache.get(key);
-        if (!cacheEntry) return undefined;
-
-        cacheEntry._refCount!++;
-        cacheEntry._refCountSinceGC!++;
-
-        if (cacheEntry.gzipBinary) {
-            cacheEntry.binary = cacheEntry.gzipBinary;
-            cacheEntry.binarySize = cacheEntry.gzipBinarySize;
-            cacheEntry.isGzipped = true;
-            return cacheEntry;
-        }
-
-        if (cacheEntry.ucpBinary) {
-            cacheEntry.binary = cacheEntry.ucpBinary;
-            cacheEntry.binarySize = cacheEntry.ucpBinarySize;
-            cacheEntry.isGzipped = false;
-            return cacheEntry;
-        }
-
-        cacheEntry.binary = undefined;
-        return cacheEntry;
+    private reconstructResponse(binary: Uint8Array, meta: StoredCacheMeta): Response {
+       const item: CacheItemProps = {
+           url: meta.url,
+           binary: binary as any,
+           binarySize: binary.byteLength,
+           isGzipped: meta.isGzipped,
+           headers: meta.headers,
+           status: meta.status,
+           meta: meta.meta || {}
+       };
+       
+       return cacheItemToResponse(item);
     }
-
-    //endregion
-
-    //region Garbage collector
-
-    private needToGC() {
-        if (this.statItemCount>this.maxItemCount) return true;
-        else if (this.statMemoryUsage>this.maxMemoryUsage) return true;
-        return false;
-    }
-
-    private garbageCollector() {
-        const itemCountBefore = this.statItemCount;
-        const memoryUsageBefore = this.statMemoryUsage;
-
-        runGarbageCollector({
-            cache: this.cache as unknown as Map<string, GCEntry>,
-            currentItemCount: this.statItemCount,
-            currentMemoryUsage: this.statMemoryUsage,
-            maxItemCount: this.maxItemCount,
-            maxItemCountDelta: this.maxItemCountDelta!,
-            maxMemoryUsage: this.maxMemoryUsage,
-            maxMemoryUsageDelta: this.maxMemoryUsageDelta!,
-            
-            getEntrySize: (entry) => {
-                let size = 0;
-                // We must cast here because GCEntry doesn't know about specific props
-                // Ideally MyCacheEntry should extend GCEntry
-                const e = entry as unknown as MyCacheEntry;
-                if (e.ucpBinarySize) size += e.ucpBinarySize;
-                if (e.gzipBinarySize) size += e.gzipBinarySize;
-                return size;
-            },
-            
-            isProtected: (entry) => {
-                const e = entry as unknown as MyCacheEntry;
-                if (!e.headers || !e.headers["content-type"]) return false;
-                const contentType = e.headers["content-type"];
-                return contentType.startsWith("text/html");
-            },
-
-            onEntryRemoved: (key, entry) => {
-                const e = entry as unknown as MyCacheEntry;
-                this.statItemCount--;
-                
-                let size = 0;
-                if (e.ucpBinarySize) size += e.ucpBinarySize;
-                if (e.gzipBinarySize) size += e.gzipBinarySize;
-                
-                this.statMemoryUsage -= size;
-            },
-
-            log: (msg) => {
-                // To match original behavior which only logged start/end with specific formatting
-                if (msg === "====== GC Started ======") {
-                    console.log("====== InMemory cache is executing garbage collector ======");
-                } else if (msg === "====== GC Finished ======") {
-                    console.log("===========================================================");
-                    console.log("Item count ----> before:", itemCountBefore + ", after:", this.statItemCount, " [limit: " + this.maxItemCount + " items]");
-                    console.log("Memory usage --> before:", octetToMo(memoryUsageBefore) + "Mb, after:", octetToMo(this.statMemoryUsage), "mb [limit: " + octetToMo(this.maxMemoryUsage) + "mb]");
-                    console.log("===========================================================");
-                    console.log();
-                }
-            }
-        });
-    }
-
+    
     //endregion
 }
 

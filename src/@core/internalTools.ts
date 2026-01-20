@@ -32,10 +32,10 @@ export function addHeadersToCache(header: string) {
     if (!gDefaultHeadersToCache.includes(header)) gDefaultHeadersToCache.push(header);
 }
 
-export function cacheAddBrowserCacheValues(cacheItem: CacheItemProps, etag: string) {
-    if (!cacheItem.headers) cacheItem.headers = {};
-    cacheItem.headers["etag"] = etag;
-    cacheItem.headers["last-modified-since"] = new Date().toUTCString();
+export function cacheAddBrowserCacheValues(headers?: Record<string, string>, etag: string) {
+    if (!headers) return;
+    headers["etag"] = etag;
+    headers["last-modified-since"] = new Date().toUTCString();
 }
 
 export function cacheItemToResponse(entry: CacheItemProps) {
