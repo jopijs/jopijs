@@ -13,18 +13,18 @@ export class TypeObjectProvider extends TypeInDirChunk {
         const importPathTs = writer.toPathForImport(relPath, false);
         const importPathJs = writer.toPathForImport(relPath, true);
 
-        const srcContent = `import {ObjectProvider} from "jopijs/generated";
+        const srcContent = `import {ImplObjectProvider} from "jopijs/generated";
 import providerDef from "${importPathTs}";
 
-const provider = new ObjectProvider("${key}", providerDef);
+const provider = new ImplObjectProvider("${key}", providerDef);
 export default provider;
 `;
 
         const distContent = `
-import {ObjectProvider} from "jopijs/generated";
+import {ImplObjectProvider} from "jopijs/generated";
 import providerDef from "${importPathJs}";
 
-const provider = new ObjectProvider("${key}", providerDef);
+const provider = new ImplObjectProvider("${key}", providerDef);
 export default provider;
 `;
 

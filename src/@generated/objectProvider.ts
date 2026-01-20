@@ -1,4 +1,4 @@
-import { getCoreWebSite, type ObjectCache } from "jopijs";
+import { getCoreWebSite, type ObjectCache, type ObjectProvider } from "jopijs";
 
 function getObjectCache(): ObjectCache {
     if (!gObjectCache) {
@@ -10,27 +10,25 @@ function getObjectCache(): ObjectCache {
 //
 let gObjectCache: ObjectCache | undefined;
 
-interface ObjectProviderValue {
-    value?: any;
-}
-
-type ValueProviderFunction = (id?: any, subCacheName?: string) => Promise<ObjectProviderValue>;
-
-export class ObjectProvider {
+export class ImplObjectProvider {
     private pendingRequests = new Map<string, Promise<any>>();
     private subCacheName?: string;
 
-    constructor(public readonly key: string, private readonly valueProvider: ValueProviderFunction) {
+    constructor(public readonly key: string, private readonly objectProvider: ObjectProvider) {
     }
 
-    useSubCache(cacheName: string): ObjectProvider {
+    useSubCache(cacheName: string): ImplObjectProvider {
         if (this.subCacheName===cacheName) return this;
-        let clone = new ObjectProvider(this.key, this.valueProvider);
+        let clone = new ImplObjectProvider(this.key, this.objectProvider);
         clone.subCacheName = cacheName;
         return clone;
     }
     
     async getValue(id?: any): Promise<any> {
+        if (this.objectProvider.getFromCache) {
+            return await this.objectProvider.getFromCache(id, this.subCacheName);
+        }
+
         let cache = getObjectCache();
         if (this.subCacheName) cache = cache.createSubCache(this.subCacheName);
 
@@ -56,10 +54,15 @@ export class ObjectProvider {
                 //       adding cache rules & behaviors into the
                 //       response for futur versions.
                 //
-                let res = await this.valueProvider(id, this.subCacheName);
+                let res = await this.objectProvider.getValue(id, this.subCacheName);
                 //
                 if (res && res.value !== undefined) {
-                    await cache.set(fullKey, res.value);
+                    if (this.objectProvider.addToCache) {
+                        await this.objectProvider.addToCache(id, this.subCacheName, res);
+                    } else {
+                        await cache.set(fullKey, res.value);
+                    }
+
                     return res.value;
                 }
                 
@@ -75,13 +78,20 @@ export class ObjectProvider {
     }
 
     async delete(id?: any): Promise<void> {
-        let cache = getObjectCache();
-        if (this.subCacheName) cache = cache.createSubCache(this.subCacheName);
-        
-        return await cache.delete(this.key + (id ? ":" + id : ""));
+        if (this.objectProvider.deleteFromCache) {
+            await this.objectProvider.deleteFromCache(id, this.subCacheName);
+        } else {
+            let cache = getObjectCache();
+            if (this.subCacheName) cache = cache.createSubCache(this.subCacheName);
+            await cache.delete(this.key + (id ? ":" + id : ""));
+        }
     }
 
     async refresh(id?: any): Promise<any> {
+        if (this.objectProvider.refreshValue) {
+            return this.objectProvider.refreshValue(id, this.subCacheName);
+        }
+
         await this.delete(id);
         return await this.getValue(id);
     }
