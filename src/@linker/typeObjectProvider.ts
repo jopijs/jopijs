@@ -2,34 +2,34 @@ import { TypeInDirChunk, type TypeInDirChunk_Item } from "./coreAliasTypes.ts";
 import type { CodeGenWriter } from "./engine.ts";
 import * as jk_fs from "jopi-toolkit/jk_fs";
 
-export class TypeDataProvider extends TypeInDirChunk {
+export class TypeObjectProvider extends TypeInDirChunk {
     async generateCodeForItem(writer: CodeGenWriter, key: string, item: TypeInDirChunk_Item) {
         let entryPoint = item.entryPoint;
-        key = key.substring("dataProviders!".length);
+        key = key.substring("objectProviders!".length);
 
-        const outDir = jk_fs.join(writer.dir.output_src, "dataProvider");
+        const outDir = jk_fs.join(writer.dir.output_src, "objectProvider");
         const relPath = jk_fs.getRelativePath(outDir, entryPoint);
 
         const importPathTs = writer.toPathForImport(relPath, false);
         const importPathJs = writer.toPathForImport(relPath, true);
 
-        const srcContent = `import {DataProvider} from "jopijs/generated";
+        const srcContent = `import {ObjectProvider} from "jopijs/generated";
 import providerDef from "${importPathTs}";
 
-const provider = new DataProvider("${key}", providerDef);
+const provider = new ObjectProvider("${key}", providerDef);
 export default provider;
 `;
 
         const distContent = `
-import {DataProvider} from "jopijs/generated";
+import {ObjectProvider} from "jopijs/generated";
 import providerDef from "${importPathJs}";
 
-const provider = new DataProvider("${key}", providerDef);
+const provider = new ObjectProvider("${key}", providerDef);
 export default provider;
 `;
 
         await writer.writeCodeFile({
-            fileInnerPath: `dataProviders/${key}`,
+            fileInnerPath: `objectProviders/${key}`,
             srcFileContent: srcContent,
             distFileContent: distContent
         });

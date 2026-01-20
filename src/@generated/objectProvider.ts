@@ -10,22 +10,22 @@ function getObjectCache(): ObjectCache {
 //
 let gObjectCache: ObjectCache | undefined;
 
-interface DataProviderValue {
+interface ObjectProviderValue {
     value?: any;
 }
 
-type ValueProviderFunction = (id?: any, subCacheName?: string) => Promise<DataProviderValue>;
+type ValueProviderFunction = (id?: any, subCacheName?: string) => Promise<ObjectProviderValue>;
 
-export class DataProvider {
+export class ObjectProvider {
     private pendingRequests = new Map<string, Promise<any>>();
     private subCacheName?: string;
 
     constructor(public readonly key: string, private readonly valueProvider: ValueProviderFunction) {
     }
 
-    useSubCache(cacheName: string): DataProvider {
+    useSubCache(cacheName: string): ObjectProvider {
         if (this.subCacheName===cacheName) return this;
-        let clone = new DataProvider(this.key, this.valueProvider);
+        let clone = new ObjectProvider(this.key, this.valueProvider);
         clone.subCacheName = cacheName;
         return clone;
     }
