@@ -143,7 +143,7 @@ export class InMemoryCache implements PageCache {
                     if (res.done) return { value: undefined, done: true };
                     
                     const key = res.value;
-                    let vEntry = that._cache.getWithMeta<Uint8Array>(key);
+                    let vEntry = that._cache.getWithMeta<Uint8Array>(key, true);
                     if (!vEntry) continue; // Should not happen unless expired between key and get
                     
                     const storedMeta = vEntry.meta as StoredCacheMeta;
@@ -220,7 +220,7 @@ export class InMemoryCache implements PageCache {
     //region With a key
 
     async key_hasInCache(key: string): Promise<boolean> {
-        return !!this._cache.get(key);
+        return this._cache.has(key);
     }
 
     async key_getCacheMeta(key: string): Promise<CacheMeta | undefined> {

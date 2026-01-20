@@ -122,7 +122,7 @@ export class InMemoryObjectCache implements ObjectCache {
     //region Key Access (Internal)
 
     async key_has(key: string): Promise<boolean> {
-        return !!this.cache.get(key); // optimized enough? get checks expiration
+        return this.cache.has(key);
     }
 
     async key_get<T>(key: string): Promise<T | undefined> {
