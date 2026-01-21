@@ -124,17 +124,9 @@ export class InMemoryCache implements PageCache {
 
     getCacheEntryIterator(subCacheName?: string): Iterable<CacheEntry> {
         const iterator = this._cache.keys();
-        if (!subCacheName) subCacheName = "";
+        // convention: subCacheName + ":" + url
+        const filterPrefix = (subCacheName || "") + ":";
         const that = this;
-
-        /*
-            Keys logic:
-            key_addToCache(subCacheName, url) -> key = subCacheName + ":" + url
-            if subCacheName="API : " -> key = "API : :url"
-            
-            We iterate keys. We check if key starts with prefix.
-            Wait, we need to extract the entry to build CacheEntry.
-        */
 
         return makeIterable({
             next(): IteratorResult<CacheEntry> {
@@ -143,41 +135,27 @@ export class InMemoryCache implements PageCache {
                     if (res.done) return { value: undefined, done: true };
                     
                     const key = res.value;
+                    if (!key.startsWith(filterPrefix)) continue;
+
                     let vEntry = that._cache.getWithMeta<Uint8Array>(key, true);
-                    if (!vEntry) continue; // Should not happen unless expired between key and get
+                    if (!vEntry) continue;
                     
                     const storedMeta = vEntry.meta as StoredCacheMeta;
-                    if (!storedMeta) continue; // Should not happen
-                    
-                    const url = storedMeta.url;
-                    const idx = key.indexOf(":");
-                    const currentSubCacheName = key.substring(0, idx);
 
-                    if (subCacheName === currentSubCacheName) {
-                         const cacheEntry: CacheEntry = {
-                            url: url,
+                    return {
+                        value: {
+                            url: storedMeta.url,
                             meta: storedMeta.meta,
                             response: that.reconstructResponse(vEntry.value, storedMeta)
-                        };
-                        return { value: cacheEntry, done: false };
-                    }
+                        },
+                        done: false
+                    };
                 }
             }
         });
     }
 
     getSubCacheIterator(): Iterable<string> {
-        // Since we don't maintain a list of dynamic subcaches in memory anymore (we only have the ones created via createSubCache in `this.subCaches`),
-        // we could just return `Object.keys(this.subCaches)`.
-        // However, the original implementation iterated over ALL keys in the cache to find prefixes.
-        // This implies that if a subcache was populated, then the app restarted (hot reload kept cache), 
-        // we might want to recover known subcaches?
-        // But `subCaches` property is initialized empty on restart unless hot reload logic handles it?
-        // `InMemoryCache` hot reload key handles the MAP. 
-        // `subCaches` is NOT preserved in hot reload in the original code.
-        // BUT `getSubCacheIterator` scanned the MAP. So it dynamically found subcaches present in data.
-        
-        // We can replicate scanning keys.
         const alreadyReturned = new Set<string>();
         const iterator = this._cache.keys();
 
@@ -188,11 +166,11 @@ export class InMemoryCache implements PageCache {
                      if (res.done) return { value: undefined, done: true };
                      
                      const key = res.value;
-                     const idx = key.indexOf(":");
-                     if (idx <= 0) continue; // No prefix or empty prefix?
-                     // old code: if (idx===0) continue;
+                     // Convention: "SubCache::url" or ":url"
+                     const separatorIdx = key.indexOf(":");
+                     if (separatorIdx===-1) continue;
                      
-                     const subCacheName = key.substring(0, idx);
+                     const subCacheName = key.substring(0, separatorIdx + 1);
                      if (!alreadyReturned.has(subCacheName)) {
                          alreadyReturned.add(subCacheName);
                          return { value: subCacheName, done: false };
@@ -308,7 +286,7 @@ class InMemorySubCache implements PageCache {
     private readonly prefix: string;
 
     constructor(private readonly parent: InMemoryCache, name: string) {
-        this.prefix = name + " : ";
+        this.prefix = name + ":";
     }
 
     async addToCache(_req: JopiRequest, url: URL, response: Response, meta?: CacheMeta): Promise<Response> {

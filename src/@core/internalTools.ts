@@ -32,7 +32,7 @@ export function addHeadersToCache(header: string) {
     if (!gDefaultHeadersToCache.includes(header)) gDefaultHeadersToCache.push(header);
 }
 
-export function cacheAddBrowserCacheValues(headers?: Record<string, string>, etag: string) {
+export function cacheAddBrowserCacheValues(headers: undefined|Record<string, string>, etag: string) {
     if (!headers) return;
     headers["etag"] = etag;
     headers["last-modified-since"] = new Date().toUTCString();

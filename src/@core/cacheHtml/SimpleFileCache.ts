@@ -148,7 +148,7 @@ export class SimpleFileCache implements PageCache {
         cacheEntry.isGzipped = isGzipped;
 
         const etag = (await jk_fs.calcFileHash(filePath))!;
-        cacheAddBrowserCacheValues(cacheEntry, etag);
+        cacheAddBrowserCacheValues(cacheEntry.headers, etag);
 
         filePath += " info";
         await fs.mkdir(path.dirname(filePath), {recursive: true});
