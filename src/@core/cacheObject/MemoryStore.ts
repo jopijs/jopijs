@@ -1,19 +1,15 @@
 
-import * as jk_app from "jopi-toolkit/jk_app";
 import { makeIterable } from "../internalTools.js";
-import { ONE_MEGA_OCTET as oneMo } from "../publicTools.js";
 import type { ObjectCache, ObjectCacheMeta, ObjectCacheSetParams } from "./interfaces.ts";
 import { JkMemCache } from "jopi-toolkit/jk_memcache";
+import { getSharedJkMemCache } from "../sharedJkMemCache.js";
 
-const keepOnHotReload = jk_app.keepOnHotReload;
-const HOT_RELOAD_KEY = "jopi.rewrite.inMemoryObjectCache.hotReloadKey";
+const GLOBAL_PREFIX = "OBJ:";
 
 export interface InMemoryObjectCacheOptions {
     clearOnHotReload?: boolean;
     maxItemCount?: number;
-    maxItemCountDelta?: number; // Deprecated/Ignored in new implementation
     maxMemoryUsage_mo?: number;
-    maxMemoryUsageDelta_mo?: number; // Deprecated/Ignored in new implementation
 }
 
 export class MemoryStore implements ObjectCache {
@@ -23,24 +19,13 @@ export class MemoryStore implements ObjectCache {
     constructor(options?: InMemoryObjectCacheOptions) {
         options = options || {};
 
-        // Try to recover existing instance from Hot Reload context
-        // Note: jk_app.keepOnHotReload runs the factory if key doesn't exist.
-        //
-        this._cache = keepOnHotReload(HOT_RELOAD_KEY, () => {
-            const maxCount = options.maxItemCount || 5000;
-            const maxMemoryUsage_mo = options.maxMemoryUsage_mo || 500;
-            const maxSize = Math.trunc(maxMemoryUsage_mo * oneMo);
-
-            return new JkMemCache({
-                name: "MainObjectCache",
-                maxCount,
-                maxSize,
-                cleanupInterval: 60000
-            });
+        // Use shared cache instance
+        this._cache = getSharedJkMemCache({
+            maxItemCount: options.maxItemCount,
+            maxMemoryUsage_mo: options.maxMemoryUsage_mo
         });
     }
 
-    
     createSubCache(name: string): ObjectCache {
         let cache = this.subCaches[name];
         
@@ -77,7 +62,8 @@ export class MemoryStore implements ObjectCache {
     }
 
     keys(): Iterable<string> {
-       const iterator = this._cache.keys();
+       const iterator = this._cache.keysStartingWith(GLOBAL_PREFIX);
+       const prefixLen = GLOBAL_PREFIX.length;
        
        return makeIterable({
             next(): IteratorResult<string> {
@@ -85,7 +71,10 @@ export class MemoryStore implements ObjectCache {
                     const res = iterator.next();
                     if (res.done) return { value: undefined, done: true };
                     
-                    const key = res.value;
+                    const fullKey = res.value;
+                    const key = fullKey.substring(prefixLen);
+                    
+                    // We only want top-level keys here (no colon separators for subcaches)
                     if (key.indexOf(":") === -1) {
                         return { value: key, done: false };
                     }
@@ -101,8 +90,9 @@ export class MemoryStore implements ObjectCache {
     //region SubCache Helpers logic
 
     sub_keys(prefix: string): Iterable<string> {
-        const iterator = this._cache.keysStartingWith(prefix);
-        const prefixLen = prefix.length;
+        const fullPrefix = GLOBAL_PREFIX + prefix;
+        const iterator = this._cache.keysStartingWith(fullPrefix);
+        const prefixLen = fullPrefix.length;
 
         return makeIterable({
             next(): IteratorResult<string> {
@@ -118,15 +108,15 @@ export class MemoryStore implements ObjectCache {
     //region Key Access (Internal)
 
     async key_has(key: string): Promise<boolean> {
-        return this._cache.has(key);
+        return this._cache.has(GLOBAL_PREFIX + key);
     }
 
     async key_get<T>(key: string): Promise<T | undefined> {
-        return this._cache.get<T>(key) || undefined;
+        return this._cache.get<T>(GLOBAL_PREFIX + key) || undefined;
     }
 
     async key_getWithMeta<T>(key: string): Promise<{ value: T; meta: ObjectCacheMeta } | undefined> {
-        const entry = this._cache.getWithMeta<T>(key);
+        const entry = this._cache.getWithMeta<T>(GLOBAL_PREFIX + key);
         if (!entry) return undefined;
         return { value: entry.value, meta: entry.meta as ObjectCacheMeta };
     }
@@ -135,7 +125,8 @@ export class MemoryStore implements ObjectCache {
         if (!params) params = {};
         const meta = params.meta || {};
 
-        const fullKey = subCacheName ? subCacheName + key : key;
+        const userKey = subCacheName ? subCacheName + key : key;
+        const fullKey = GLOBAL_PREFIX + userKey;
         
         // Prepare options for JkMemCache
         const opts: any = {};
@@ -153,7 +144,7 @@ export class MemoryStore implements ObjectCache {
     }
 
     async key_delete(key: string): Promise<void> {
-        this._cache.delete(key);
+        this._cache.delete(GLOBAL_PREFIX + key);
     }
     
     //endregion

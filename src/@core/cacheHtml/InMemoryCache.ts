@@ -1,7 +1,7 @@
-import * as jk_app from "jopi-toolkit/jk_app";
 import * as jk_crypto from "jopi-toolkit/jk_crypto";
 import * as jk_compress from "jopi-toolkit/jk_compress";
 import { JkMemCache } from "jopi-toolkit/jk_memcache";
+import { getSharedJkMemCache } from "../sharedJkMemCache.ts";
 
 import type {CacheMeta, PageCache, CacheEntry, CacheItemProps} from "./cache.ts";
 import {ONE_KILO_OCTET, ONE_MEGA_OCTET} from "../publicTools.ts";
@@ -13,9 +13,7 @@ import {
 } from "../internalTools.ts";
 import type {JopiRequest} from "../jopiRequest.ts";
 
-const clearHotReloadKey = jk_app.clearHotReloadKey;
-const keepOnHotReload = jk_app.keepOnHotReload;
-const HOT_RELOAD_KEY = "jopi.rewrite.inMemoryCache.hotReloadKey";
+const GLOBAL_PREFIX = "HTML:";
 
 export interface InMemoryCacheOptions {
     clearOnHotReload?: boolean;
@@ -45,24 +43,12 @@ export class InMemoryCache implements PageCache {
     constructor(options?: InMemoryCacheOptions) {
         options = options || {};
 
-        if (options.clearOnHotReload) {
-            clearHotReloadKey(HOT_RELOAD_KEY);
-        }
-
         const maxContentLength = options.maxContentLength || ONE_KILO_OCTET * 600;
         this.maxContentLength = maxContentLength;
 
-        this._cache = keepOnHotReload(HOT_RELOAD_KEY, () => {
-            const maxCount = options.maxItemCount || 5000;
-            const maxMemoryUsage_mo = options.maxMemoryUsage_mo || 500;
-            const maxSize = Math.trunc(maxMemoryUsage_mo * ONE_MEGA_OCTET);
-
-            return new JkMemCache({
-                name: "HtmlCache",
-                maxCount,
-                maxSize,
-                cleanupInterval: 60000
-            });
+        this._cache = getSharedJkMemCache({
+            maxItemCount: options.maxItemCount,
+            maxMemoryUsage_mo: options.maxMemoryUsage_mo
         });
     }
 
@@ -123,9 +109,11 @@ export class InMemoryCache implements PageCache {
     }
 
     getCacheEntryIterator(subCacheName?: string): Iterable<CacheEntry> {
-        const iterator = this._cache.keys();
         // convention: subCacheName + ":" + url
-        const filterPrefix = (subCacheName || "") + ":";
+        const userPrefix = (subCacheName || "") + ":";
+        const fullPrefix = GLOBAL_PREFIX + userPrefix;
+        
+        const iterator = this._cache.keysStartingWith(fullPrefix);
         const that = this;
 
         return makeIterable({
@@ -134,10 +122,7 @@ export class InMemoryCache implements PageCache {
                     const res = iterator.next();
                     if (res.done) return { value: undefined, done: true };
                     
-                    const key = res.value;
-                    if (!key.startsWith(filterPrefix)) continue;
-
-                    let vEntry = that._cache.getWithMeta<Uint8Array>(key, true);
+                    const vEntry = that._cache.getWithMeta<Uint8Array>(res.value, true);
                     if (!vEntry) continue;
                     
                     const storedMeta = vEntry.meta as StoredCacheMeta;
@@ -157,7 +142,8 @@ export class InMemoryCache implements PageCache {
 
     getSubCacheIterator(): Iterable<string> {
         const alreadyReturned = new Set<string>();
-        const iterator = this._cache.keys();
+        const iterator = this._cache.keysStartingWith(GLOBAL_PREFIX);
+        const prefixLen = GLOBAL_PREFIX.length;
 
         return makeIterable({
             next(): IteratorResult<string> {
@@ -165,7 +151,9 @@ export class InMemoryCache implements PageCache {
                      const res = iterator.next();
                      if (res.done) return { value: undefined, done: true };
                      
-                     const key = res.value;
+                     const fullKey = res.value;
+                     const key = fullKey.substring(prefixLen);
+                     
                      // Convention: "SubCache::url" or ":url"
                      const separatorIdx = key.indexOf(":");
                      if (separatorIdx===-1) continue;
@@ -183,11 +171,11 @@ export class InMemoryCache implements PageCache {
     //region With a key
 
     async key_hasInCache(key: string): Promise<boolean> {
-        return this._cache.has(key);
+        return this._cache.has(GLOBAL_PREFIX + key);
     }
 
     async key_getCacheMeta(key: string): Promise<CacheMeta | undefined> {
-        const entry = this._cache.getWithMeta(key);
+        const entry = this._cache.getWithMeta(GLOBAL_PREFIX + key);
         if (!entry) return undefined;
         return (entry.meta as StoredCacheMeta).meta;
     }
@@ -218,7 +206,7 @@ export class InMemoryCache implements PageCache {
             meta: meta || {}
         };
 
-        const key = subCacheName + ':' + url;
+        const key = GLOBAL_PREFIX + subCacheName + ':' + url;
         
         // Allows keeping HTML in cache longer than other types of content.
         //
@@ -232,12 +220,12 @@ export class InMemoryCache implements PageCache {
     }
 
     key_removeFromCache(key: string): Promise<void> {
-        this._cache.delete(key);
+        this._cache.delete(GLOBAL_PREFIX + key);
         return Promise.resolve();
     }
 
     key_getFromCache(req: JopiRequest, key: string): Response|undefined {
-        const entry = this._cache.getWithMeta<Uint8Array>(key);
+        const entry = this._cache.getWithMeta<Uint8Array>(GLOBAL_PREFIX + key);
         if (!entry) return undefined;
         
         const storedMeta = entry.meta as StoredCacheMeta;
@@ -250,7 +238,7 @@ export class InMemoryCache implements PageCache {
     }
 
     key_getFromCacheWithMeta(req: JopiRequest, key: string): CacheEntry | undefined {
-        const entry = this._cache.getWithMeta<Uint8Array>(key);
+        const entry = this._cache.getWithMeta<Uint8Array>(GLOBAL_PREFIX + key);
         if (!entry) return undefined;
 
         const storedMeta = entry.meta as StoredCacheMeta;
@@ -328,11 +316,6 @@ class InMemorySubCache implements PageCache {
 
 export function initMemoryCache(options: InMemoryCacheOptions) {
     if (gInstance) return;
-
-    if (options.clearOnHotReload) {
-        clearHotReloadKey(HOT_RELOAD_KEY);
-    }
-
     gInstance = new InMemoryCache(options);
 }
 
