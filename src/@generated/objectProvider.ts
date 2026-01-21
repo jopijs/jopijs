@@ -1,4 +1,5 @@
 import { getCoreWebSite, type ObjectCache, type ObjectProvider } from "jopijs";
+import { logObjectProvider } from "./_logs.ts";
 
 function getObjectCache(): ObjectCache {
     if (!gObjectCache) {
@@ -48,6 +49,10 @@ export class ImplObjectProvider {
      * @returns A promise that resolves to the value.
      */
     async getValue(id?: string | number): Promise<any> {
+        if (this.objectProvider.directGetValue) {
+            return await this.objectProvider.directGetValue(id, this.subCacheName, this.key);
+        }
+
         if (this.objectProvider.getFromCache) {
             return await this.objectProvider.getFromCache(id, this.subCacheName);
         }
@@ -83,6 +88,7 @@ export class ImplObjectProvider {
                 //       adding cache rules & behaviors into the
                 //       response for futur versions.
                 //
+                logObjectProvider.spam(w => w("CALC", {subCache: this.subCacheName, key: this.key, id}));
                 let res = await this.objectProvider.getValue(id, this.subCacheName);
                 //
                 if (res && res.value !== undefined) {
@@ -114,6 +120,8 @@ export class ImplObjectProvider {
         if (this.objectProvider.removeFromCache) {
             await this.objectProvider.removeFromCache(id, this.subCacheName);
         } else {
+            logObjectProvider.spam(w => w("DELETE", { subCache: this.subCacheName, key: this.key, id }));
+            
             let cache = getObjectCache();
             if (this.subCacheName) cache = cache.createSubCache(this.subCacheName);
             await cache.delete(this.key + (id ? ":" + id : ""));

@@ -5,6 +5,16 @@
  */
 export interface ObjectProvider {
     /**
+     * Retrieves a value directly without using the cache mechanism or deduplication.
+     * When this method is present, it takes precedence over all other retrieval methods.
+     * @param id - The unique identifier of the object.
+     * @param subCacheName - The name of the sub-cache currently in use.
+     * @param key - The key mapped to the object provider.
+     * @returns The value retrieved directly.
+     */
+    directGetValue?(id: string | number | undefined, subCacheName: string | undefined,  key: string): any;
+
+    /**
      * Gets the default sub-cache name used by this provider.
      * This allows grouping related objects in a specific cache partition.
      * @returns The name of the default sub-cache.
