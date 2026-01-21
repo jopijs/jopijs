@@ -41,9 +41,6 @@ export class InMemoryObjectCache implements ObjectCache {
         });
     }
 
-    private get cache(): JkMemCache {
-        return this._cache;
-    }
     
     createSubCache(name: string): ObjectCache {
         let cache = this.subCaches[name];
@@ -81,7 +78,7 @@ export class InMemoryObjectCache implements ObjectCache {
     }
 
     keys(): Iterable<string> {
-       const iterator = this.cache.keys();
+       const iterator = this._cache.keys();
        
        return makeIterable({
             next(): IteratorResult<string> {
@@ -105,7 +102,7 @@ export class InMemoryObjectCache implements ObjectCache {
     //region SubCache Helpers logic
 
     sub_keys(prefix: string): Iterable<string> {
-        const iterator = this.cache.keysStartingWith(prefix);
+        const iterator = this._cache.keysStartingWith(prefix);
         const prefixLen = prefix.length;
 
         return makeIterable({
@@ -122,15 +119,15 @@ export class InMemoryObjectCache implements ObjectCache {
     //region Key Access (Internal)
 
     async key_has(key: string): Promise<boolean> {
-        return this.cache.has(key);
+        return this._cache.has(key);
     }
 
     async key_get<T>(key: string): Promise<T | undefined> {
-        return this.cache.get<T>(key) || undefined;
+        return this._cache.get<T>(key) || undefined;
     }
 
     async key_getWithMeta<T>(key: string): Promise<{ value: T; meta: ObjectCacheMeta } | undefined> {
-        const entry = this.cache.getWithMeta<T>(key);
+        const entry = this._cache.getWithMeta<T>(key);
         if (!entry) return undefined;
         return { value: entry.value, meta: entry.meta as ObjectCacheMeta };
     }
@@ -153,11 +150,11 @@ export class InMemoryObjectCache implements ObjectCache {
         }
 
         // We do not need to check max entries/memory here, JkMemCache handles usage.
-        this.cache.set(fullKey, value as any, opts);
+        this._cache.set(fullKey, value as any, opts);
     }
 
     async key_delete(key: string): Promise<void> {
-        this.cache.delete(key);
+        this._cache.delete(key);
     }
     
     //endregion
@@ -173,15 +170,7 @@ class InMemorySubObjectCache implements ObjectCache {
     private readonly subCaches: Record<string, ObjectCache> = {};
 
     createSubCache(name: string): ObjectCache {
-        let cache = this.subCaches[name];
-        if (cache) return cache;
-        
-        // This logic in original code assumes recursion through parent but maintaining local map
-        // Wait, original: cache = this.parent.createSubCache(this.prefix + name);
-        // It asks parent to create a subcache with "parentPrefix:newname".
-        cache = this.parent.createSubCache(this.prefix + name);
-        this.subCaches[name] = cache;
-        return cache;
+        return this.parent.createSubCache(name);
     }
 
     async get<T>(key: string): Promise<T | undefined> {
@@ -210,8 +199,7 @@ class InMemorySubObjectCache implements ObjectCache {
     }
 
     getSubCacheIterator(): Iterable<string> {
-        // Sub-cache can't have a sub-cache.
-        return [];
+        return this.parent.getSubCacheIterator();
     }
 }
 
