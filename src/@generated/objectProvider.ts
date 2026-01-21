@@ -88,14 +88,16 @@ export class ImplObjectProvider {
                 //       adding cache rules & behaviors into the
                 //       response for futur versions.
                 //
-                logObjectProvider.spam(w => w("CALC", {subCache: this.subCacheName, key: this.key, id}));
+                logObjectProvider.info(w => w("CALC", {subCache: this.subCacheName, key: this.key, id}));
                 let res = await this.objectProvider.getValue(id, this.subCacheName);
                 //
                 if (res && res.value !== undefined) {
-                    if (this.objectProvider.addToCache) {
-                        await this.objectProvider.addToCache(id, this.subCacheName, res);
-                    } else {
-                        await cache.set(fullKey, res.value);
+                    if (res.addToCache !== false) {
+                        if (this.objectProvider.addToCache) {
+                            await this.objectProvider.addToCache(id, this.subCacheName, res);
+                        } else {
+                            await cache.set(fullKey, res.value, res.cacheParams);
+                        }
                     }
 
                     return res.value;

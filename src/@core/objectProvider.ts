@@ -1,3 +1,5 @@
+import type { ObjectCacheSetParams } from "./cacheObject/def.ts";
+
 /**
  * Interface representing a provider for a specific type of object.
  * ObjectProviders are used to centralize data fetching and caching logic.
@@ -81,4 +83,14 @@ export interface ObjectProviderValue {
      * The actual value of the object.
      */
     value?: any;
+
+    /**
+     * If false, don't add entry to the cache.
+     */
+    addToCache?: boolean;
+
+    /**
+     * Optional parameters for the cache storage (TTL, expiration, metadata, importance).
+     */
+    cacheParams?: ObjectCacheSetParams;
 }
