@@ -11,19 +11,17 @@ import {WebSiteCrawler, type WebSiteCrawlerOptions} from "jopijs/crawler";
 import { type FetchOptions, type ServerDownResult, ServerFetch, type ServerFetchOptions } from "./serverFetch.ts";
 import { getLetsEncryptCertificate, type LetsEncryptParams, type OnTimeoutError } from "./letsEncrypt.ts";
 import { type UserInfos_WithLoginPassword, UserStore_WithLoginPassword } from "./userStores.ts";
-import { getBundlerConfig, type PostCssInitializer } from "./bundler/index.ts";
+import { getBundlerConfig, type PostCssInitializer } from "./bundler";
 import { getInMemoryCache, initMemoryCache, type InMemoryCacheOptions } from "./cacheHtml/InMemoryCache.ts";
 import { SimpleFileCache } from "./cacheHtml/SimpleFileCache.ts";
 import { type PageCache, VoidPageCache } from "./cacheHtml/cache.ts";
-import type { ObjectCache } from "./cacheObject/def.ts";
+import type { ObjectCache } from "./cacheObject";
 import {
+    FileStore,
     getInMemoryObjectCache,
     initMemoryObjectCache,
     type InMemoryObjectCacheOptions
-} from "./cacheObject/inMemoryObjectCache.ts";
-import { FileObjectCache } from "./cacheObject/fileObjectCache.ts";
-import { JopiRequest } from "./jopiRequest.ts";
-
+} from "./cacheObject/index.ts";
 import {
     type CacheRules,
     type HttpMethod,
@@ -46,6 +44,7 @@ import { setHttpProxyReadPause } from "./dataSources.ts";
 import { isDevelopment } from "jopi-toolkit/jk_process";
 import { getWebSiteConfig } from "jopijs/coreconfig";
 import { initProcessSupervisor } from "./watcher.ts";
+import type {JopiRequest} from "./jopiRequest.ts";
 
 /**
  * The main application class for JopiJS.
@@ -931,7 +930,7 @@ class WebSite_ObjectCacheBuilder {
 
     /** Use a disk-based object cache stored in a specific directory. */
     use_fileSystemCache(rootDir: string): WebSite_ObjectCacheBuilder {
-        this.cache = new FileObjectCache(rootDir);
+        this.cache = new FileStore(rootDir);
         return this;
     }
 

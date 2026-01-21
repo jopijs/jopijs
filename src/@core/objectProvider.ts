@@ -1,4 +1,4 @@
-import type { ObjectCacheSetParams } from "./cacheObject/def.ts";
+import type { ObjectCacheSetParams } from "./cacheObject";
 
 /**
  * Interface representing a provider for a specific type of object.

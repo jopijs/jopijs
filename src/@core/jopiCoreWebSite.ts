@@ -35,8 +35,7 @@ import { logCache_notInCache, logServer_request } from "./_logs.ts";
 import type { TryReturnFileParams } from "./browserCacheControl.ts";
 import { installDataSourcesServer, type JopiPageDataProvider } from "./dataSources.ts";
 import { addHeadersToCache } from "./internalTools.ts";
-import type { ObjectCache } from "./cacheObject/def.ts";
-import { getInMemoryObjectCache } from "./cacheObject/inMemoryObjectCache.ts";
+import { getInMemoryObjectCache, type ObjectCache } from "./cacheObject/index.ts";
 
 export type RouteHandler = (req: JopiRequest) => Promise<Response>;
 

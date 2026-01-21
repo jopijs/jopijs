@@ -5,10 +5,10 @@ import fss from "node:fs";
 import * as jk_fs from "jopi-toolkit/jk_fs";
 import * as jk_crypto from "jopi-toolkit/jk_crypto";
 import { makeIterable } from "../internalTools.js";
-import type { ObjectCache, ObjectCacheEntry, ObjectCacheMeta } from "./def.ts";
+import type { ObjectCache, ObjectCacheEntry, ObjectCacheMeta } from "./interfaces.ts";
 
-export class FileObjectCache implements ObjectCache {
-    private readonly subCaches: Record<string, FileObjectCache> = {};
+export class FileStore implements ObjectCache {
+    private readonly subCaches: Record<string, FileStore> = {};
     public readonly rootDir: string;
 
     constructor(rootDir: string) {
@@ -21,7 +21,7 @@ export class FileObjectCache implements ObjectCache {
         let cache = this.subCaches[name];
         if (!cache) {
             const newDir = path.join(this.rootDir, "_subCaches", name);
-            cache = new FileObjectCache(newDir);
+            cache = new FileStore(newDir);
             this.subCaches[name] = cache;
         }
         return cache;

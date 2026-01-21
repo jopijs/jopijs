@@ -14,7 +14,7 @@ import Page from "./PageComponent.ts";
 
 import { initCheerio } from "./jQuery.ts";
 import { type PageCache, type CacheEntry } from "./cacheHtml/cache.ts";
-import type { ObjectCache } from "./cacheObject/def.ts";
+import type { ObjectCache } from "./cacheObject/index.ts";
 import {
     type AuthResult,
     type CookieOptions, SBPE_DirectSendThisResponseException,

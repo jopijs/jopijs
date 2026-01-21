@@ -2,7 +2,7 @@
 import * as jk_app from "jopi-toolkit/jk_app";
 import { makeIterable } from "../internalTools.js";
 import { ONE_MEGA_OCTET as oneMo } from "../publicTools.js";
-import type { ObjectCache, ObjectCacheMeta, ObjectCacheSetParams } from "./def.ts";
+import type { ObjectCache, ObjectCacheMeta, ObjectCacheSetParams } from "./interfaces.ts";
 import { JkMemCache } from "jopi-toolkit/jk_memcache";
 
 const keepOnHotReload = jk_app.keepOnHotReload;
@@ -16,8 +16,7 @@ export interface InMemoryObjectCacheOptions {
     maxMemoryUsageDelta_mo?: number; // Deprecated/Ignored in new implementation
 }
 
-
-export class InMemoryObjectCache implements ObjectCache {
+export class MemoryStore implements ObjectCache {
     private readonly subCaches: Record<string, InMemorySubObjectCache> = {};
     private _cache: JkMemCache;
     
@@ -163,7 +162,7 @@ export class InMemoryObjectCache implements ObjectCache {
 class InMemorySubObjectCache implements ObjectCache {
     private readonly prefix: string;
 
-    constructor(private readonly parent: InMemoryObjectCache, name: string) {
+    constructor(private readonly parent: MemoryStore, name: string) {
         this.prefix = name + ":";
     }
 
@@ -205,7 +204,7 @@ class InMemorySubObjectCache implements ObjectCache {
 
 export function initMemoryObjectCache(options: InMemoryObjectCacheOptions) {
     if (gInstance) return;
-    gInstance = new InMemoryObjectCache(options);
+    gInstance = new MemoryStore(options);
 }
 
 export function getInMemoryObjectCache(): ObjectCache {
@@ -213,4 +212,4 @@ export function getInMemoryObjectCache(): ObjectCache {
     return gInstance;
 }
 
-let gInstance: InMemoryObjectCache;
+let gInstance: MemoryStore;
