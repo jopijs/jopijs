@@ -70,8 +70,8 @@ export function exposeDataSource_PageData(route: string, securityUid: string, da
             req.role_assertUserHasOneOfThisRoles(allowedRoles);
         }
         
-        const seed = await req.req_getBodyData<any>();
-        const res = await dataProvider.getRefreshedData!.call(dataProvider, {req, seed, isFromBrowser: true});
+        const reqData = await req.req_getBodyData<any>();
+        const res = await dataProvider.getRefreshedData!.call(dataProvider, {req, seed: reqData.seed, isFromBrowser: true});
         return req.res_jsonResponse(res);
     }});
 

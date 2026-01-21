@@ -285,7 +285,7 @@ async function refreshPageData(url: string, useThisSeed: any): Promise<void> {
     let res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(gPageDataState!.data!.seed)
+        body: JSON.stringify({ seed: gPageDataState!.data!.seed })
     });
 
     gPageDataState!.isLoading = false;
