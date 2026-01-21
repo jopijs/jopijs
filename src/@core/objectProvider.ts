@@ -1,4 +1,46 @@
-import type { ObjectCacheSetParams } from "./cacheObject";
+import type { ObjectCache, ObjectCacheSetParams } from "./cacheObject";
+
+/**
+ * Base parameters passed to ObjectProvider methods.
+ */
+export interface ObjectProviderParams {
+    /**
+     * The unique identifier of the object.
+     */
+    id?: string | number;
+
+    /**
+     * The name of the sub-cache currently in use.
+     */
+    subCacheName?: string;
+
+    /**
+     * The key mapped to the object provider.
+     */
+    key: string;
+
+    /**
+     * The cache instance associated with this provider/sub-cache.
+     */
+    cache: ObjectCache;
+}
+
+export interface ObjectProviderGetValueParams extends ObjectProviderParams {}
+export interface ObjectProviderDirectGetValueParams extends ObjectProviderParams {}
+export interface ObjectProviderRefreshValueParams extends ObjectProviderParams {}
+export interface ObjectProviderDeleteValueParams extends ObjectProviderParams {}
+export interface ObjectProviderGetFromCacheParams extends ObjectProviderParams {}
+export interface ObjectProviderRemoveFromCacheParams extends ObjectProviderParams {}
+
+/**
+ * Parameters for adding a value to the cache.
+ */
+export interface ObjectProviderAddToCacheParams extends ObjectProviderParams {
+    /**
+     * The value to add to the cache.
+     */
+    res: ObjectProviderValue;
+}
 
 /**
  * Interface representing a provider for a specific type of object.
@@ -9,12 +51,10 @@ export interface ObjectProvider {
     /**
      * Retrieves a value directly without using the cache mechanism or deduplication.
      * When this method is present, it takes precedence over all other retrieval methods.
-     * @param id - The unique identifier of the object.
-     * @param subCacheName - The name of the sub-cache currently in use.
-     * @param key - The key mapped to the object provider.
+     * @param params - The parameters including id, subCacheName, and key.
      * @returns The value retrieved directly.
      */
-    directGetValue?(id: string | number | undefined, subCacheName: string | undefined,  key: string): any;
+    directGetValue?(params: ObjectProviderDirectGetValueParams): any;
 
     /**
      * Gets the default sub-cache name used by this provider.
@@ -26,53 +66,46 @@ export interface ObjectProvider {
     /**
      * Retrieves a value by its ID from the provider.
      * This method is called by the system when a value is not found in the cache.
-     * @param id - The unique identifier of the object.
-     * @param subCacheName - The name of the sub-cache currently in use.
+     * @param params - The parameters including id, subCacheName, and key.
      * @returns A promise that resolves to the object provider value.
      */
-    getValue(id?: string | number, subCacheName?: string): Promise<ObjectProviderValue>;
+    getValue(params: ObjectProviderGetValueParams): Promise<ObjectProviderValue>;
 
     /**
      * Forces a refresh of the value.
      * If not implemented, the system will remove the item from cache and call getValue.
-     * @param id - The unique identifier of the object.
-     * @param subCacheName - The name of the sub-cache currently in use.
+     * @param params - The parameters including id, subCacheName, and key.
      * @returns A promise that resolves to the refreshed value.
      */
-    refreshValue?(id?: string | number, subCacheName?: string): Promise<any>;
+    refreshValue?(params: ObjectProviderRefreshValueParams): Promise<any>;
 
     /**
      * Deletes a value from the underlying storage.
-     * @param id - The unique identifier of the object.
-     * @param subCacheName - The name of the sub-cache currently in use.
+     * @param params - The parameters including id, subCacheName, and key.
      */
-    deleteValue?(id?: string | number, subCacheName?: string): Promise<void>;
+    deleteValue?(params: ObjectProviderDeleteValueParams): Promise<void>;
 
     /**
      * Custom implementation for retrieving a value from a specific cache.
      * If not provided, the system uses the default ObjectCache.
-     * @param id - The unique identifier of the object.
-     * @param subCacheName - The name of the sub-cache currently in use.
+     * @param params - The parameters including id, subCacheName, and key.
      * @returns A promise that resolves to the cached value if found.
      */
-    getFromCache?(id?: string | number, subCacheName?: string): Promise<any>;
+    getFromCache?(params: ObjectProviderGetFromCacheParams): Promise<any>;
 
     /**
      * Custom implementation for adding a value to a specific cache.
      * If not provided, the system uses the default ObjectCache.
-     * @param id - The unique identifier of the object.
-     * @param subCacheName - The name of the sub-cache currently in use.
-     * @param res - The value to add to the cache.
+     * @param params - The parameters including id, subCacheName, key, and res.
      */
-    addToCache?(id: string | number | undefined, subCacheName: string | undefined, res: ObjectProviderValue): Promise<void>;
+    addToCache?(params: ObjectProviderAddToCacheParams): Promise<void>;
 
     /**
      * Custom implementation for removing a value from a specific cache.
      * If not provided, the system uses the default ObjectCache.
-     * @param id - The unique identifier of the object.
-     * @param subCacheName - The name of the sub-cache currently in use.
+     * @param params - The parameters including id, subCacheName, and key.
      */
-    removeFromCache?(id?: string | number, subCacheName?: string): Promise<void>;
+    removeFromCache?(params: ObjectProviderRemoveFromCacheParams): Promise<void>;
 }
 
 /**

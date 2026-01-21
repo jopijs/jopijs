@@ -1,4 +1,4 @@
-import { getCoreWebSite, type ObjectCache, type ObjectProvider } from "jopijs";
+import { getCoreWebSite, type ObjectCache, type ObjectProvider, type ObjectProviderParams } from "jopijs";
 import { logObjectProvider } from "./_logs.ts";
 
 function getObjectCache(): ObjectCache {
@@ -49,21 +49,15 @@ export class ImplObjectProvider {
      * @returns A promise that resolves to the value.
      */
     async getValue(id?: string | number): Promise<any> {
+        const cache = this._resolveCache();
+        const params: ObjectProviderParams = { id, subCacheName: this.subCacheName, key: this.key, cache };
+
         if (this.objectProvider.directGetValue) {
-            return await this.objectProvider.directGetValue(id, this.subCacheName, this.key);
+            return await this.objectProvider.directGetValue(params);
         }
 
         if (this.objectProvider.getFromCache) {
-            return await this.objectProvider.getFromCache(id, this.subCacheName);
-        }
-
-        let cache = getObjectCache();
-        //
-        if (this.subCacheName) {
-            cache = cache.createSubCache(this.subCacheName);
-        } else if (this.objectProvider.getDefaultSubCache) {
-            this.subCacheName = this.objectProvider.getDefaultSubCache();
-            cache = cache.createSubCache(this.subCacheName);
+            return await this.objectProvider.getFromCache(params);
         }
 
         let fullKey = this.key + (id ? ":" + id : "");
@@ -89,12 +83,12 @@ export class ImplObjectProvider {
                 //       response for futur versions.
                 //
                 logObjectProvider.info(w => w("CALC", {subCache: this.subCacheName, key: this.key, id}));
-                let res = await this.objectProvider.getValue(id, this.subCacheName);
+                let res = await this.objectProvider.getValue(params);
                 //
                 if (res && res.value !== undefined) {
                     if (res.addToCache !== false) {
                         if (this.objectProvider.addToCache) {
-                            await this.objectProvider.addToCache(id, this.subCacheName, res);
+                            await this.objectProvider.addToCache({ ...params, res });
                         } else {
                             await cache.set(fullKey, res.value, res.cacheParams);
                         }
@@ -119,13 +113,14 @@ export class ImplObjectProvider {
      * @param id - The unique identifier of the object to remove.
      */
     async removeFromCache(id?: string | number): Promise<void> {
+        const cache = this._resolveCache();
+        const params: ObjectProviderParams = { id, subCacheName: this.subCacheName, key: this.key, cache };
+
         if (this.objectProvider.removeFromCache) {
-            await this.objectProvider.removeFromCache(id, this.subCacheName);
+            await this.objectProvider.removeFromCache(params);
         } else {
             logObjectProvider.spam(w => w("DELETE", { subCache: this.subCacheName, key: this.key, id }));
             
-            let cache = getObjectCache();
-            if (this.subCacheName) cache = cache.createSubCache(this.subCacheName);
             await cache.delete(this.key + (id ? ":" + id : ""));
         }
     }
@@ -136,8 +131,11 @@ export class ImplObjectProvider {
      * @returns A promise that resolves to the fresh value.
      */
     async refreshValue(id?: string | number): Promise<any> {
+        const cache = this._resolveCache();
+        const params: ObjectProviderParams = { id, subCacheName: this.subCacheName, key: this.key, cache };
+
         if (this.objectProvider.refreshValue) {
-            return this.objectProvider.refreshValue(id, this.subCacheName);
+            return this.objectProvider.refreshValue(params);
         }
 
         await this.removeFromCache(id);
@@ -152,7 +150,26 @@ export class ImplObjectProvider {
         await this.removeFromCache(id);
         
         if (this.objectProvider.deleteValue) {
-            await this.objectProvider.deleteValue(id, this.subCacheName);
+            const cache = this._resolveCache();
+            const params: ObjectProviderParams = { id, subCacheName: this.subCacheName, key: this.key, cache };
+            await this.objectProvider.deleteValue(params);
         }
+    }
+    /**
+     * Helper to resolve the correct cache instance, initializing subCacheName if needed.
+     */
+    private _resolveCache(): ObjectCache {
+        let cache = getObjectCache();
+        
+        if (this.subCacheName) {
+            return cache.createSubCache(this.subCacheName);
+        }
+        
+        if (this.objectProvider.getDefaultSubCache) {
+            this.subCacheName = this.objectProvider.getDefaultSubCache();
+            return cache.createSubCache(this.subCacheName);
+        }
+        
+        return cache;
     }
 }
