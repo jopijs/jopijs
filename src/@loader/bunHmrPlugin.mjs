@@ -2,6 +2,10 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import {installEsBuildPlugins} from "jopijs/loader-tools";
 
+// ******************************************************************************************************
+// Loaded from bunfig.toml file to when using HMR mode.
+// ******************************************************************************************************
+
 const myPlugin = {
     name: "jopi-replace-text",
 

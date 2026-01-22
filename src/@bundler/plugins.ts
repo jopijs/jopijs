@@ -3,12 +3,15 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import {tailwindTransformGlobalCss} from "jopijs/postcss";
 import * as jk_events from "jopi-toolkit/jk_events";
-import * as jk_fs from "jopi-toolkit/jk_fs";
 import type {EsBuildParams} from "./esbuild.ts";
 import {installEsBuildPlugins} from "jopijs/loader-tools";
 import MagicString from 'magic-string';
 import {SourceMapConsumer, SourceMapGenerator} from "source-map";
 import {logServer_refresh} from "./_logs.ts";
+
+// ******************************************************************************************************
+// Plugin for EsBuild, loaded directly insided EsBuild instance.
+// ******************************************************************************************************
 
 /**
  * This plugin allows replacing some text entries according to rules.

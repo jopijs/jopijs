@@ -30,9 +30,11 @@ function patchForJsEngine(value: Record<any, any>) {
     return value;
 }
 
+export const supportedImageType = [".jpg", ".png", ".jpeg", ".gif", ".webp", ".woff", ".woff2", ".ttf", ".avif", ".ico"],
+
 const supportedExtensionsByGroup = patchForJsEngine({
     css: [".css", ".scss"],
-    binary: [".jpg", ".png", ".jpeg", ".gif", ".webp", ".woff", ".woff2", ".ttf", ".avif", ".ico"],
+    binary: supportedImageType,
 
     //.json added here by patchForJsEngine if not bun.js
     text: [".txt", ".svg", ".glsl", /*".json" added only for node.js */]
@@ -43,3 +45,4 @@ export const supportedExtensionToType = invertKeys(supportedExtensionsByGroup);
 
 export const supportedExtensionsRegExp = new RegExp(`(${supportedExtensions.map(ext => ext.replace('.', '\\.')).join('|')})(?:\\?.*)?$`);
 
+export const supportedExtensionsReg_images = new RegExp(`(${supportedImageType.map(ext => ext.replace('.', '\\.')).join('|')})(?:\\?.*)?$`);

@@ -6,6 +6,7 @@ import fs from "node:fs";
 import * as jk_app from "jopi-toolkit/jk_app";
 import * as jk_fs from "jopi-toolkit/jk_fs";
 import {jopiTempDir} from "jopijs/coreconfig";
+import { supportedExtensionsRegExp } from "./rules.ts";
 
 interface JopiRawContent {
     file: string;
@@ -87,12 +88,15 @@ function createJopiRawFile(targetFilePath: string, processType: string): any {
     };
 }
 
+/**
+ * Install plugin for bun.js and esbuild.
+ */
 export function installEsBuildPlugins(build: Bun.PluginBuilder, who: string) {
-    const _isEsBuild = who=="esbuild";
     const isBun_default = who=="bun";
     const isBun_ReactHMR = who=="bun-react-hmr";
     const isBun = isBun_default || isBun_ReactHMR;
-
+    
+    // css modules
     build.onResolve({filter: /\.module\.(css|scss)$/}, (args) => {
         const result = resolveAndCheckPath(args.path, path.dirname(args.importer));
 
@@ -108,24 +112,10 @@ export function installEsBuildPlugins(build: Bun.PluginBuilder, who: string) {
         return createJopiRawFile(result.path!, "cssmodule");
     });
 
-
-    if (!isBun) {
-        build.onResolve({filter: /\.(css|scss)$/}, (args) => {
-            let [filePath, _option] = args.path.split('?');
-            const result = resolveAndCheckPath(filePath, path.dirname(args.importer));
-
-            if (result.error) {
-                return {
-                    errors: [{
-                        text: result.error
-                    }]
-                };
-            }
-
-            //@ts-ignore
-            return createJopiRawFile(result.path!, "css");
-        });
-    } else {
+    if (isBun) {
+        // Resolve css path. Do only that here.
+        // If required: must use createJopiRawFile
+        //
         // @ts-ignore
         build.onResolve({ filter: /\.(css|scss)$/ }, (args) => {
             // Is usefulle when we have a import "./style.css" from the dist/ folder.
@@ -147,8 +137,50 @@ export function installEsBuildPlugins(build: Bun.PluginBuilder, who: string) {
                 path: result.path!
             };
         });
+
+        if (isBun_default) {
+            // Handle supported extensions.
+            build.onResolve({ filter: supportedExtensionsRegExp }, async (args) => {
+                let importPath = args.path;
+                let absolutePath: string;
+
+                // Relatif path? Resolve it.
+                if (importPath.startsWith('.')) {
+                    absolutePath = path.resolve(path.dirname(args.importer), importPath);
+                }
+                else if (path.isAbsolute(importPath)) {
+                    absolutePath = importPath;
+                }
+                else {
+                    return undefined;
+                }
+
+                const srcPath = jk_app.requireSourceOf(absolutePath);
+
+                // Required since build.onLoad is never call for images.
+                return createJopiRawFile(srcPath, "bun-raw");
+            });
+        }
     }
 
+    if (!isBun) {
+        build.onResolve({filter: /\.(css|scss)$/}, (args) => {
+            let [filePath, _option] = args.path.split('?');
+            const result = resolveAndCheckPath(filePath, path.dirname(args.importer));
+
+            if (result.error) {
+                return {
+                    errors: [{
+                        text: result.error
+                    }]
+                };
+            }
+
+            //@ts-ignore
+            return createJopiRawFile(result.path!, "css");
+        });
+    }
+    
     // @ts-ignore
     build.onResolve({filter: /\?(?:inline|raw)$/}, async (args) => {
         let [filePath, option] = args.path.split('?');
@@ -187,6 +219,22 @@ export function installEsBuildPlugins(build: Bun.PluginBuilder, who: string) {
                 // But we do it for CSS-Modules.
                 //
                 return processCssFile(filePath);
+            case "bun-raw":
+                let idx = filePath.indexOf("?");
+                let options = "";
+
+                if (idx !== -1) {
+                    options = filePath.substring(idx + 1);
+                    filePath = filePath.substring(0, idx);
+                }
+
+                const res = await transformFile(filePath, options);
+
+                return {
+                    contents: res.text,
+                    loader: "js",
+                };
+                break;
         }
     });
 }
