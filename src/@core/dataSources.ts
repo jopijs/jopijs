@@ -1,4 +1,4 @@
-import type {JNamedTableReader, JNamedTableReader_ReadParams} from "jopi-toolkit/jk_data";
+import type {JNamedTableReader, JNamedTableReader_ReadParams, JTableReader} from "jopi-toolkit/jk_data";
 import type {CoreWebSite} from "./jopiCoreWebSite.ts";
 import type {JopiRequest} from "./jopiRequest.ts";
 import {sleep} from "jopi-toolkit/jk_timer";
@@ -11,18 +11,12 @@ interface RegisteredDataSource {
 
 //region Data Table
 
-interface RegisteredDataSource_Table extends RegisteredDataSource {
-    name: string;
-    dataSource: JNamedTableReader;
-    permissions: Record<string, string[]>;
-}
-
 // noinspection JSUnusedGlobalSymbols
 /**
  * Expose a data source to the network.
  * Warning: if mainly called by generated code.
  */
-export function exposeDataSource_Table(name: string, securityUid: string, dataSource: JNamedTableReader, permissions: Record<string, string[]>) {
+export function exposeDataSource_Table(_name: string, securityUid: string, dataSource: JTableReader, permissions: Record<string, string[]>) {
     toExpose.push({
         securityUid,
 
