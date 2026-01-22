@@ -6,7 +6,6 @@ import TypeUiComposite from "./typeUiComposite.ts";
 import ModInstaller from "./modInstaller.ts";
 import TypeRoutes from "./typeRoutes.ts";
 import TypeTable from "./typeTable.ts";
-import {TypeVariants} from "./typeVariants.ts";
 import ModPackageJson from "./modPackageJson.ts";
 import {TypeTranslation} from "./typeTranslation.ts";
 import {TypeLib} from "./typeLib.ts";
@@ -72,13 +71,7 @@ export function getDefaultLinkerConfig(): LinkerConfig {
             new TypeServerEvents("server-events"),
             new TypeTable("tables"),
 
-            new TypeVariants("variants"),
-            new TypeTranslation("translations"),
-
-            //new TypeAsIsChunk("shadUI", [".tsx"]),
-            //new TypeAsIsChunk("shadComponents", [".tsx"]),
-            //new TypeAsIsChunk("shadLib", [".ts", ".tsx"]),
-            //new TypeAsIsChunk("shadHooks", [".ts", ".tsx"])
+            new TypeTranslation("translations")
         ],
 
         modulesProcess: [
