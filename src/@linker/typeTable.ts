@@ -3,7 +3,7 @@ import * as jk_fs from "jopi-toolkit/jk_fs";
 import * as jk_app from "jopi-toolkit/jk_app";
 import {normalizeNeedRoleConditionName} from "./common.ts";
 import {CodeGenWriter, FilePart, InstallFileType} from "./engine.ts";
-import type {JTableDs} from "jopi-toolkit/jk_data";
+import type {JNamedTableReader} from "jopi-toolkit/jk_data";
 import * as jk_tools from "jopi-toolkit/jk_tools";
 
 interface TypeTable_Item extends TypeInDirChunk_Item {
@@ -110,7 +110,8 @@ export default class TypeTable extends TypeInDirChunk {
         let outDir = jk_fs.join(writer.dir.output_src, this.getGenOutputDir(dsItem));
         let entryPoint = jk_fs.getRelativePath(jk_fs.join(outDir, "index.ts"), dsItem.entryPoint);
         let importPath = writer.toPathForImport(entryPoint, false);
-
+        let dsName = jk_fs.basename(dsItem.itemPath);
+        
         if (dsItem.mustBuildProxy) {
             // > The server and browser versions will not be the same here.
             //   The server version directly targets the datasource.
@@ -132,14 +133,17 @@ export default DEFAULT;`,
 
             //region jBundler_ifServer.ts
 
-            let srcCode = writer.AI_INSTRUCTIONS + `import C from "${importPath}";
-export * from "${importPath}";
-export default C;`;
+            let srcCode = writer.AI_INSTRUCTIONS + `
+import {toDataTable} from "jopijs/generated";
+import C from "${importPath}";
+export default toDataTable(C, ${JSON.stringify(dsName)});`;
 
             importPath = writer.toPathForImport(entryPoint, true);
-            let distCode = writer.AI_INSTRUCTIONS + `import C from "${importPath}";
-export * from "${importPath}";
-export default C;`;
+
+            let distCode = writer.AI_INSTRUCTIONS + `
+import {toDataTable} from "jopijs/generated";
+import C from "${importPath}";
+export default toDataTable(C, ${JSON.stringify(dsName)});`;
 
             await writer.writeCodeFile({
                 fileInnerPath: jk_fs.join(this.getGenOutputDir(dsItem), targetName, "jBundler_ifServer"),
@@ -151,23 +155,17 @@ export default C;`;
 
             //region jBundler_ifBrowser.ts
 
-            let dsName = jk_fs.basename(dsItem.itemPath);
-
-            let dsImpl: JTableDs;
+            let dsImpl: JNamedTableReader;
 
             // Calc the path of the file to import.
             let toImport = dsItem.entryPoint;
             if (!writer.mustUseTypeScript) toImport = jk_app.getCompiledFilePathFor(toImport);
 
             try {
-                // Allows to known the data source name and schema.
+                // Allows to known the data source schema.
                 dsImpl = (await import(toImport)).default;
             } catch {
                 throw this.declareError("Is not a valide data source.", dsItem.entryPoint);
-            }
-
-            if (dsImpl.name!==dsName) {
-                throw this.declareError(`The datasource name must be "${dsName}". Found "${dsImpl.name}"`, dsItem.entryPoint);
             }
 
             let schema = dsImpl.schema;
@@ -176,12 +174,12 @@ export default C;`;
             let jsonSchema = schema.toJson();
 
             srcCode = writer.AI_INSTRUCTIONS;
-            srcCode += `import {JTableDs_HttpProxy} from "jopi-toolkit/jk_data";`;
+            srcCode += `import {JNamedTableReader_HttpProxy} from "jopi-toolkit/jk_data";`;
             srcCode += `\nimport {schema as newSchema} from "jopi-toolkit/jk_schema";`;
             srcCode += `\n\nexport const dataSourceName = "${dsName}";`;
 
             srcCode += `\nexport const schema = newSchema(${JSON.stringify(jsonSchema.desc, null, 4)}, ${JSON.stringify(jsonSchema.schemaMeta, null, 4)});`;
-            srcCode += `\nexport default new JTableDs_HttpProxy(dataSourceName, "/_jopi/ds/${dsItem.securityUid}", schema)`;
+            srcCode += `\nexport default new JNamedTableReader_HttpProxy(dataSourceName, "/_jopi/ds/${dsItem.securityUid}", schema)`;
             distCode = srcCode;
 
             await writer.writeCodeFile({

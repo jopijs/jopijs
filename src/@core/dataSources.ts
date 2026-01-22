@@ -1,4 +1,4 @@
-import type {JTableDs, JTableDs_ReadParams} from "jopi-toolkit/jk_data";
+import type {JNamedTableReader, JNamedTableReader_ReadParams} from "jopi-toolkit/jk_data";
 import type {CoreWebSite} from "./jopiCoreWebSite.ts";
 import type {JopiRequest} from "./jopiRequest.ts";
 import {sleep} from "jopi-toolkit/jk_timer";
@@ -13,7 +13,7 @@ interface RegisteredDataSource {
 
 interface RegisteredDataSource_Table extends RegisteredDataSource {
     name: string;
-    dataSource: JTableDs;
+    dataSource: JNamedTableReader;
     permissions: Record<string, string[]>;
 }
 
@@ -22,14 +22,14 @@ interface RegisteredDataSource_Table extends RegisteredDataSource {
  * Expose a data source to the network.
  * Warning: if mainly called by generated code.
  */
-export function exposeDataSource_Table(name: string, securityUid: string, dataSource: JTableDs, permissions: Record<string, string[]>) {
+export function exposeDataSource_Table(name: string, securityUid: string, dataSource: JNamedTableReader, permissions: Record<string, string[]>) {
     toExpose.push({
         securityUid,
 
         onCall: async (req) => {
             let reqData = await req.req_getBodyData<{
                 dsName: string;
-                read?: JTableDs_ReadParams;
+                read?: JNamedTableReader_ReadParams;
             }>();
 
             if (reqData.read) {

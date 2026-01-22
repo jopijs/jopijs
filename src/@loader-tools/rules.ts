@@ -30,7 +30,7 @@ function patchForJsEngine(value: Record<any, any>) {
     return value;
 }
 
-export const supportedImageType = [".jpg", ".png", ".jpeg", ".gif", ".webp", ".woff", ".woff2", ".ttf", ".avif", ".ico"],
+export const supportedImageType = [".jpg", ".png", ".jpeg", ".gif", ".webp", ".woff", ".woff2", ".ttf", ".avif", ".ico"];
 
 const supportedExtensionsByGroup = patchForJsEngine({
     css: [".css", ".scss"],
