@@ -11,7 +11,7 @@ import {WebSiteCrawler, type WebSiteCrawlerOptions} from "jopijs/crawler";
 import { type FetchOptions, type ServerDownResult, ServerFetch, type ServerFetchOptions } from "./serverFetch.ts";
 import { getLetsEncryptCertificate, type LetsEncryptParams, type OnTimeoutError } from "./letsEncrypt.ts";
 import { type UserInfos_WithLoginPassword, UserStore_WithLoginPassword } from "./userStores.ts";
-import { getBundlerConfig, type PostCssInitializer } from "./bundler";
+import { getBundlerConfig, type PostCssInitializer } from "./bundler/index.ts";
 import { getInMemoryCache, initMemoryCache, type InMemoryCacheOptions } from "./cacheHtml/InMemoryCache.ts";
 import { SimpleFileCache } from "./cacheHtml/SimpleFileCache.ts";
 import { type PageCache, VoidPageCache } from "./cacheHtml/cache.ts";
