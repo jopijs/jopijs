@@ -2,6 +2,7 @@ import * as jk_app from "jopi-toolkit/jk_app";
 import * as jk_fs from "jopi-toolkit/jk_fs";
 import * as jk_term from "jopi-toolkit/jk_term";
 import { logModules } from "./_logs.ts";
+import * as path from "node:path";
 
 interface IsPackageJson {
     name?: string;
@@ -298,6 +299,7 @@ export async function updateWorkspaces() {
         let needSavePkgJson = false;
         let hasAddedWkItems = false;
 
+        const srcDir = getProjectDir_src();
         for (let item of wsItems) {
             let modName: string;
             let idx = item.lastIndexOf("/");
@@ -318,9 +320,20 @@ export async function updateWorkspaces() {
                 }
 
                 foundModules[modName] = true;
-            }
 
-            newWsItems.push("src/" + modName);
+                const modInfo = modules[modName];
+                const srcDir = getProjectDir_src();
+                
+                let relPath = path.relative(srcDir, modInfo.fullPath);
+                relPath = relPath.split(path.sep).join("/");
+                
+                const newItem = "src/" + relPath;
+                newWsItems.push(newItem);
+
+                if (item !== newItem) needSavePkgJson = true;
+            } else {
+                newWsItems.push("src/" + modName);
+            }
         }
 
         for (let modName of allModNames) {
@@ -331,7 +344,12 @@ export async function updateWorkspaces() {
             hasAddedWkItems = true;
 
             foundModules[modName] = true;
-            newWsItems.push("src/" + modName);
+            
+            const modInfo = modules[modName];
+            let relPath = jk_fs.relative(srcDir, modInfo.fullPath);
+            relPath = relPath.split(path.sep).join("/");
+
+            newWsItems.push("src/" + relPath);
         }
 
         //endregion
@@ -372,7 +390,7 @@ export async function getModulesList(): Promise<Record<string, JopiModuleInfo>> 
     for (let dirItem of dirItems) {
         if (!dirItem.isDirectory && !dirItem.isSymbolicLink) continue;
         
-        if ((dirItem.name[0] === "(") && (dirItem.name[dirItem.name.length - 1] === ")")) {
+        if (dirItem.name.startsWith("modGroup_")) {
             toScan.push(dirItem.fullPath);
         }
     }
