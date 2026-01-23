@@ -1,8 +1,8 @@
 import type {JopiPageDataProvider} from "jopijs";
 import {declareLinkerError} from "jopijs/linker";
-import * as jk_crypto from "jopi-toolkit/jk_crypto";
 import * as jk_fs from "jopi-toolkit/jk_fs";
 import {exposeDataSource_PageData} from "jopijs";
+import { calcCryptedUrl } from "./tools.ts";
 
 export function setPageDataProvider(webSite: any, route: string, allowedRoles: string[], provider: JopiPageDataProvider, filePath: string) {
     if (!provider.getRefreshedData && !provider.getDataForCache) {
@@ -23,7 +23,7 @@ export function setPageDataProvider(webSite: any, route: string, allowedRoles: s
 
     if (provider.getRefreshedData) {
         //TODO: Allowing configuring this salt.
-        const pageDataKey = jk_crypto.md5(route + "todo_allowing_configuring_this_salt");
+        const pageDataKey = calcCryptedUrl(route);
 
         // Note: role security check is done into this http proxy.
         routeInfos.pageDataParams.url = exposeDataSource_PageData(route, pageDataKey, provider, allowedRoles);

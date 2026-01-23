@@ -1,4 +1,4 @@
-import type {JNamedTableReader, JNamedTableReader_ReadParams, JTableReader} from "jopi-toolkit/jk_data";
+import type {JNamedTableReader_ReadParams, JTableReader} from "jopi-toolkit/jk_data";
 import type {CoreWebSite} from "./jopiCoreWebSite.ts";
 import type {JopiRequest} from "./jopiRequest.ts";
 import {sleep} from "jopi-toolkit/jk_timer";
@@ -58,7 +58,7 @@ export interface GetRefreshedDataParams {
     isFromBrowser?: boolean;
 }
 
-export function exposeDataSource_PageData(route: string, securityUid: string, dataProvider: JopiPageDataProvider, allowedRoles: string[]|undefined): string {
+export function exposeDataSource_PageData(_route: string, securityUid: string, dataProvider: JopiPageDataProvider, allowedRoles: string[]|undefined): string {
     toExpose.push({securityUid, onCall: async (req) => {
         if (allowedRoles && allowedRoles.length) {
             req.role_assertUserHasOneOfThisRoles(allowedRoles);

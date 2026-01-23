@@ -4,7 +4,7 @@ import * as jk_app from "jopi-toolkit/jk_app";
 import {normalizeNeedRoleConditionName} from "./common.ts";
 import {CodeGenWriter, FilePart, InstallFileType} from "./engine.ts";
 import type {JNamedTableReader} from "jopi-toolkit/jk_data";
-import * as jk_tools from "jopi-toolkit/jk_tools";
+import { calcCryptedUrl } from "jopijs/generated";
 
 interface TypeTable_Item extends TypeInDirChunk_Item {
     /**
@@ -54,14 +54,7 @@ export default class TypeTable extends TypeInDirChunk {
     }
 
     async onChunk(chunk: TypeInDirChunk_Item, key: string, dirPath: string) {
-        const securityUidFile = jk_fs.join(dirPath, "security-ui.dontDelete");
-        let securityUid = await jk_fs.readTextFromFile(securityUidFile);
-
-        if (!securityUid) {
-            securityUid = jk_tools.generateUUIDv4();
-            await jk_fs.writeTextToFile(securityUidFile, securityUid);
-        }
-
+        let securityUid = calcCryptedUrl(key);
         let dsItem: TypeTable_Item = chunk as TypeTable_Item;
 
         dsItem.securityUid = securityUid;
