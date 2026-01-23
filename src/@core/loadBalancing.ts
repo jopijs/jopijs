@@ -1,5 +1,5 @@
 import type {ServerFetch} from "./serverFetch.ts";
-import {type SendingBody} from "./jopiCoreWebSite.ts";
+import {type FetchBodyAccepted} from "./jopiCoreWebSite.ts";
 import {JopiRequest} from "./jopiRequest.js";
 import * as jk_timer from "jopi-toolkit/jk_timer";
 
@@ -78,7 +78,7 @@ export class LoadBalancer {
         return cursor;
     }
 
-    async fetch(method: string, url: URL, body?: SendingBody, headers?: any): Promise<Response> {
+    async fetch(method: string, url: URL, body?: FetchBodyAccepted, headers?: any): Promise<Response> {
         const server = this.selectServer();
         if (!server) return new Response("", {status: 521});
 

@@ -18,7 +18,7 @@ import { type PageCache, type CacheEntry } from "./cacheHtml/cache.ts";
 import {
     type AuthResult,
     type CookieOptions,
-    type HttpMethod, type LoginPassword,
+    type HttpMethod,
     type RequestBody,
     type ResponseModifier, type ServeFileOptions, type TestCookieValue, type TextModifier, type UserInfos,
     CoreWebSite
@@ -1326,7 +1326,7 @@ export class JopiRequest {
      * @param loginInfo Credentials (e.g., username/password) matching the website's login manager.
      * @returns An AuthResult object indicating success or failure.
      */
-    async user_tryAuthWithJWT<T = LoginPassword>(loginInfo: T): Promise<AuthResult> {
+    async user_tryAuthWithJWT<T = any>(loginInfo: T): Promise<AuthResult> {
         const authResult = await this.webSite.tryAuthUser(loginInfo);
 
         if (authResult.isOk) {

@@ -1,6 +1,6 @@
 // noinspection JSUnusedGlobalSymbols
 
-import {type SendingBody} from "./jopiCoreWebSite.ts";
+import {type FetchBodyAccepted} from "./jopiCoreWebSite.ts";
 import type {LoadBalancer} from "./loadBalancing.ts";
 import {AutomaticStartStop} from "./automaticStartStop.js";
 import {JopiRequest} from "./jopiRequest.js";
@@ -320,11 +320,11 @@ export class ServerFetch<T> {
         return this.doFetch(req.req_method, req.req_urlInfos.href, req.req_body, req.req_headers);
     }
 
-    async fetch(method: string, url: URL, body?: SendingBody, headers?: Headers) {
+    async fetch(method: string, url: URL, body?: FetchBodyAccepted, headers?: Headers) {
         return this.doFetch(method, url.toString(), body, headers);
     }
 
-    async fetch2(method: string, url: string, body?: SendingBody, headers?: Headers) {
+    async fetch2(method: string, url: string, body?: FetchBodyAccepted, headers?: Headers) {
         return this.doFetch(method, url, body, headers);
     }
 
@@ -342,7 +342,7 @@ export class ServerFetch<T> {
     /**
      * Allow fetching some content.
      */
-    private async doFetch(method: string, url: string, body?: SendingBody, headers?: Headers): Promise<Response> {
+    private async doFetch(method: string, url: string, body?: FetchBodyAccepted, headers?: Headers): Promise<Response> {
         const bckURL = url;
 
         if (!headers) {

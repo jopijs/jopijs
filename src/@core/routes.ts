@@ -1,4 +1,7 @@
 import { type ValueWithPriority } from "jopi-toolkit/jk_tools";
+
+/** Supported HTTP methods. */
+export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'HEAD' | 'OPTIONS';
 import { JopiRequest } from "./jopiRequest.ts";
 import type { JopiMiddleware, JopiPostMiddleware, JopiWebSocket } from "./jopiCoreWebSite.ts";
 import type { JopiPageDataProvider } from "./dataSources.ts";

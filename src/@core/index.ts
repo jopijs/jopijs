@@ -11,6 +11,7 @@ export * from "./letsEncrypt.ts";
 export * from "./jopiApp.ts";
 export * from "./jopiRouteConfig.ts";
 
+export * from "./errors.ts";
 export * from "./routes.ts";
 export * from "./jopiRequest.ts";
 export * from "./jopiCoreWebSite.ts";
