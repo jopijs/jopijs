@@ -374,8 +374,6 @@ export async function updateWorkspaces() {
     }
 
     //endregion
-
-    
 }
 
 /**

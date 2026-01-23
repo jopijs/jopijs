@@ -76,25 +76,24 @@ export class InMemoryCache implements PageCache {
     }
 
     async getFromCache(req: JopiRequest, url: URL): Promise<Response|undefined> {
-        return this.key_getFromCache(req, ':' + url.href);
+        return this.key_getFromCache(req, url.href);
     }
 
     async getFromCacheWithMeta(req: JopiRequest, url: URL): Promise<CacheEntry | undefined> {
-        return this.key_getFromCacheWithMeta(req, ':' + url.href);
+        return this.key_getFromCacheWithMeta(req, url.href);
     }
 
     getCacheMeta(url: URL): Promise<CacheMeta | undefined> {
-        return this.key_getCacheMeta(':' + url.href);
+        return this.key_getCacheMeta(url.href);
     }
 
     async hasInCache(url: URL): Promise<boolean> {
-        return this.key_hasInCache(':' + url.href);
+        return this.key_hasInCache(url.href);
     }
 
     async getCacheEntrySize(url: URL): Promise<number | undefined> {
-        return this.key_getCacheEntrySize(':' + url.href);
+        return this.key_getCacheEntrySize(url.href);
     }
-
 
     /**
      * Set the binary value inside the cache entry.
@@ -115,7 +114,7 @@ export class InMemoryCache implements PageCache {
 
     getCacheEntryIterator(subCacheName?: string): Iterable<CacheEntry> {
         // convention: subCacheName + ":" + url
-        const userPrefix = (subCacheName || "") + ":";
+        const userPrefix = subCacheName ? subCacheName + ":" : "";
         const fullPrefix = GLOBAL_PREFIX + userPrefix;
         
         const iterator = this._cache.keysStartingWith(fullPrefix);
@@ -159,11 +158,13 @@ export class InMemoryCache implements PageCache {
                      const fullKey = res.value;
                      const key = fullKey.substring(prefixLen);
                      
-                     // Convention: "SubCache::url" or ":url"
+                     // Convention: "SubCache:url"
                      const separatorIdx = key.indexOf(":");
                      if (separatorIdx===-1) continue;
                      
                      const subCacheName = key.substring(0, separatorIdx + 1);
+                     if (subCacheName === "http:" || subCacheName === "https:") continue;
+
                      if (!alreadyReturned.has(subCacheName)) {
                          alreadyReturned.add(subCacheName);
                          return { value: subCacheName, done: false };
@@ -217,7 +218,7 @@ export class InMemoryCache implements PageCache {
             meta: meta || {}
         };
 
-        const key = GLOBAL_PREFIX + subCacheName + ':' + url;
+        const key = GLOBAL_PREFIX + subCacheName + url;
         
         // Allows keeping HTML in cache longer than other types of content.
         //
@@ -293,28 +294,28 @@ class InMemorySubCache implements PageCache {
     }
 
     async hasInCache(url: URL): Promise<boolean> {
-        return this.parent.key_hasInCache(this.prefix + ':' + url.href);
+        return this.parent.key_hasInCache(this.prefix + url.href);
     }
 
     async getCacheEntrySize(url: URL): Promise<number | undefined> {
-        return this.parent.key_getCacheEntrySize(this.prefix + ':' + url.href);
+        return this.parent.key_getCacheEntrySize(this.prefix + url.href);
     }
 
 
     async getCacheMeta(url: URL): Promise<CacheMeta | undefined> {
-        return this.parent.key_getCacheMeta(this.prefix + ':' + url.href);
+        return this.parent.key_getCacheMeta(this.prefix + url.href);
     }
 
     removeFromCache(url: URL): Promise<void> {
-        return this.parent.key_removeFromCache(this.prefix + ':' + url.href);
+        return this.parent.key_removeFromCache(this.prefix + url.href);
     }
 
     async getFromCache(req: JopiRequest, url: URL): Promise<Response|undefined> {
-        return this.parent.key_getFromCache(req, this.prefix + ':' + url.href);
+        return this.parent.key_getFromCache(req, this.prefix + url.href);
     }
 
     async getFromCacheWithMeta(req: JopiRequest, url: URL): Promise<CacheEntry | undefined> {
-        return this.parent.key_getFromCacheWithMeta(req, this.prefix + ':' + url.href);
+        return this.parent.key_getFromCacheWithMeta(req, this.prefix + url.href);
     }
 
     createSubCache(name: string): PageCache {
