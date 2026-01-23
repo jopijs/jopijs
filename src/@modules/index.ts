@@ -366,13 +366,27 @@ export async function updateWorkspaces() {
 export async function getModulesList(): Promise<Record<string, JopiModuleInfo>> {
     if (gModulesList) return gModulesList;
 
-    const dirItems = await jk_fs.listDir(getProjectDir_src());
-    let found: Record<string, JopiModuleInfo> = {};
+    let dirItems = await jk_fs.listDir(getProjectDir_src());
+    const toScan: string[] = [getProjectDir_src()];
 
     for (let dirItem of dirItems) {
         if (!dirItem.isDirectory && !dirItem.isSymbolicLink) continue;
-        if (!dirItem.name.startsWith("mod_")) continue;
-        found[dirItem.name] = new JopiModuleInfo(dirItem.name, dirItem.fullPath);
+        
+        if ((dirItem.name[0] === "(") && (dirItem.name[dirItem.name.length - 1] === ")")) {
+            toScan.push(dirItem.fullPath);
+        }
+    }
+
+    let found: Record<string, JopiModuleInfo> = {};
+
+    for (let scanDir of toScan) {
+        dirItems = await jk_fs.listDir(scanDir);
+
+        for (let dirItem of dirItems) {
+            if (!dirItem.isDirectory && !dirItem.isSymbolicLink) continue;
+            if (!dirItem.name.startsWith("mod_")) continue;
+            found[dirItem.name] = new JopiModuleInfo(dirItem.name, dirItem.fullPath);
+        }
     }
 
     return gModulesList = found;
