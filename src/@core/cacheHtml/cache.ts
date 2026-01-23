@@ -67,6 +67,8 @@ export interface PageCache {
 
     removeFromCache(url: URL): Promise<void>;
 
+    getCacheEntrySize(url: URL): Promise<number | undefined>;
+
     createSubCache(name: string): PageCache;
 
     getSubCacheIterator(): Iterable<string>;
@@ -84,6 +86,10 @@ export class VoidPageCache implements PageCache {
     }
 
     getCacheMeta(_url: URL): Promise<CacheMeta | undefined> {
+        return Promise.resolve(undefined);
+    }
+
+    getCacheEntrySize(_url: URL): Promise<number | undefined> {
         return Promise.resolve(undefined);
     }
 

@@ -91,6 +91,11 @@ export class InMemoryCache implements PageCache {
         return this.key_hasInCache(':' + url.href);
     }
 
+    async getCacheEntrySize(url: URL): Promise<number | undefined> {
+        return this.key_getCacheEntrySize(':' + url.href);
+    }
+
+
     /**
      * Set the binary value inside the cache entry.
      * This by compressing the binary if needed.
@@ -178,6 +183,12 @@ export class InMemoryCache implements PageCache {
         const entry = this._cache.getWithMeta(GLOBAL_PREFIX + key);
         if (!entry) return undefined;
         return (entry.meta as StoredCacheMeta).meta;
+    }
+
+    async key_getCacheEntrySize(key: string): Promise<number | undefined> {
+        const entry = this._cache.getWithMeta<Uint8Array>(GLOBAL_PREFIX + key);
+        if (!entry) return undefined;
+        return entry.size;
     }
 
     async key_addToCache(subCacheName: string, url: string, response: Response, meta: CacheMeta|undefined) {
@@ -284,6 +295,11 @@ class InMemorySubCache implements PageCache {
     async hasInCache(url: URL): Promise<boolean> {
         return this.parent.key_hasInCache(this.prefix + ':' + url.href);
     }
+
+    async getCacheEntrySize(url: URL): Promise<number | undefined> {
+        return this.parent.key_getCacheEntrySize(this.prefix + ':' + url.href);
+    }
+
 
     async getCacheMeta(url: URL): Promise<CacheMeta | undefined> {
         return this.parent.key_getCacheMeta(this.prefix + ':' + url.href);

@@ -131,6 +131,12 @@ export class SimpleFileCache implements PageCache {
         return cacheEntry.isGzipped===true;
     }
 
+    async getCacheEntrySize(url: URL): Promise<number | undefined> {
+        const cacheEntry = await this.getCacheEntry(url);
+        if (!cacheEntry) return undefined;
+        return cacheEntry.binarySize;
+    }
+
     private async getCacheEntry(url: URL): Promise<CacheItemProps|undefined> {
         const filePath = this.calcFilePath(url);
 

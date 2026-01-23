@@ -74,6 +74,11 @@ export class WebSiteMirrorCache implements PageCache {
         return !!stats && stats.isFile();
     }
 
+    async getCacheEntrySize(url: URL): Promise<number | undefined> {        
+        return undefined;
+    }
+
+
     getFromCache(req: JopiRequest, url: URL): Promise<Response | undefined> {
         const filePath = this.calcFilePath(url);
         return req.file_tryReturnFile(filePath);
