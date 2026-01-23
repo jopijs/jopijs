@@ -14,16 +14,16 @@ import { type UserInfos_WithLoginPassword, UserStore_WithLoginPassword } from ".
 import { getBundlerConfig, type PostCssInitializer } from "./bundler/index.ts";
 import { getInMemoryCache, initMemoryCache, type InMemoryCacheOptions } from "./cacheHtml/InMemoryCache.ts";
 import { SimpleFileCache } from "./cacheHtml/SimpleFileCache.ts";
-import { type PageCache, VoidPageCache } from "./cacheHtml/cache.ts";
+import { type PageCache, VoidPageCache, type CacheRules } from "./cacheHtml/cache.ts";
 import type { ObjectCache } from "./cacheObject";
 import {
     FileStore,
     getInMemoryObjectCache,
     initMemoryObjectCache,
-    type InMemoryObjectCacheOptions
+    type InMemoryObjectCacheOptions,
+    setObjectCache
 } from "./cacheObject/index.ts";
 import {
-    type CacheRules,
     type HttpMethod,
     type JopiMiddleware,
     type JopiPostMiddleware,
@@ -45,6 +45,7 @@ import { isDevelopment } from "jopi-toolkit/jk_process";
 import { getWebSiteConfig } from "jopijs/coreconfig";
 import { initProcessSupervisor } from "./watcher.ts";
 import type {JopiRequest} from "./jopiRequest.ts";
+import { setDefaultHtmlCache, setHtmlCacheRules } from "./cacheHtml/index.ts";
 
 /**
  * The main application class for JopiJS.
@@ -361,7 +362,7 @@ export class JopiWebSiteBuilder {
             if (getSsgEnvValueRaw() !== undefined) {
                 // This disable the cache, and also the automatic compression.
                 // It's needed because of a Node.js (v22) issue with fetch + compression. 
-                this.options.cache = new VoidPageCache();
+                setDefaultHtmlCache(new VoidPageCache());
             }
 
             this.webSite = new CoreWebSite(this.origin, this.options);
@@ -875,10 +876,10 @@ class WebSite_HtmlCacheBuilder {
 
     constructor(private readonly webSite: JopiWebSiteBuilder, private readonly internals: WebSiteInternal) {
         this.internals.afterHook.push(async webSite => {
-            webSite.setHtmlCacheRules(this.rules);
-
+            setHtmlCacheRules(this.rules)
+            
             if (this.cache) {
-                webSite.setHtmlCache(this.cache);
+                setDefaultHtmlCache(this.cache);
             }
         });
     }
@@ -915,7 +916,7 @@ class WebSite_ObjectCacheBuilder {
     constructor(private readonly webSite: JopiWebSiteBuilder, private readonly internals: WebSiteInternal) {
         this.internals.afterHook.push(async webSite => {
             if (this.cache) {
-                webSite.setObjectCache(this.cache);
+                setObjectCache(this.cache);
             }
         });
     }

@@ -1,15 +1,5 @@
-import { getCoreWebSite, type ObjectCache, type ObjectProvider, type ObjectProviderParams } from "jopijs";
+import { type ObjectCache, type ObjectProvider, type ObjectProviderParams, getObjectCache } from "jopijs";
 import { logObjectProvider } from "./_logs.ts";
-
-function getObjectCache(): ObjectCache {
-    if (!gObjectCache) {
-        gObjectCache = getCoreWebSite().getObjectCache();
-    }
-
-    return gObjectCache;
-}
-//
-let gObjectCache: ObjectCache | undefined;
 
 /**
  * Implementation of the ObjectProvider wrapper.

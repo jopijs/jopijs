@@ -16,11 +16,10 @@ import {
     PageController,
     type UiUserInfos
 } from "jopijs/ui";
-import type { PageCache } from "./cacheHtml/cache.ts";
+
 import { VoidPageCache } from "./cacheHtml/cache.ts";
 import { ONE_DAY } from "./publicTools.ts";
 
-import { getInMemoryCache } from "./cacheHtml/InMemoryCache.ts";
 import { installBundleServer } from "./bundler/index.ts";
 import { createBundle } from "./bundler/index.ts";
 import * as jk_webSocket from "jopi-toolkit/jk_webSocket";
@@ -33,11 +32,9 @@ import { getNewServerInstanceBuilder, type ServerInstanceBuilder } from "./serve
 import { PriorityLevel, sortByPriority, type ValueWithPriority } from "jopi-toolkit/jk_tools";
 import { logCache_notInCache, logServer_request } from "./_logs.ts";
 import type { TryReturnFileParams } from "./browserCacheControl.ts";
-import { installDataSourcesServer, type JopiPageDataProvider } from "./dataSources.ts";
-import { addHeadersToCache } from "./internalTools.ts";
-import { getInMemoryObjectCache, type ObjectCache } from "./cacheObject/index.ts";
-
-export type RouteHandler = (req: JopiRequest) => Promise<Response>;
+import { installDataSourcesServer } from "./dataSources.ts";
+import { getHtmlCacheRules, getMustUseAutomaticCache } from "./cacheHtml/index.ts";
+import { testRoutePath, type RouteSelector, type WebSiteRouteInfos, type RouteHandler, type JopiWsRouteHandler, type JopiErrorHandler, type JopiRouteHandler } from "./routes.ts";
 
 export interface MiddlewareOptions {
     /**
@@ -63,141 +60,6 @@ export interface MiddlewareOptions {
     routeSelector?: RouteSelector;
 }
 
-/**
- * Allows to select routes.
- */
-export interface RouteSelector {
-    /**
-     * Define the path pattern.
-     * - "/": matches everything
-     * - "/hello": matches "/hello" and sub-paths like "/hello/world" (but NOT "/helloworld")
-     * - "/hello/": matches sub-paths like "/hello/world" (but NOT "/hello")
-     */
-    fromPath?: string;
-
-    /**
-     * Define the list of paths to include.
-     */
-    include?: string[];
-
-    /**
-     * Define the list of paths to exclude.
-     */
-    exclude?: string[];
-
-    /**
-     * Allow testing if a path is accepted or not.
-     * @param handler
-     */
-    test?: (routePath: string) => boolean;
-}
-
-/**
- * Tests if a path matches the route selector.
- */
-export function testRoutePath(path: string, routeSelector: RouteSelector): boolean {
-    // 1. Security First: Exclude (Veto)
-    // If explicitly excluded, reject immediately.
-    if (routeSelector.exclude && routeSelector.exclude.includes(path)) {
-        return false;
-    }
-
-    // 2. Authorize via Explicit Include
-    if (routeSelector.include && routeSelector.include.includes(path)) {
-        return true;
-    }
-
-    // 3. Authorize via Path Pattern
-    if (routeSelector.fromPath) {
-        const fp = routeSelector.fromPath;
-
-        if (fp.endsWith("/")) {
-            // If ends with /, we match sub-paths
-            if (path.startsWith(fp)) return true;
-        } else {
-            // Exact match or sub-path with /
-            if ((path === fp) || path.startsWith(fp + "/")) return true;
-        }
-    }
-
-    // 4. Authorize via Custom Test
-    // If the test function returns true, we authorize.
-    if (routeSelector.test && routeSelector.test(path)) {
-        return true;
-    }
-
-    // 5. Default Deny
-    // If no rule authorized the route, it is rejected.
-    return false;
-}
-
-export interface CacheRules {
-    /**
-     * Allows selecting routes on which this cache rules will apply.
-     */
-    routeSelector: RouteSelector;
-
-    /**
-     * If true, then disable the cache for the routes.
-     */
-    disableAutomaticCache?: boolean;
-
-    /**
-     * Define a function which is called to read the cache.
-     * This allows replacing the default cache reading behavior.
-     */
-    readCacheEntry?(req: JopiRequest): Promise<Response | undefined>;
-
-    /**
-     * Define a function which is called when the response is get from the cache.
-     * If a value is returned, then this value is used as the new value,
-     * allowing to replace what comes from the cache.
-     * @param handler
-     */
-    afterGetFromCache?: (req: JopiRequest, res: Response) => Promise<Response | undefined | void>;
-
-    /**
-     * Defines a function which can alter the response to save into the cache or avoid cache adding.
-     * If returns a response: this response will be added into the cache.
-     * If returns undefined: will not add the response into the cache.
-     */
-    beforeAddToCache?: (req: JopiRequest, res: Response) => Promise<Response | undefined | void>;
-
-    /**
-     * Define a function which is called before checking the cache.
-     * This allows doing some checking, and if needed, it can return
-     * a response and bypass the request cycle.
-     */
-    beforeCheckingCache?: (req: JopiRequest) => Promise<Response | undefined | void>;
-
-    /**
-     * Define a function which is called when the response is not in the cache.
-     */
-    ifNotInCache?(req: JopiRequest, isPage: boolean): void;
-}
-
-export interface WebSiteRouteInfos {
-    route: string;
-    handler: (req: JopiRequest) => Promise<Response>;
-
-    requiredRoles?: string[];
-
-    middlewares?: { priority: PriorityLevel, value: JopiMiddleware }[];
-    postMiddlewares?: { priority: PriorityLevel, value: JopiPostMiddleware }[];
-
-    mustEnableAutomaticCache?: boolean;
-
-    /**
-     * Define a function which is called to read the cache.
-     * This allows replacing the default cache reading behavior.
-     */
-    readCacheEntry?(req: JopiRequest): Promise<Response | undefined>;
-
-    afterGetFromCache?: (req: JopiRequest, res: Response) => Promise<Response | undefined | void>;
-    beforeAddToCache?: (req: JopiRequest, res: Response) => Promise<Response | undefined | void>;
-    beforeCheckingCache?: (req: JopiRequest) => Promise<Response | undefined | void>;
-    ifNotInCache?: (req: JopiRequest, isPage: boolean) => void;
-}
 
 /**
  * The core class representing a JopiJS website.
@@ -228,7 +90,6 @@ export class CoreWebSite {
      * @param options Configuration options for the website.
      */
     constructor(url: string, options?: WebSiteOptions) {
-        gWebsite = this;
         if (!options) options = {};
 
         url = url.trim().toLowerCase();
@@ -251,8 +112,6 @@ export class CoreWebSite {
         }
 
         this.host = urlInfos.host;
-        this.htmlCache = options.cache || getInMemoryCache();
-        this.objectCache = options.objectCache || getInMemoryObjectCache();
         this.serverInstanceBuilder = getNewServerInstanceBuilder(this);
         this.mustRemoveTrailingSlashes = options.removeTrailingSlash !== false;
         this.cookieDefaults = options.cookieDefaults;
@@ -503,7 +362,7 @@ export class CoreWebSite {
             // **********
 
             const baseHandler = handler;
-            const mustUseAutoCache = this.mustUseAutomaticCache && routeInfos && (routeInfos.mustEnableAutomaticCache === true)
+            const mustUseAutoCache = getMustUseAutomaticCache() && routeInfos && (routeInfos.mustEnableAutomaticCache === true)
             
             if ((rootReq as JopiRequestImpl).routeInfos.requiredRoles) {
                 const roles = (rootReq as JopiRequestImpl).routeInfos.requiredRoles;
@@ -685,60 +544,10 @@ export class CoreWebSite {
 
     //region Cache
 
-    htmlCache: PageCache;
-    objectCache: ObjectCache;
-    mustUseAutomaticCache: boolean = true;
-    private cacheRules: CacheRules[] = [];
-    
-    /** Returns the current cache engine instance. */
-    getHtmlCache(): PageCache {
-        return this.htmlCache;
-    }
-
-    /**
-     * Sets a custom cache engine.
-     * @param pageCache The cache implementation to use.
-     */
-    setHtmlCache(pageCache: PageCache) {
-        this.htmlCache = pageCache || gVoidCache;
-    }
-
-    /** Returns the current object cache engine instance. */
-    getObjectCache(): ObjectCache {
-        return this.objectCache;
-    }
-
-    /**
-     * Sets a custom object cache engine.
-     * @param objectCache The cache implementation to use.
-     */
-    setObjectCache(objectCache: ObjectCache) {
-        this.objectCache = objectCache;
-    }
-
-    /** Disables the entire automatic caching system. */
-    disableHtmlCache() {
-        this.mustUseAutomaticCache = false;
-    }
-
-    /**
-     * Adds a header name to the list of headers that should be cached along with the response.
-     * @param header The name of the HTTP header.
-     */
-    addHeaderToCache(header: string) {
-        addHeadersToCache(header);
-    }
-
-    /**
-     * Sets the global cache rules.
-     * @param rules An array of rules to determine caching behavior.
-     */
-    setHtmlCacheRules(rules: CacheRules[]) {
-        this.cacheRules = rules;
-    }
-
     private applyCacheRules(routeInfos: WebSiteRouteInfos, path: string) {
-        for (let rule of this.cacheRules) {
+        const cacheRules = getHtmlCacheRules();
+
+        for (let rule of cacheRules) {
             if (!testRoutePath(path, rule.routeSelector)) continue;
 
             if (!routeInfos.afterGetFromCache) {
@@ -1088,12 +897,6 @@ export class CoreWebSite {
     //endregion
 }
 //
-let gWebsite: CoreWebSite|undefined;
-
-export function getCoreWebSite(): CoreWebSite {
-    return gWebsite!;
-}
-
 const gVoidRouteHandler = () => Promise.resolve(new Response("void", { status: 200 }));
 
 export interface ServeFileOptions {
@@ -1115,17 +918,7 @@ export class WebSiteOptions {
      * The TLS certificate to use;
      */
     certificate?: SslCertificatePath;
-
-    /**
-     * Allow defining our own cache for this website and don't use the common one.
-     */
-    cache?: PageCache;
     
-    /**
-     * Allow defining our own object cache for this website.
-     */
-    objectCache?: ObjectCache;
-
     /**
      * A list of listeners which must be called when the website is fully operational.
      */
@@ -1141,67 +934,6 @@ export class WebSiteOptions {
      * Default options for cookies.
      */
     cookieDefaults?: CookieOptions;
-}
-
-export interface WebSiteRouteInfos {
-    route: string;
-    handler: JopiRouteHandler;
-
-    middlewares?: ValueWithPriority<JopiMiddleware>[];
-    postMiddlewares?: ValueWithPriority<JopiPostMiddleware>[];
-
-    /**
-     * If defined, then this is a catch-all slug.
-     * Example: for the route /user/[...path] then the slug is "path".
-     */
-    catchAllSlug?: string;
-
-    /**
-     * Data provider for the page.
-     */
-    pageDataParams?: {
-        provider: JopiPageDataProvider;
-        roles?: string[];
-        url?: string;
-    };
-
-    /**
-     * A list of roles which are required.
-     */
-    requiredRoles?: string[];
-
-    /**
-     * Define a filter to use to sanitize the search params of the url.
-     */
-    searchParamFilter?: SearchParamFilterFunction;
-
-    /**
-     * If true, the automatic cache is enabled.
-     */
-    mustEnableAutomaticCache?: boolean;
-
-    /**
-     * Is executed before checking the cache.
-     * If a response is returned/void, then directly returns this response.
-     */
-    beforeCheckingCache?: (req: JopiRequest) => Promise<Response | undefined | void>;
-
-    /**
-     * Is executed if the response is not in the cache.
-     */
-    ifNotInCache?: (req: JopiRequest, isPage: boolean) => void;
-
-    /**
-     * Is executed before adding the response to the cache.
-     * Returns the response or undefined/void to avoid adding to the cache.
-     */
-    beforeAddToCache?: (req: JopiRequest, res: Response) => Promise<Response | undefined | void>;
-
-    /**
-     * Is executed after getting the response from the cache.
-     * Returns the response or undefined/void to avoid using this cache entry.
-     */
-    afterGetFromCache?: (req: JopiRequest, res: Response) => Promise<Response | undefined | void>;
 }
 
 /**
@@ -1235,15 +967,6 @@ export class JopiWebSocket {
 export function newWebSite(url: string, options?: WebSiteOptions): CoreWebSite {
     return new CoreWebSite(url, options);
 }
-
-/** Function signature for handling a standard HTTP route. */
-export type JopiRouteHandler = (req: JopiRequest) => Promise<Response>;
-
-/** Function signature for handling a WebSocket connection. */
-export type JopiWsRouteHandler = (ws: JopiWebSocket, infos: WebSocketConnectionInfos) => void;
-
-/** Function signature for handling HTTP errors (404, 500, etc.). */
-export type JopiErrorHandler = (req: JopiRequest, error?: Error | string) => Response | Promise<Response>;
 
 /** Supported HTTP methods. */
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'HEAD' | 'OPTIONS';
@@ -1286,71 +1009,7 @@ export type JopiMiddleware = (req: JopiRequest) => Response | Promise<Response |
  */
 export type JopiPostMiddleware = (req: JopiRequest, res: Response) => Response | Promise<Response>;
 
-/**
- * Base class for exceptions that modify the control flow of the server request processing.
- * These are caught by the server to trigger specific behaviors (redirect, error page, etc.)
- * rather than being treated as standard runtime errors.
- */
-export class SBPE_ServerByPassException extends Error {
-}
-
-export class SBPE_ErrorPage extends SBPE_ServerByPassException {
-    constructor(public readonly code: number) {
-        super("error");
-    }
-
-    async apply(webSite: CoreWebSite, req: JopiRequest): Promise<Response> {
-        try {
-            switch (this.code) {
-                case 404:
-                    return webSite.return404(req);
-                case 500:
-                    return webSite.return500(req);
-                case 401:
-                    return webSite.return401(req);
-            }
-        }
-        catch {
-        }
-
-        return webSite.return500(req);
-    }
-}
-
-/**
- * Exception thrown to indicate that the current user does not have the required permissions.
- * Triggers the 401 Unauthorized handler.
- */
-export class SBPE_NotAuthorizedException extends SBPE_ServerByPassException {
-}
-
-/**
- * Exception thrown to immediately send a specific response, bypassing the rest of the route logic.
- */
-export class SBPE_DirectSendThisResponseException extends SBPE_ServerByPassException {
-    constructor(public readonly response: Response | JopiRouteHandler) {
-        super();
-    }
-}
-
-/**
- * Exception thrown to stop request processing without sending any response.
- * Useful when the response has already been handled by other means (e.g. raw socket).
- */
-export class SBPE_MustReturnWithoutResponseException extends SBPE_ServerByPassException {
-    constructor() {
-        super();
-    }
-}
-
-/**
- * Error thrown when attempting to start a server that is already running.
- */
-export class ServerAlreadyStartedError extends Error {
-    constructor() {
-        super("the server is already");
-    }
-}
+import { SBPE_ServerByPassException, SBPE_ErrorPage, SBPE_NotAuthorizedException, SBPE_DirectSendThisResponseException, SBPE_MustReturnWithoutResponseException } from "./errors.ts";
 
 /**
  * Options for configuring a cookie.
@@ -1445,5 +1104,3 @@ export interface LoginPassword {
     login: string;
     password: string;
 }
-
-const gVoidCache = new VoidPageCache();

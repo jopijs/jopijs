@@ -14,16 +14,23 @@ import Page from "./PageComponent.ts";
 
 import { initCheerio } from "./jQuery.ts";
 import { type PageCache, type CacheEntry } from "./cacheHtml/cache.ts";
-import type { ObjectCache } from "./cacheObject/index.ts";
+
 import {
     type AuthResult,
-    type CookieOptions, SBPE_DirectSendThisResponseException,
-    type HttpMethod, type JopiRouteHandler, type LoginPassword, SBPE_NotAuthorizedException,
+    type CookieOptions,
+    type HttpMethod, type LoginPassword,
     type RequestBody,
     type ResponseModifier, type ServeFileOptions, type TestCookieValue, type TextModifier, type UserInfos,
-    CoreWebSite,
-    type WebSiteRouteInfos, SBPE_ServerByPassException
+    CoreWebSite
 } from "./jopiCoreWebSite.ts";
+
+import {type JopiRouteHandler} from "./routes.ts";
+
+import {
+    SBPE_DirectSendThisResponseException,
+    SBPE_NotAuthorizedException,
+    SBPE_ServerByPassException
+} from "./errors.ts";
 
 import { parseCookies } from "./internalTools.ts";
 import * as jk_term from "jopi-toolkit/jk_term";
@@ -33,6 +40,8 @@ import { createBundleForPage } from "./bundler/index.ts";
 import { type BrowserCacheValidationInfos, type ReqReturnFileParams } from "./browserCacheControl.ts";
 import { WebSiteMirrorCache } from "./cacheHtml/webSiteMirrorCache.ts";
 import type { PageDataProviderData } from "jopijs/ui";
+import { getDefaultHtmlCache } from "./cacheHtml/index.ts";
+import type { WebSiteRouteInfos } from "./routes.ts";
 
 /**
  * Represents an incoming HTTP request in the JopiJS framework.
@@ -68,7 +77,7 @@ export class JopiRequest {
         public readonly routeInfos: WebSiteRouteInfos,
         req_urlParts: Record<string, string> | undefined,
     ) {
-        this.htmlCache = webSite.htmlCache;
+        this.htmlCache = getDefaultHtmlCache();
         this._req_headers = this.coreRequest.headers;
 
         this._req_urlParts = req_urlParts;

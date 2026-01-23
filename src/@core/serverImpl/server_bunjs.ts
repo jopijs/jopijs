@@ -1,8 +1,8 @@
 import type {CoreServer, SseEvent, SseEventController, WebSocketConnectionInfos} from "../jopiServer.ts";
-import {
-    type HttpMethod, type JopiWebSocket,
-    SBPE_DirectSendThisResponseException , CoreWebSite, type WebSiteRouteInfos
-} from "../jopiCoreWebSite.ts";
+import {type HttpMethod, type JopiWebSocket,CoreWebSite} from "../jopiCoreWebSite.ts";
+import {SBPE_DirectSendThisResponseException,} from "../errors.ts";
+import {type WebSiteRouteInfos} from "../routes.ts";
+
 import type {ServerInstanceBuilder} from "../serverInstanceBuilder.ts";
 import React from "react";
 import * as jk_fs from "jopi-toolkit/jk_fs";

@@ -16,15 +16,16 @@ import type {
 import type {
     HttpMethod,
     JopiWebSocket,
-    JopiWsRouteHandler,
     CoreWebSite,
-    WebSiteRouteInfos
 } from "../jopiCoreWebSite.ts";
-import {SBPE_MustReturnWithoutResponseException} from "../jopiCoreWebSite.ts";
+
+import { type JopiWsRouteHandler, type WebSiteRouteInfos } from "../routes.ts";
+
 import type {ServerInstanceBuilder} from "../serverInstanceBuilder.ts";
 import {addRoute, createRouter, findRoute, type RouterContext} from "rou3";
 import React from "react";
 import {JopiRequestImpl} from "../jopiRequest.ts";
+import { SBPE_MustReturnWithoutResponseException } from "../errors.ts";
 
 class NodeServerInstance implements CoreServer {
     private readonly server: http.Server<typeof http.IncomingMessage, typeof http.ServerResponse>;

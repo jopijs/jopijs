@@ -5,11 +5,11 @@ import {NodeJsServerInstanceBuilder} from "./serverImpl/server_nodejs.ts";
 import {
     type HttpMethod,
     type JopiWebSocket,
-    CoreWebSite,
-    type WebSiteRouteInfos
+    CoreWebSite
 } from "./jopiCoreWebSite.ts";
 import React from "react";
 import type {TryReturnFileParams} from "./browserCacheControl.ts";
+import type { WebSiteRouteInfos } from "./routes.ts";
 
 export interface ServerInstanceBuilder {
     addRoute(verb: HttpMethod, path: string, routeInfos: WebSiteRouteInfos): void;
