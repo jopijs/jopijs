@@ -11,6 +11,7 @@ export * from "./valueStore.ts";
 export * from "./cookies/index.ts";
 export * from "./htmlNode.ts";
 export * from "./events.ts";
+export * from "./utils.ts";
 
 export const isBrowserSide = isBrowser;
 export const isServerSide = !isBrowser;
