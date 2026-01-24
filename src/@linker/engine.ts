@@ -243,8 +243,10 @@ export class CodeGenWriter {
         return filePath;
     }
 
-    makePathRelativeToOutput(path: string) {
-        return jk_fs.getRelativePath(this.dir.output_src, path);
+    makePathRelativeToOutput(path: string, innerPath?: string) {
+        let root = this.dir.output_src;
+        if (innerPath) root = jk_fs.join(root, innerPath);
+        return jk_fs.getRelativePath(root, path);
     }
 
     async writeCodeFile(params: WriteCodeFileParams) {

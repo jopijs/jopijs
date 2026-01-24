@@ -3,7 +3,7 @@ import * as jk_fs from "jopi-toolkit/jk_fs";
 import * as jk_app from "jopi-toolkit/jk_app";
 import {normalizeNeedRoleConditionName} from "./common.ts";
 import {CodeGenWriter, FilePart, InstallFileType} from "./engine.ts";
-import type {JDataBinding} from "jopi-toolkit/jk_data";
+import type {JopiDataTable} from "jopi-toolkit/jk_data";
 import { calcCryptedUrl } from "jopijs/generated";
 
 interface TypeDataTables_Item extends TypeInDirChunk_Item {
@@ -105,6 +105,14 @@ export default class TypeDataTables extends TypeInDirChunk {
         let importPath = writer.toPathForImport(entryPoint, false);
         let dsName = jk_fs.basename(dsItem.itemPath);
         
+        let browserActionsSrc = jk_fs.join(jk_fs.dirname(dsItem.entryPoint), "browserActions.ts");
+        let hasBrowserActions = await jk_fs.isFile(browserActionsSrc);
+
+        let serverActionsSrc = jk_fs.join(jk_fs.dirname(dsItem.entryPoint), "serverActions.ts");
+        let hasServerActions = await jk_fs.isFile(serverActionsSrc);
+
+        const outputDir = jk_fs.join(this.getGenOutputDir(dsItem), targetName);
+        
         if (dsItem.mustBuildProxy) {
             // > The server and browser versions will not be the same here.
             //   The server version directly targets the datasource.
@@ -115,40 +123,56 @@ export default class TypeDataTables extends TypeInDirChunk {
             await writer.writeCodeFile({
                 fileInnerPath: jk_fs.join(this.getGenOutputDir(dsItem), targetName, "index"),
 
-                srcFileContent: writer.AI_INSTRUCTIONS + `export * from "./jBundler_ifServer.ts";
-import DEFAULT from "./jBundler_ifServer.ts";
+                srcFileContent: writer.AI_INSTRUCTIONS + `import DEFAULT from "./jBundler_ifServer.ts";
 export default DEFAULT;`,
 
-                distFileContent: writer.AI_INSTRUCTIONS + `export * from "./jBundler_ifServer.js";
-import DEFAULT from "./jBundler_ifServer.js";
+                distFileContent: writer.AI_INSTRUCTIONS + `import DEFAULT from "./jBundler_ifServer.js";
 export default DEFAULT;`,
             });
 
             //region jBundler_ifServer.ts
 
+            let serverActionsImportTS = "";
+            let serverActionsMerge = "";
+            let serverActionsImportJS = "";
+
+            if (hasServerActions) {
+                let saPathTS = writer.toPathForImport(writer.makePathRelativeToOutput(serverActionsSrc, outputDir), false);
+                serverActionsImportTS = `import serverActions from "${saPathTS}";`;
+                
+                let saPathJS = writer.toPathForImport(writer.makePathRelativeToOutput(serverActionsSrc, outputDir), true);
+                serverActionsImportJS = `import serverActions from "${saPathJS}";`;
+
+                serverActionsMerge = `, serverActions`;
+            }
+
             let srcCode = writer.AI_INSTRUCTIONS + `
 import {toDataTable} from "jopijs/generated";
 import C from "${importPath}";
-export default toDataTable(C, ${JSON.stringify(dsName)});`;
+${serverActionsImportTS}
+
+export default toDataTable(C, ${JSON.stringify(dsName)}${serverActionsMerge});`;
 
             importPath = writer.toPathForImport(entryPoint, true);
 
-            let distCode = writer.AI_INSTRUCTIONS + `
+            let dstCode = writer.AI_INSTRUCTIONS + `
 import {toDataTable} from "jopijs/generated";
 import C from "${importPath}";
-export default toDataTable(C, ${JSON.stringify(dsName)});`;
+${serverActionsImportJS}
+
+export default toDataTable(C, ${JSON.stringify(dsName)}${serverActionsMerge});`;
 
             await writer.writeCodeFile({
                 fileInnerPath: jk_fs.join(this.getGenOutputDir(dsItem), targetName, "jBundler_ifServer"),
                 srcFileContent: srcCode,
-                distFileContent: distCode
+                distFileContent: dstCode
             });
 
             //endregion
 
             //region jBundler_ifBrowser.ts
 
-            let dsImpl: JDataBinding;
+            let dsImpl: JopiDataTable;
 
             // Calc the path of the file to import.
             let toImport = dsItem.entryPoint;
@@ -165,121 +189,36 @@ export default toDataTable(C, ${JSON.stringify(dsName)});`;
 
             let schema = dsImpl.schema;
             if (!schema) throw this.declareError("Is not a valide data tables. Missing schema.", dsItem.entryPoint);
-
-            let rowActions = dsImpl.rowActions;
-            let checkRolesFunction = dsImpl.checkRoles;
-
-            if (rowActions) {
-                if (!checkRolesFunction) throw this.declareError("Is not a valide data tables. Missing checkRoles function.", dsItem.entryPoint);
-            }
             
             let jsonSchema = schema.toJson();
 
-            let srzHttpProxyParams: any = {
+            let httpProxyParams: any = {
                 schema: { desc: jsonSchema.desc, meta: jsonSchema.schemaMeta },
                 apiUrl: `/_jopi/ds/${dsItem.securityUid}`,
                 name: dsName
             };
 
-            let handlers: Record<string, string> = {};
-            if (checkRolesFunction) handlers["checkRoles"] = checkRolesFunction.toString();
-
-            let srzActions = [];
-
-            if (rowActions) {
-                let offset = 0;
-
-                for (const action of rowActions) {
-                    let actionEntry: any = { title: action.title, name: action.name };
-                    srzActions.push(actionEntry);
-                    
-                    if (action.preProcess || action.postProcess) {
-                        if (action.preProcess) {
-                            let name = "action_pre_" + offset;
-                            actionEntry.preProcessName = name;
-                            handlers[name] = action.preProcess.toString();
-                        }
-
-                        if (action.postProcess) {
-                            let name = "action_post_" + offset;
-                            actionEntry.postProcessName = name;
-                            handlers[name] = action.postProcess.toString();
-                        }
-
-
-                        if (action.serverAction) {
-                            actionEntry.hasServerAction = true;
-                        }
-                    }
-
-                    offset++;
-                }
-            }
-
             //region Generate TypeScript code
 
-            let szrHandlers = "{";
-
-            for (let handlerName in handlers) {
-                szrHandlers += `\n\n"${handlerName}": //@ts-ignore\n${handlers[handlerName]},`;
+            srcCode = writer.AI_INSTRUCTIONS;
+            srcCode += `import {toDataTableProxy} from "jopi-toolkit/jk_data";`;
+            
+            if (hasBrowserActions) {
+                let baPath = writer.toPathForImport(writer.makePathRelativeToOutput(browserActionsSrc, outputDir), false);
+                srcCode += `\nimport browserActions from "${baPath}";`;
             }
 
-            szrHandlers += "\n}";
-
-            srcCode = writer.AI_INSTRUCTIONS;
-            srcCode += `import {JDataBinding_HttpProxy, type JDataBinding_HttpProxyParams} from "jopi-toolkit/jk_data";`;
-            srcCode += `\n\nconst srzHttpProxyParams = ${JSON.stringify(srzHttpProxyParams, null, 4)};`;
-            srcCode += `\n\nconst srzActions: any = ${JSON.stringify(srzActions, null, 4)};`;
-            srcCode += `\n\nconst szrHandlers: any = ${szrHandlers};`;
-
-            srcCode += `\n\nconst actions = srzActions.map((a:any) => ({
-    name: a.name,
-    title: a.title,
-    hasServerAction: a.hasServerAction,
-    preProcess: a.preProcessName ? szrHandlers[a.preProcessName] : undefined,
-    postProcess: a.postProcessName ? szrHandlers[a.postProcessName] : undefined,
-}));
-
-const proxyParams: JDataBinding_HttpProxyParams = {
-    ...srzHttpProxyParams,
-    rowActions: actions,
-    checkRoles: szrHandlers.checkRoles
-};`;
-
-            srcCode += `\n\nexport default new JDataBinding_HttpProxy(proxyParams)`;
-
-            //endregion
-
-            //region Generate JavaScript code
-
-            distCode = writer.AI_INSTRUCTIONS;
-            distCode += `import {JDataBinding_HttpProxy} from "jopi-toolkit/jk_data";`;
-            distCode += `\n\nconst srzHttpProxyParams = ${JSON.stringify(srzHttpProxyParams, null, 4)};`;
-            distCode += `\n\nconst srzActions = ${JSON.stringify(srzActions, null, 4)};`;
-            distCode += `\n\nconst szrHandlers = ${szrHandlers};`;
-
-            distCode += `\n\nconst actions = srzActions.map((a) => ({
-    name: a.name,
-    title: a.title,
-    hasServerAction: a.hasServerAction,
-    preProcess: a.preProcessName ? szrHandlers[a.preProcessName] : undefined,
-    postProcess: a.postProcessName ? szrHandlers[a.postProcessName] : undefined,
-}));
-
-const proxyParams = {
-    ...srzHttpProxyParams,
-    rowActions: actions,
-    checkRoles: szrHandlers.checkRoles
-};`;
-
-            distCode += `\n\nexport default new JDataBinding_HttpProxy(proxyParams)`;
+            srcCode += `\n\nconst httpProxyParams = ${JSON.stringify(httpProxyParams, null, 4)};`;
+            srcCode += `\n\nexport default toDataTableProxy(httpProxyParams, browserActions.default)`;
+            
+            dstCode = srcCode;
 
             //endregion
 
             await writer.writeCodeFile({
-                fileInnerPath: jk_fs.join(this.getGenOutputDir(dsItem), targetName, "jBundler_ifBrowser"),
+                fileInnerPath: jk_fs.join(outputDir, "jBundler_ifBrowser"),
                 srcFileContent: srcCode,
-                distFileContent: distCode
+                distFileContent: dstCode
             });
 
             //endregion
