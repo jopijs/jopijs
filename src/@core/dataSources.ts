@@ -1,4 +1,4 @@
-import type {JNamedTableReader_ReadParams, JTableReader} from "jopi-toolkit/jk_data";
+import type {JDataReadParams, JDataTable} from "jopi-toolkit/jk_data";
 import type {CoreWebSite} from "./jopiCoreWebSite.ts";
 import type {JopiRequest} from "./jopiRequest.ts";
 import {sleep} from "jopi-toolkit/jk_timer";
@@ -13,24 +13,24 @@ interface RegisteredDataSource {
 
 // noinspection JSUnusedGlobalSymbols
 /**
- * Expose a data source to the network.
+ * Expose a data table to the network.
  * Warning: if mainly called by generated code.
  */
-export function exposeDataSource_Table(_name: string, securityUid: string, dataSource: JTableReader, permissions: Record<string, string[]>) {
+export function exposeDataSource_Table(_name: string, securityUid: string, dataTable: JDataTable, permissions: Record<string, string[]>) {
     toExpose.push({
         securityUid,
 
         onCall: async (req) => {
             let reqData = await req.req_getBodyData<{
                 dsName: string;
-                read?: JNamedTableReader_ReadParams;
+                read?: JDataReadParams;
             }>();
 
             if (reqData.read) {
                 let requiredRoles = permissions.READ;
                 if (requiredRoles) req.role_assertUserHasOneOfThisRoles(requiredRoles);
 
-                let res = await dataSource.read(reqData.read);
+                let res = await dataTable.read(reqData.read);
                 return req.res_jsonResponse(res);
             }
 

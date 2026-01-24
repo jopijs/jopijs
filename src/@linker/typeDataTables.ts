@@ -3,7 +3,7 @@ import * as jk_fs from "jopi-toolkit/jk_fs";
 import * as jk_app from "jopi-toolkit/jk_app";
 import {normalizeNeedRoleConditionName} from "./common.ts";
 import {CodeGenWriter, FilePart, InstallFileType} from "./engine.ts";
-import type {JNamedTableReader} from "jopi-toolkit/jk_data";
+import type {JDataBinding} from "jopi-toolkit/jk_data";
 import { calcCryptedUrl } from "jopijs/generated";
 
 interface TypeDataTables_Item extends TypeInDirChunk_Item {
@@ -148,32 +148,133 @@ export default toDataTable(C, ${JSON.stringify(dsName)});`;
 
             //region jBundler_ifBrowser.ts
 
-            let dsImpl: JNamedTableReader;
+            let dsImpl: JDataBinding;
 
             // Calc the path of the file to import.
             let toImport = dsItem.entryPoint;
             if (!writer.mustUseTypeScript) toImport = jk_app.getCompiledFilePathFor(toImport);
 
             try {
-                // Allows to known the data source schema.
+                // Allows to known informations data table.
+                // Warning: here it requires the compiled version to exists.
+                //
                 dsImpl = (await import(toImport)).default;
             } catch {
                 throw this.declareError("Is not a valide data source.", dsItem.entryPoint);
             }
 
             let schema = dsImpl.schema;
-            if (!schema) throw this.declareError("Is not a valide data source. Missing schema.", dsItem.entryPoint);
+            if (!schema) throw this.declareError("Is not a valide data tables. Missing schema.", dsItem.entryPoint);
 
+            let rowActions = dsImpl.rowActions;
+            let checkRolesFunction = dsImpl.checkRoles;
+
+            if (rowActions) {
+                if (!checkRolesFunction) throw this.declareError("Is not a valide data tables. Missing checkRoles function.", dsItem.entryPoint);
+            }
+            
             let jsonSchema = schema.toJson();
 
-            srcCode = writer.AI_INSTRUCTIONS;
-            srcCode += `import {JNamedTableReader_HttpProxy} from "jopi-toolkit/jk_data";`;
-            srcCode += `\nimport {schema as newSchema} from "jopi-toolkit/jk_schema";`;
-            srcCode += `\n\nexport const dataSourceName = "${dsName}";`;
+            let srzHttpProxyParams: any = {
+                schema: { desc: jsonSchema.desc, meta: jsonSchema.schemaMeta },
+                apiUrl: `/_jopi/ds/${dsItem.securityUid}`,
+                name: dsName
+            };
 
-            srcCode += `\nexport const schema = newSchema(${JSON.stringify(jsonSchema.desc, null, 4)}, ${JSON.stringify(jsonSchema.schemaMeta, null, 4)});`;
-            srcCode += `\nexport default new JNamedTableReader_HttpProxy(dataSourceName, "/_jopi/ds/${dsItem.securityUid}", schema)`;
-            distCode = srcCode;
+            let handlers: Record<string, string> = {};
+            if (checkRolesFunction) handlers["checkRoles"] = checkRolesFunction.toString();
+
+            let srzActions = [];
+
+            if (rowActions) {
+                let offset = 0;
+
+                for (const action of rowActions) {
+                    let actionEntry: any = { title: action.title, name: action.name };
+                    srzActions.push(actionEntry);
+                    
+                    if (action.preProcess || action.postProcess) {
+                        if (action.preProcess) {
+                            let name = "action_pre_" + offset;
+                            actionEntry.preProcessName = name;
+                            handlers[name] = action.preProcess.toString();
+                        }
+
+                        if (action.postProcess) {
+                            let name = "action_post_" + offset;
+                            actionEntry.postProcessName = name;
+                            handlers[name] = action.postProcess.toString();
+                        }
+
+
+                        if (action.serverAction) {
+                            actionEntry.hasServerAction = true;
+                        }
+                    }
+
+                    offset++;
+                }
+            }
+
+            //region Generate TypeScript code
+
+            let szrHandlers = "{";
+
+            for (let handlerName in handlers) {
+                szrHandlers += `\n\n"${handlerName}": //@ts-ignore\n${handlers[handlerName]},`;
+            }
+
+            szrHandlers += "\n}";
+
+            srcCode = writer.AI_INSTRUCTIONS;
+            srcCode += `import {JDataBinding_HttpProxy, type JDataBinding_HttpProxyParams} from "jopi-toolkit/jk_data";`;
+            srcCode += `\n\nconst srzHttpProxyParams = ${JSON.stringify(srzHttpProxyParams, null, 4)};`;
+            srcCode += `\n\nconst srzActions: any = ${JSON.stringify(srzActions, null, 4)};`;
+            srcCode += `\n\nconst szrHandlers: any = ${szrHandlers};`;
+
+            srcCode += `\n\nconst actions = srzActions.map((a:any) => ({
+    name: a.name,
+    title: a.title,
+    hasServerAction: a.hasServerAction,
+    preProcess: a.preProcessName ? szrHandlers[a.preProcessName] : undefined,
+    postProcess: a.postProcessName ? szrHandlers[a.postProcessName] : undefined,
+}));
+
+const proxyParams: JDataBinding_HttpProxyParams = {
+    ...srzHttpProxyParams,
+    rowActions: actions,
+    checkRoles: szrHandlers.checkRoles
+};`;
+
+            srcCode += `\n\nexport default new JDataBinding_HttpProxy(proxyParams)`;
+
+            //endregion
+
+            //region Generate JavaScript code
+
+            distCode = writer.AI_INSTRUCTIONS;
+            distCode += `import {JDataBinding_HttpProxy} from "jopi-toolkit/jk_data";`;
+            distCode += `\n\nconst srzHttpProxyParams = ${JSON.stringify(srzHttpProxyParams, null, 4)};`;
+            distCode += `\n\nconst srzActions = ${JSON.stringify(srzActions, null, 4)};`;
+            distCode += `\n\nconst szrHandlers = ${szrHandlers};`;
+
+            distCode += `\n\nconst actions = srzActions.map((a) => ({
+    name: a.name,
+    title: a.title,
+    hasServerAction: a.hasServerAction,
+    preProcess: a.preProcessName ? szrHandlers[a.preProcessName] : undefined,
+    postProcess: a.postProcessName ? szrHandlers[a.postProcessName] : undefined,
+}));
+
+const proxyParams = {
+    ...srzHttpProxyParams,
+    rowActions: actions,
+    checkRoles: szrHandlers.checkRoles
+};`;
+
+            distCode += `\n\nexport default new JDataBinding_HttpProxy(proxyParams)`;
+
+            //endregion
 
             await writer.writeCodeFile({
                 fileInnerPath: jk_fs.join(this.getGenOutputDir(dsItem), targetName, "jBundler_ifBrowser"),

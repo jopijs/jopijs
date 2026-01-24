@@ -1,5 +1,5 @@
-import type { JNamedTableReader, JTableReader } from "jopi-toolkit/jk_data";
+import type { JDataBinding, JDataTable } from "jopi-toolkit/jk_data";
 
-export function toDataTable(ds: JTableReader, name: string): JNamedTableReader {
+export function toDataTable(ds: JDataBinding, name: string): JDataTable {
     return { ...ds, name };
 }
