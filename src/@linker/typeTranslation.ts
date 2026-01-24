@@ -239,8 +239,50 @@ export class TypeTranslation extends AliasType {
 
             map += "\n};";
 
-            srcCode += `\n${map}\n\nexport const supportedLangs = ${JSON.stringify(Object.keys(trGroup.langFiles))};\n\nexport default function get(lang?: string) { return lang ? (((byLang as any)[lang]) || defaultLang) :  defaultLang }`;
-            dstCode += `\n${map}\n\nexport const supportedLangs = ${JSON.stringify(Object.keys(trGroup.langFiles))};\n\nexport default function get(lang) { return lang ? (byLang[lang] || defaultLang) :  defaultLang }`;
+            srcCode += `
+${map}
+
+export const supportedLangs = ${JSON.stringify(Object.keys(trGroup.langFiles))};
+
+export function getAllTranslationsFor(key: string) {
+    const tr = {};
+
+    for (const lang of supportedLangs) {
+        const forLang = (byLang as any)[lang];
+        
+        if (forLang) {
+            const found = forLang[key];
+            tr[lang] = found();
+        }
+    }
+
+    return tr;
+}
+
+export default function get(lang?: string) { return lang ? (((byLang as any)[lang]) || defaultLang) :  defaultLang }
+`;
+            dstCode += `
+${map}
+
+export const supportedLangs = ${JSON.stringify(Object.keys(trGroup.langFiles))};
+
+export function getAllTranslationsFor(key) {
+    const tr = {};
+
+    for (const lang of supportedLangs) {
+        const forLang = byLang[lang];
+        
+        if (forLang) {
+            const found = forLang[key];
+            tr[lang] = found();
+        }
+    }
+
+    return tr;
+}
+
+export default function get(lang) { return lang ? (byLang[lang] || defaultLang) :  defaultLang }
+`;
 
             await writer.writeCodeFile({
                 fileInnerPath: jk_fs.join(dirName, "index"),
