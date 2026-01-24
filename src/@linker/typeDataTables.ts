@@ -103,11 +103,29 @@ export default class TypeDataTables extends TypeInDirChunk {
         let importPath = writer.toPathForImport(entryPoint, false);
         let dsName = jk_fs.basename(dsItem.itemPath);
         
-        let browserActionsSrc = jk_fs.join(jk_fs.dirname(dsItem.entryPoint), "browserActions.ts");
-        let hasBrowserActions = await jk_fs.isFile(browserActionsSrc);
+        const browserActionsSrc = jk_fs.join(jk_fs.dirname(dsItem.entryPoint), "actionsBrowser.ts");
+        const hasBrowserActions = await jk_fs.isFile(browserActionsSrc);
+        const serverActionsSrc = jk_fs.join(jk_fs.dirname(dsItem.entryPoint), "actionsServer.ts");
+        const hasServerActions = await jk_fs.isFile(serverActionsSrc);
 
-        let serverActionsSrc = jk_fs.join(jk_fs.dirname(dsItem.entryPoint), "serverActions.ts");
-        let hasServerActions = await jk_fs.isFile(serverActionsSrc);
+        if (!hasBrowserActions) {
+            const srcCode = 
+            await jk_fs.writeTextToFile(browserActionsSrc, `import type { JopiTableBrowserActions } from "jopi-toolkit/jk_data";
+const actions: JopiTableBrowserActions = {};
+export default actions;`);
+
+            await jk_fs.writeTextToFile(jk_app.getCompiledFilePathFor(browserActionsSrc), `const actions = {};
+export default actions;`);
+        }
+
+        if (!hasServerActions) {
+            await jk_fs.writeTextToFile(serverActionsSrc, `import type { JopiTableServerActions } from "jopijs";
+const actions: JopiTableServerActions = {};
+export default actions;`);
+
+            await jk_fs.writeTextToFile(jk_app.getCompiledFilePathFor(serverActionsSrc), `const actions = {};
+export default actions;`);
+        }
 
         const outputDir = jk_fs.join(this.getGenOutputDir(dsItem), targetName);
         
@@ -134,15 +152,12 @@ export default DEFAULT;`,
             let serverActionsMerge = "";
             let serverActionsImportJS = "";
 
-            if (hasServerActions) {
-                let saPathTS = writer.toPathForImport(writer.makePathRelativeToOutput(serverActionsSrc, outputDir), false);
-                serverActionsImportTS = `import serverActions from "${saPathTS}";`;
-                
-                let saPathJS = writer.toPathForImport(writer.makePathRelativeToOutput(serverActionsSrc, outputDir), true);
-                serverActionsImportJS = `import serverActions from "${saPathJS}";`;
-
-                serverActionsMerge = `, serverActions`;
-            }
+            let saPathTS = writer.toPathForImport(writer.makePathRelativeToOutput(serverActionsSrc, outputDir), false);
+            serverActionsImportTS = `import serverActions from "${saPathTS}";`;
+            
+            let saPathJS = writer.toPathForImport(writer.makePathRelativeToOutput(serverActionsSrc, outputDir), true);
+            serverActionsImportJS = `import serverActions from "${saPathJS}";`;
+            serverActionsMerge = `, serverActions`;
 
             let srcCode = writer.AI_INSTRUCTIONS + `
 import {toDataTable} from "jopijs/generated";
@@ -202,13 +217,14 @@ export default toDataTable(C, ${JSON.stringify(dsName)}${serverActionsMerge});`;
             srcCode = writer.AI_INSTRUCTIONS;
             srcCode += `import {toDataTableProxy} from "jopi-toolkit/jk_data";`;
             
-            if (hasBrowserActions) {
-                let baPath = writer.toPathForImport(writer.makePathRelativeToOutput(browserActionsSrc, outputDir), false);
-                srcCode += `\nimport browserActions from "${baPath}";`;
-            }
+            let extraParams = "";
+
+            let baPath = writer.toPathForImport(writer.makePathRelativeToOutput(browserActionsSrc, outputDir), false);
+            srcCode += `\nimport browserActions from "${baPath}";`;
+            extraParams = ", browserActions";
 
             srcCode += `\n\nconst httpProxyParams = ${JSON.stringify(httpProxyParams, null, 4)};`;
-            srcCode += `\n\nexport default toDataTableProxy(httpProxyParams, browserActions)`;
+            srcCode += `\n\nexport default toDataTableProxy(httpProxyParams${extraParams})`;
             
             dstCode = srcCode;
 
