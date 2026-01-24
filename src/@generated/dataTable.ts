@@ -19,7 +19,7 @@ class DataTableWrapper implements JDataTable  {
 
     async executeAction(rows: any[], actionName: string, context?: IActionContext): Promise<JActionResult | void> {
         const req = context as unknown as JopiRequest;
-        const action = serverActions?.[actionName];
+        const action = this.serverActions?.[actionName];
 
         if (!action) {
             return {
