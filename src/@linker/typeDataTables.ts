@@ -6,7 +6,7 @@ import {CodeGenWriter, FilePart, InstallFileType} from "./engine.ts";
 import type {JNamedTableReader} from "jopi-toolkit/jk_data";
 import { calcCryptedUrl } from "jopijs/generated";
 
-interface TypeTable_Item extends TypeInDirChunk_Item {
+interface TypeDataTables_Item extends TypeInDirChunk_Item {
     /**
      * Must automatically expose this data source to the network?
      */
@@ -23,8 +23,8 @@ interface TypeTable_Item extends TypeInDirChunk_Item {
     securityUid: string;
 }
 
-export default class TypeTable extends TypeInDirChunk {
-    private toExpose: TypeTable_Item[] = [];
+export default class TypeDataTables extends TypeInDirChunk {
+    private toExpose: TypeDataTables_Item[] = [];
 
     protected getDefaultFeatures(): Record<string, boolean>|undefined {
         return {
@@ -55,7 +55,7 @@ export default class TypeTable extends TypeInDirChunk {
 
     async onChunk(chunk: TypeInDirChunk_Item, key: string, dirPath: string) {
         let securityUid = calcCryptedUrl(key);
-        let dsItem: TypeTable_Item = chunk as TypeTable_Item;
+        let dsItem: TypeDataTables_Item = chunk as TypeDataTables_Item;
 
         dsItem.securityUid = securityUid;
 
@@ -98,7 +98,7 @@ export default class TypeTable extends TypeInDirChunk {
         }
     }
 
-    async generateCodeForItem(writer: CodeGenWriter, key: string, dsItem: TypeTable_Item): Promise<void> {
+    async generateCodeForItem(writer: CodeGenWriter, key: string, dsItem: TypeDataTables_Item): Promise<void> {
         let targetName = key.substring(key.indexOf("!") + 1);
         let outDir = jk_fs.join(writer.dir.output_src, this.getGenOutputDir(dsItem));
         let entryPoint = jk_fs.getRelativePath(jk_fs.join(outDir, "index.ts"), dsItem.entryPoint);
