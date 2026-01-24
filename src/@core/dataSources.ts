@@ -1,4 +1,4 @@
-import type {JDataReadParams, JDataTable} from "jopi-toolkit/jk_data";
+import type {IActionContext, JDataReadParams, JDataTable} from "jopi-toolkit/jk_data";
 import type {CoreWebSite} from "./jopiCoreWebSite.ts";
 import type {JopiRequest} from "./jopiRequest.ts";
 import {sleep} from "jopi-toolkit/jk_timer";
@@ -21,14 +21,28 @@ export function exposeDataSource_Table(_name: string, securityUid: string, dataT
         securityUid,
 
         onCall: async (req) => {
-            let reqData = await req.req_getBodyData<{
-                dsName: string;
-                read?: JDataReadParams;
-            }>();
+            let reqData = await req.req_getBodyData();
 
-            if (reqData.read) {
-                let requiredRoles = permissions.READ;
-                if (requiredRoles) req.role_assertUserHasOneOfThisRoles(requiredRoles);
+            if (reqData.action) {
+                // Each action must check his roles.
+                // But if we can't read the data, we can't triger actions.
+                //
+                if (permissions.READ) {
+                    req.role_assertUserHasOneOfThisRoles(permissions.READ);
+                }
+
+                const res = await dataTable.executeAction?.(reqData.rows, reqData.action, req as unknown as IActionContext);
+
+                if (res) {
+                    return req.res_jsonResponse(res);
+                } else {
+                    return req.res_jsonResponse({isOk: true});
+                }
+            }
+            else if (reqData.read) {
+                if (permissions.READ) {
+                    req.role_assertUserHasOneOfThisRoles(permissions.READ);
+                }
 
                 let res = await dataTable.read(reqData.read);
                 return req.res_jsonResponse(res);

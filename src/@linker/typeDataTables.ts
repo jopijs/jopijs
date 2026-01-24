@@ -79,15 +79,13 @@ export default class TypeDataTables extends TypeInDirChunk {
             count++;
 
             let dsName = jk_fs.basename(dsItem.itemPath);
-            let relPath = writer.makePathRelativeToOutput(dsItem.entryPoint);
-            let relPathTS = writer.toPathForImport(relPath, false);
-            let relPathJS = writer.toPathForImport(relPath, true);
-
+            let importPath = "@/dataTables/" + dsName;
+            
             writer.genAddToInstallFile(
                 InstallFileType.server,
                 FilePart.imports, {
-                    ts: `\nimport DS_${count} from "${relPathTS}";`,
-                    js: `\nimport DS_${count} from "${relPathJS}";`
+                    ts: `\nimport DS_${count} from "${importPath}";`,
+                    js: `\nimport DS_${count} from "${importPath}";`
                 });
 
             writer.genAddToInstallFile(
@@ -195,6 +193,7 @@ export default toDataTable(C, ${JSON.stringify(dsName)}${serverActionsMerge});`;
             let httpProxyParams: any = {
                 schema: { desc: jsonSchema.desc, meta: jsonSchema.schemaMeta },
                 apiUrl: `/_jopi/ds/${dsItem.securityUid}`,
+                actions: dsImpl.actions,
                 name: dsName
             };
 
@@ -209,7 +208,7 @@ export default toDataTable(C, ${JSON.stringify(dsName)}${serverActionsMerge});`;
             }
 
             srcCode += `\n\nconst httpProxyParams = ${JSON.stringify(httpProxyParams, null, 4)};`;
-            srcCode += `\n\nexport default toDataTableProxy(httpProxyParams, browserActions.default)`;
+            srcCode += `\n\nexport default toDataTableProxy(httpProxyParams, browserActions)`;
             
             dstCode = srcCode;
 
