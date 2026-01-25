@@ -413,6 +413,23 @@ export function error401() {
             srcFileContent: `export * from "./jBundler_ifServer.ts";\nexport { default } from "./jBundler_ifServer.ts";`,
             distFileContent: `export * from "./jBundler_ifServer.js";\nexport { default } from "./jBundler_ifServer.js";`,
         });
+
+        // >>> Generate route.json
+
+        const map : Record<string, string> = {};
+
+        const registryValues = Object.values(this.registry);
+
+        registryValues.forEach(item => {
+            if (item.verb === "PAGE") {
+                let relPath = jk_fs.getRelativePath(myDir, item.filePath);
+                map[item.route] = relPath;
+            }
+        });
+
+        const jsonContent = JSON.stringify(map, null, 4);
+        await jk_fs.writeTextToFile(jk_fs.join(writer.dir.output_src, "routes", "routes.json"), jsonContent);
+        await jk_fs.writeTextToFile(jk_fs.join(writer.dir.output_dist, "routes", "routes.json"), jsonContent);
     }
 
     /**
