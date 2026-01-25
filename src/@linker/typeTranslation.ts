@@ -245,7 +245,7 @@ ${map}
 export const supportedLangs = ${JSON.stringify(Object.keys(trGroup.langFiles))};
 
 export function getAllTranslationsFor(key: string) {
-    const tr = {};
+    const tr: any = {};
 
     for (const lang of supportedLangs) {
         const forLang = (byLang as any)[lang];
