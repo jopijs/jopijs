@@ -410,8 +410,8 @@ export function error401() {
 
         await writer.writeCodeFile({
             fileInnerPath: jk_fs.join("routes", "index"),
-            srcFileContent: `export * from "./jBundler_ifServer.ts";`,
-            distFileContent: `export * from "./jBundler_ifServer.js";`,
+            srcFileContent: `export * from "./jBundler_ifServer.ts";\nexport { default } from "./jBundler_ifServer.ts";`,
+            distFileContent: `export * from "./jBundler_ifServer.js";\nexport { default } from "./jBundler_ifServer.js";`,
         });
     }
 
