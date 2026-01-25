@@ -389,6 +389,10 @@ export async function getModulesList(): Promise<Record<string, JopiModuleInfo>> 
         if (!dirItem.isDirectory && !dirItem.isSymbolicLink) continue;
         
         if (dirItem.name.startsWith("modGroup_")) {
+            if (await jk_fs.isFile(jk_fs.join(dirItem.fullPath, ".ignore"))) {
+                continue;
+            }
+            
             toScan.push(dirItem.fullPath);
         }
     }
