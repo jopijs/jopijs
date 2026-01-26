@@ -389,10 +389,29 @@ export async function getModulesList(): Promise<Record<string, JopiModuleInfo>> 
         if (!dirItem.isDirectory && !dirItem.isSymbolicLink) continue;
         
         if (dirItem.name.startsWith("modGroup_")) {
-            if (await jk_fs.isFile(jk_fs.join(dirItem.fullPath, ".ignore"))) {
-                continue;
+            const hasIgnore = await jk_fs.isFile(jk_fs.join(dirItem.fullPath, ".ignore"));
+            const tsConfigPath = jk_fs.join(dirItem.fullPath, "tsconfig.json");
+
+            if (hasIgnore) {
+                if (!await jk_fs.isFile(tsConfigPath)) {
+                    // Allows TypeScript compiler to ignore this folder.
+                    // (without this, it will try to compile and fail)
+                    //
+                    await jk_fs.writeTextToFile(tsConfigPath, JSON.stringify({
+                        compilerOptions: {
+                            noEmit: true
+                        },
+                        include: []
+                    }, null, 2));
+                }
+
+                continue;                
             }
-            
+        
+            if (await jk_fs.isFile(tsConfigPath)) {
+                await jk_fs.unlink(tsConfigPath);
+            }
+        
             toScan.push(dirItem.fullPath);
         }
     }
