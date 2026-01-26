@@ -1695,7 +1695,10 @@ export class JopiRequestImpl extends JopiRequest {
             // What we will include in our HTML.
             const options: PageOptions = {
                 head: [
-                // Include our bundler.
+                    // Ensure mobile compatibility.
+                    { tag: "meta", key: "jopi.viewport", name: "viewport", content: "width=device-width, initial-scale=1" },
+
+                    // Include our bundler.
                     { tag: "link", key: "jopi.mainBundle", rel: "stylesheet", type: "text/css", href: bundlePath + pageKey + ".css" },
 
                     // Allows selecting dark or white theme.
