@@ -1250,8 +1250,6 @@ export class JopiRequest {
         return ReactServer.renderToStaticMarkup(element);
     }
 
-    protected _pageData: PageDataProviderData | undefined;
-
     /**
      * Retrieves the data pre-fetched for the page (if any).
      * This data is typically injected during the build/render process.
@@ -1259,6 +1257,8 @@ export class JopiRequest {
     react_getPageData(): PageDataProviderData | undefined {
         return this._pageData;
     }
+
+    protected _pageData: PageDataProviderData | undefined;
 
     //endregion
 
@@ -1694,7 +1694,24 @@ export class JopiRequestImpl extends JopiRequest {
 
             // What we will include in our HTML.
             const options: PageOptions = {
-                head: [{tag: "link", key: "jopi.mainBundle", rel: "stylesheet", type:"text/css", href: bundlePath + pageKey + ".css"}],
+                head: [
+                // Include our bundler.
+                    { tag: "link", key: "jopi.mainBundle", rel: "stylesheet", type: "text/css", href: bundlePath + pageKey + ".css" },
+
+                    // Allows selecting dark or white theme.
+                    // Must be here before the body, to avoid a flashing effect.
+                    //
+                    {
+                        tag: "script",
+                        key: "jopi.themeDetection",
+                        content: `(function() {
+var savedTheme = localStorage.getItem("theme");
+var supportDarkMode = window.matchMedia("(prefers-color-scheme: dark)").matches;
+if (savedTheme === "dark" || (!savedTheme && supportDarkMode)) document.documentElement.classList.add("dark");
+else document.documentElement.classList.remove("dark");
+})();`
+                    }
+                ],
                 bodyEnd: [{tag: "script", key: "jopi.mainScript", type: "module", src: bundlePath + pageKey + ".js"}]
             };
 
