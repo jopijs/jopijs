@@ -95,7 +95,7 @@ export function useCssModule(cssModule: undefined | Record<string, string>) {
 }
 
 export interface ReactStaticEvent {
-    send<T>(data?: T): T;
+    send<T>(data?: T): T | undefined;
     reactListener<T>(listener: (data?: T) => void): void;
 }
 

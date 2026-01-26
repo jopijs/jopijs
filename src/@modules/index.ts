@@ -384,32 +384,17 @@ export async function getModulesList(): Promise<Record<string, JopiModuleInfo>> 
 
     let dirItems = await jk_fs.listDir(getProjectDir_src());
     const toScan: string[] = [getProjectDir_src()];
+    const ignoredGroups: string[] = [];
 
     for (let dirItem of dirItems) {
         if (!dirItem.isDirectory && !dirItem.isSymbolicLink) continue;
         
         if (dirItem.name.startsWith("modGroup_")) {
             const hasIgnore = await jk_fs.isFile(jk_fs.join(dirItem.fullPath, ".ignore"));
-            const tsConfigPath = jk_fs.join(dirItem.fullPath, "tsconfig.json");
-
+            
             if (hasIgnore) {
-                if (!await jk_fs.isFile(tsConfigPath)) {
-                    // Allows TypeScript compiler to ignore this folder.
-                    // (without this, it will try to compile and fail)
-                    //
-                    await jk_fs.writeTextToFile(tsConfigPath, JSON.stringify({
-                        compilerOptions: {
-                            noEmit: true
-                        },
-                        include: []
-                    }, null, 2));
-                }
-
+                ignoredGroups.push(dirItem.name);
                 continue;                
-            }
-        
-            if (await jk_fs.isFile(tsConfigPath)) {
-                await jk_fs.unlink(tsConfigPath);
             }
         
             toScan.push(dirItem.fullPath);
@@ -427,6 +412,8 @@ export async function getModulesList(): Promise<Record<string, JopiModuleInfo>> 
             found[dirItem.name] = new JopiModuleInfo(dirItem.name, dirItem.fullPath);
         }
     }
+
+    await updateRootTsConfigExcludes(ignoredGroups);
 
     return gModulesList = found;
 }
@@ -467,3 +454,26 @@ export function setModulesSourceDir(dir: string) {
 let gProjectDir_src: string|undefined;
 let gModulesList: Record<string, JopiModuleInfo>|undefined;
 let gProjectDependenciesAdded = false;
+
+/**
+ * Update tsconfig.json file to excludes ignored modGroups.
+ * Allows to don't compile them.
+ * Why? Because the linker ignore them, doing that TypeScript emit compilation errors.
+ */
+async function updateRootTsConfigExcludes(ignoredGroups: string[]) {
+    const rootDir = jk_fs.join(getProjectDir_src(), "..");
+    const tsConfigPath = jk_fs.join(rootDir, "tsconfig.json");
+    
+    if (!(await jk_fs.isFile(tsConfigPath))) return;
+    
+    const tsConfig = await jk_fs.readJsonFromFile<any>(tsConfigPath);
+    if (!tsConfig) return;
+
+    let oldIgnored = JSON.stringify(tsConfig.exclude || []);
+    tsConfig.exclude = ignoredGroups.map(g => `./src/${g}`);
+    let newIgnored = JSON.stringify(tsConfig.exclude || []);
+
+    if (oldIgnored!==newIgnored) {
+        await jk_fs.writeTextToFile(tsConfigPath, JSON.stringify(tsConfig, null, 2));
+    }
+}
