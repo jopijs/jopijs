@@ -409,6 +409,15 @@ export async function getModulesList(): Promise<Record<string, JopiModuleInfo>> 
         for (let dirItem of dirItems) {
             if (!dirItem.isDirectory && !dirItem.isSymbolicLink) continue;
             if (!dirItem.name.startsWith("mod_")) continue;
+
+            const hasIgnore = await jk_fs.isFile(jk_fs.join(dirItem.fullPath, ".ignore"));
+
+            if (hasIgnore) {
+                const relPath = path.relative(getProjectDir_src(), dirItem.fullPath);
+                ignoredGroups.push(relPath);
+                continue;
+            }
+
             found[dirItem.name] = new JopiModuleInfo(dirItem.name, dirItem.fullPath);
         }
     }
@@ -460,8 +469,19 @@ let gProjectDependenciesAdded = false;
  * Allows to don't compile them.
  * Why? Because the linker ignore them, doing that TypeScript emit compilation errors.
  */
-async function updateRootTsConfigExcludes(ignoredGroups: string[]) {
-    const rootDir = jk_fs.join(getProjectDir_src(), "..");
+async function updateRootTsConfigExcludes(ignoredMod: string[]) {
+    const projectDirSrc = getProjectDir_src();
+
+    for (const modRelPath of ignoredMod) {
+        const fullPath = jk_fs.join(projectDirSrc, modRelPath);
+        const gitIgnorePath = jk_fs.join(fullPath, ".gitignore");
+
+        if (!(await jk_fs.isFile(gitIgnorePath))) {
+            await jk_fs.writeTextToFile(gitIgnorePath, ".ignore");
+        }
+    }
+
+    const rootDir = jk_fs.join(projectDirSrc, "..");
     const tsConfigPath = jk_fs.join(rootDir, "tsconfig.json");
     
     if (!(await jk_fs.isFile(tsConfigPath))) return;
@@ -470,7 +490,7 @@ async function updateRootTsConfigExcludes(ignoredGroups: string[]) {
     if (!tsConfig) return;
 
     let oldIgnored = JSON.stringify(tsConfig.exclude || []);
-    tsConfig.exclude = ignoredGroups.map(g => `./src/${g}`);
+    tsConfig.exclude = ignoredMod.map(g => `./src/${g}`);
     let newIgnored = JSON.stringify(tsConfig.exclude || []);
 
     if (oldIgnored!==newIgnored) {
