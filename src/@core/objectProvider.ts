@@ -20,8 +20,8 @@ export interface ObjectProviderParams {
  * ObjectProviders are used to centralize data fetching and caching logic.
  * They are typically defined in a module and shared across the application.
  */
-export interface ObjectProvider {
-    get(keys: any, params: ObjectProviderParams): Promise<any>;
-    set?(keys: any, value: any, params: ObjectProviderParams): Promise<void>;
-    delete?(keys: any, vparams: ObjectProviderParams): Promise<void>;
+export interface ObjectProvider<K=any,V=any> {
+    get(keys: K, params: ObjectProviderParams): Promise<V>;
+    set?(keys: K, value: V, params: ObjectProviderParams): Promise<void>;
+    delete?(keys: K, params: ObjectProviderParams): Promise<void>;
 }
