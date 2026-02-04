@@ -71,7 +71,7 @@ export default class TypeDataTables extends TypeInDirChunk {
     async beginGeneratingCode(writer: CodeGenWriter) {
         if (!this.toExpose.length) return;
 
-        writer.genAddToInstallFile(InstallFileType.server, FilePart.imports, `\nimport {exposeDataSource_Table} from "jopijs";`);
+        writer.genAddToInstallFile(InstallFileType.server, FilePart.imports, `\nimport {exposeDataSource_Table} from "jopijs/core";`);
 
         let count = 0;
 
