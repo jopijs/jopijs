@@ -71,7 +71,7 @@ export default class TypeDataTables extends TypeInDirChunk {
     async beginGeneratingCode(writer: CodeGenWriter) {
         if (!this.toExpose.length) return;
 
-        writer.genAddToInstallFile(InstallFileType.server, FilePart.imports, `\nimport {exposeDataSource_Table} from "jopijs/core";`);
+        writer.genAddToInstallFile(InstallFileType.server, FilePart.imports, `\nimport {exposeDataSource_Table} from "jopijs";`);
 
         let count = 0;
 
@@ -119,7 +119,7 @@ export default actions;`);
         }
 
         if (!hasServerActions) {
-            await jk_fs.writeTextToFile(serverActionsSrc, `import type { JopiTableServerActions } from "jopijs/core";
+            await jk_fs.writeTextToFile(serverActionsSrc, `import type { JopiTableServerActions } from "jopijs";
 const actions: JopiTableServerActions = {};
 export default actions;`);
 
