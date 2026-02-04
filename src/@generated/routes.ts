@@ -1,5 +1,5 @@
 import React from "react";
-import { type HttpMethod, JopiRequest, CoreWebSite, type WebSiteRouteInfos, JopiRequestImpl } from "jopijs";
+import { type HttpMethod, JopiRequest, CoreWebSite, type WebSiteRouteInfos, JopiRequestImpl } from "jopijs/core";
 import * as jk_crypto from "jopi-toolkit/jk_crypto";
 import * as jk_events from "jopi-toolkit/jk_events";
 import { PriorityLevel } from "jopi-toolkit/jk_tools";

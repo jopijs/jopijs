@@ -1,6 +1,6 @@
 import type { IActionContext, JopiDataTable, JDataTable, JActionResult, JDataReadParams, JDataReadResult } from "jopi-toolkit/jk_data";
 import type { Schema } from "jopi-toolkit/jk_schema";
-import type { JopiRequest, JopiTableServerActions } from "jopijs";
+import type { JopiRequest, JopiTableServerActions } from "jopijs/core";
 
 export function toDataTable(ds: JopiDataTable, name: string, serverActions?: JopiTableServerActions): JDataTable {
     return new DataTableWrapper(ds, name, serverActions);

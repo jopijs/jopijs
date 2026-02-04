@@ -1,5 +1,5 @@
 import * as jk_events from "jopi-toolkit/jk_events";
-import type {CreateBundleParams} from "jopijs";
+import type {CreateBundleParams} from "jopijs/core";
 import {getWebSiteConfig} from "jopijs/coreconfig";
 import {esBuildBundle} from "./esbuild.ts";
 

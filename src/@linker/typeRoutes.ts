@@ -11,7 +11,7 @@ import * as jk_fs from "jopi-toolkit/jk_fs";
 import * as jk_app from "jopi-toolkit/jk_app";
 import type { RouteAttributes, RouteBindPageParams, RouteBindVerbParams } from "jopijs/generated";
 import { normalizeNeedRoleConditionName } from "./common.ts";
-import type { HttpMethod } from "jopijs";
+import type { HttpMethod } from "jopijs/core";
 import { collector_declareUiComponent } from "./dataCollector.ts";
 
 export default class TypeRoutes extends AliasType {
@@ -145,8 +145,8 @@ export default class TypeRoutes extends AliasType {
         const routeWithConfig = Object.keys(this.routeAttributes).filter(route => this.routeAttributes[route].configFile);
         
         if (routeWithConfig.length > 0) {
-            this.sourceCode_header_TS += `\nimport {JopiRouteConfig} from "jopijs";`;
-            this.sourceCode_header_JS += `\nimport {JopiRouteConfig} from "jopijs";`;
+            this.sourceCode_header_TS += `\nimport {JopiRouteConfig} from "jopijs/core";`;
+            this.sourceCode_header_JS += `\nimport {JopiRouteConfig} from "jopijs/core";`;
 
             let count = 1;
 
@@ -354,8 +354,8 @@ export function error401() {
             const sourcesTS = { ...commonTS };
             const sourcesJS = { ...commonJS };
 
-            sourcesTS.header += `import { SBPE_ErrorPage } from "jopijs";\n`;
-            sourcesJS.header += `import { SBPE_ErrorPage } from "jopijs";\n`;
+            sourcesTS.header += `import { SBPE_ErrorPage } from "jopijs/core";\n`;
+            sourcesJS.header += `import { SBPE_ErrorPage } from "jopijs/core";\n`;
 
             sourcesTS.body += exportErrors;
             sourcesJS.body += exportErrors;

@@ -1,7 +1,7 @@
 import esbuild, {type BuildResult} from "esbuild";
 import * as jk_fs from "jopi-toolkit/jk_fs";
 import * as n_what from "jopi-toolkit/jk_what";
-import type {CreateBundleParams} from "jopijs";
+import type {CreateBundleParams} from "jopijs/core";
 import {jopiReplaceText, jopiLoaderPlugin, jopiDetectRebuild} from "./plugins.ts";
 import {tailwindTransformGlobalCss} from "jopijs/postcss";
 import {getWebSiteConfig} from "jopijs/coreconfig";

@@ -5,7 +5,7 @@ import fs from "node:fs/promises";
 import postcss from "postcss";
 import * as jk_fs from "jopi-toolkit/jk_fs";
 import path from "node:path";
-import type {CreateBundleParams} from "jopijs";
+import type {CreateBundleParams} from "jopijs/core";
 import {getTailwindPlugin} from "./tailwinPlugin.ts";
 import {execConsoleMuted} from "./tools.ts";
 import * as jk_term from "jopi-toolkit/jk_term";

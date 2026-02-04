@@ -1,4 +1,4 @@
-import { type ObjectCache, type ObjectProvider, type ObjectProviderParams, getObjectCache } from "jopijs";
+import { type ObjectCache, type ObjectProvider, type ObjectProviderParams, getObjectCache } from "jopijs/core";
 
 /**
  * Implementation of the ObjectProvider wrapper.

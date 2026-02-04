@@ -1,7 +1,7 @@
-import type {JopiPageDataProvider} from "jopijs";
+import type {JopiPageDataProvider} from "jopijs/core";
 import {declareLinkerError} from "jopijs/linker";
 import * as jk_fs from "jopi-toolkit/jk_fs";
-import {exposeDataSource_PageData} from "jopijs";
+import {exposeDataSource_PageData} from "jopijs/core";
 import { calcCryptedUrl } from "./tools.ts";
 
 export function setPageDataProvider(webSite: any, route: string, allowedRoles: string[], provider: JopiPageDataProvider, filePath: string) {

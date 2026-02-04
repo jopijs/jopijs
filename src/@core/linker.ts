@@ -1,7 +1,7 @@
 import {type InstallFunction, loadServerInstall, getBrowserInstallFunction, getDefaultLinkerConfig, compile} from "jopijs/linker";
 import {JopiUiApplication} from "jopijs/ui";
 import * as jk_events from "jopi-toolkit/jk_events";
-import {JopiWebSiteBuilder, type CoreWebSite} from "jopijs";
+import {JopiWebSiteBuilder, type CoreWebSite} from "jopijs/core";
 import {logServer_linker} from "./_logs.ts";
 import {DontCallBeforeElapsed} from "jopi-toolkit/jk_tools";
 

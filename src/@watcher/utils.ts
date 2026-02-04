@@ -1,4 +1,4 @@
-import type {CoreWebSite} from "jopijs";
+import type {CoreWebSite} from "jopijs/core";
 import * as jk_events from "jopi-toolkit/jk_events";
 import {DontCallBeforeElapsed} from "jopi-toolkit/jk_tools";
 

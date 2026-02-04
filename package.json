@@ -70,7 +70,7 @@
     "ws": "^8.18.3"
   },
   "exports": {
-    ".": {
+    "./core": {
       "types": "./src/@core/index.ts",
       "default": "./dist/@core/index.js"
     },
