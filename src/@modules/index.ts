@@ -390,7 +390,7 @@ export async function getModulesList(): Promise<Record<string, JopiModuleInfo>> 
         if (!dirItem.isDirectory && !dirItem.isSymbolicLink) continue;
         
         if (dirItem.name.startsWith("modGroup_")) {
-            const hasIgnore = await jk_fs.isFile(jk_fs.join(dirItem.fullPath, ".ignore"));
+            const hasIgnore = await jk_fs.isFile(jk_fs.join(dirItem.fullPath, "jopi.ignore"));
             
             if (hasIgnore) {
                 ignoredGroups.push(dirItem.name);
@@ -410,7 +410,7 @@ export async function getModulesList(): Promise<Record<string, JopiModuleInfo>> 
             if (!dirItem.isDirectory && !dirItem.isSymbolicLink) continue;
             if (!dirItem.name.startsWith("mod_")) continue;
 
-            const hasIgnore = await jk_fs.isFile(jk_fs.join(dirItem.fullPath, ".ignore"));
+            const hasIgnore = await jk_fs.isFile(jk_fs.join(dirItem.fullPath, "jopi.ignore"));
 
             if (hasIgnore) {
                 const relPath = path.relative(getProjectDir_src(), dirItem.fullPath);
@@ -477,7 +477,7 @@ async function updateRootTsConfigExcludes(ignoredMod: string[]) {
         const gitIgnorePath = jk_fs.join(fullPath, ".gitignore");
 
         if (!(await jk_fs.isFile(gitIgnorePath))) {
-            await jk_fs.writeTextToFile(gitIgnorePath, ".ignore");
+            await jk_fs.writeTextToFile(gitIgnorePath, "jopi.ignore");
         }
     }
 

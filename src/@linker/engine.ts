@@ -184,19 +184,19 @@ async function generateAll() {
     }
 
     let installerFile = applyTemplate(gServerInstallFileTemplate_TS, gServerInstallFile_TS[FilePart.imports], gServerInstallFile_TS[FilePart.body], gServerInstallFile_TS[FilePart.footer]);
-    await writeTextToFileIfMismatch(jk_fs.join(gDir_outputSrc, "installServer.ts"), installerFile);
+    await writeTextToFileIfMismatch(jk_fs.join(gDir_output_TS, "installServer.ts"), installerFile);
     gServerInstallFile_TS = {};
 
     installerFile = applyTemplate(gServerInstallFileTemplate_JS, gServerInstallFile_JS[FilePart.imports], gServerInstallFile_JS[FilePart.body], gServerInstallFile_JS[FilePart.footer]);
-    await writeTextToFileIfMismatch(jk_fs.join(gDir_outputDst, "installServer.js"), installerFile);
+    await writeTextToFileIfMismatch(jk_fs.join(gDir_output_JS, "installServer.js"), installerFile);
     gServerInstallFile_JS = {};
 
     installerFile = applyTemplate(gBrowserInstallFileTemplate_TS, gBrowserInstallFile_TS[FilePart.imports], gBrowserInstallFile_TS[FilePart.body], gBrowserInstallFile_TS[FilePart.footer]);
-    await writeTextToFileIfMismatch(jk_fs.join(gDir_outputSrc, "installBrowser.ts"), installerFile);
+    await writeTextToFileIfMismatch(jk_fs.join(gDir_output_TS, "installBrowser.ts"), installerFile);
     gBrowserInstallFile_TS = {};
 
     installerFile = applyTemplate(gBrowserInstallFileTemplate_JS, gBrowserInstallFile_JS[FilePart.imports], gBrowserInstallFile_JS[FilePart.body], gBrowserInstallFile_JS[FilePart.footer]);
-    await writeTextToFileIfMismatch(jk_fs.join(gDir_outputDst, "installBrowser.js"), installerFile);
+    await writeTextToFileIfMismatch(jk_fs.join(gDir_output_JS, "installBrowser.js"), installerFile);
     gBrowserInstallFile_JS = {};
 }
 
@@ -255,14 +255,14 @@ export class CodeGenWriter {
         // - Be written into ./src/.jopi-codegen
         // - Be written into ./dst/.jopi-codegen  (only with Node.js)
 
-        await writeTextToFileIfMismatch(jk_fs.join(gDir_outputSrc, params.fileInnerPath + ".ts"), params.srcFileContent);
+        await writeTextToFileIfMismatch(jk_fs.join(gDir_output_TS, params.fileInnerPath + ".ts"), params.srcFileContent);
 
         if (params.distFileContent) {
-            await writeTextToFileIfMismatch(jk_fs.join(gDir_outputDst, params.fileInnerPath + ".js"), params.distFileContent);
+            await writeTextToFileIfMismatch(jk_fs.join(gDir_output_JS, params.fileInnerPath + ".js"), params.distFileContent);
         }
 
         if (params.declarationFile) {
-            await writeTextToFileIfMismatch(jk_fs.join(gDir_outputDst, params.fileInnerPath + ".d.ts"), params.declarationFile);
+            await writeTextToFileIfMismatch(jk_fs.join(gDir_output_JS, params.fileInnerPath + ".d.ts"), params.declarationFile);
         }
     }
 
@@ -347,7 +347,7 @@ async function processProject() {
 }
 
 async function processAllModules() {
-    setModulesSourceDir(gDir_ProjectSrc);
+    setModulesSourceDir(gDir_Project_TS);
     let modules = await getModulesList();
 
     for (let module of Object.values(modules)) {
@@ -377,7 +377,7 @@ async function processThisModule(moduleDir: string) {
         if (!type) throw declareLinkerError("Unknown alias type: " + name, dirItem.fullPath);
 
         if (type.position !== "root") continue;
-        await type.processDir({ moduleDir, typeDir: dirItem.fullPath, genDir: gDir_outputSrc });
+        await type.processDir({ moduleDir, typeDir: dirItem.fullPath, genDir: gDir_output_TS });
     }
 
     if (aliasRootDir) {
@@ -391,7 +391,7 @@ async function processThisModule(moduleDir: string) {
             if (!type) throw declareLinkerError("Unknown alias type: " + name, dirItem.fullPath);
 
             if (type.position === "root") continue;
-            await type.processDir({ moduleDir, typeDir: dirItem.fullPath, genDir: gDir_outputSrc });
+            await type.processDir({ moduleDir, typeDir: dirItem.fullPath, genDir: gDir_output_TS });
         }
     }
 }
@@ -794,7 +794,7 @@ export abstract class AliasType {
 
             if (currentPriority > itemPriority) {
                 logLinker_registry.spam(w => {
-                    const relPath = jk_fs.getRelativePath(gDir_ProjectSrc, item.itemPath);
+                    const relPath = jk_fs.getRelativePath(gDir_Project_TS, item.itemPath);
                     w(`Item ${itemId} ignored`, { item: itemId, path: relPath })
                 });
 
@@ -803,7 +803,7 @@ export abstract class AliasType {
         }
 
         logLinker_registry.info(w => {
-            const relPath = jk_fs.getRelativePath(gDir_ProjectSrc, item.itemPath);
+            const relPath = jk_fs.getRelativePath(gDir_Project_TS, item.itemPath);
             w(`Item ${itemId} added`, { item: itemId, path: relPath })
         });
 
@@ -909,10 +909,10 @@ let gModuleDirProcessors: ModuleDirProcessor[] = [];
 //region Bootstrap
 
 let gDir_ProjectRoot: string;
-let gDir_ProjectSrc: string;
-let gDir_ProjectDist: string;
-let gDir_outputSrc: string;
-let gDir_outputDst: string;
+let gDir_Project_TS: string;
+let gDir_Project_JS: string;
+let gDir_output_TS: string;
+let gDir_output_JS: string;
 let gMustUseTypeScript: boolean;
 
 export function getWriter(): CodeGenWriter {
@@ -920,17 +920,17 @@ export function getWriter(): CodeGenWriter {
 }
 
 export function getBrowserInstallScript() {
-    if (gMustUseTypeScript) return jk_fs.join(gDir_outputSrc, "installBrowser.ts");
-    return jk_fs.join(gDir_outputDst, "installBrowser.js");
+    if (gMustUseTypeScript) return jk_fs.join(gDir_output_TS, "installBrowser.ts");
+    return jk_fs.join(gDir_output_JS, "installBrowser.js");
 }
 
 export function getServerInstallScript() {
-    if (gMustUseTypeScript) return jk_fs.join(gDir_outputSrc, "installServer.ts");
-    return jk_fs.join(gDir_outputDst, "installServer.js");
+    if (gMustUseTypeScript) return jk_fs.join(gDir_output_TS, "installServer.ts");
+    return jk_fs.join(gDir_output_JS, "installServer.js");
 }
 
 export function innerPathToAbsolutePath_src(innerPath: string): string {
-    return jk_fs.join(gDir_outputSrc, innerPath);
+    return jk_fs.join(gDir_output_TS, innerPath);
 }
 
 /**
@@ -956,8 +956,6 @@ export interface Directories {
     output_src: string;
     output_dist: string;
 }
-
-
 
 async function computeDirectoryHash(dirToScan: string): Promise<string> {
     const items = await jk_fs.listDir(dirToScan);
@@ -988,7 +986,7 @@ export async function compile(importMeta: any, config: LinkerConfig, isRefresh =
         if (await jk_fs.isFile(jopiLinkerScript)) return jopiLinkerScript;
 
         if (jk_what.isBunJS) {
-            jopiLinkerScript = jk_fs.join(gDir_ProjectSrc, "jopi-linker.ts");
+            jopiLinkerScript = jk_fs.join(gDir_Project_TS, "jopi-linker.ts");
             if (await jk_fs.isFile(jopiLinkerScript)) return jopiLinkerScript;
         }
 
@@ -1003,21 +1001,15 @@ export async function compile(importMeta: any, config: LinkerConfig, isRefresh =
     gRegistry = {};
 
     gDir_ProjectRoot = config.projectRootDir ?? process.cwd();
-    gDir_ProjectSrc = jk_fs.join(gDir_ProjectRoot, "src");
-    gDir_ProjectDist = jk_fs.join(gDir_ProjectRoot, "dist");
+    gDir_Project_TS = jk_fs.join(gDir_ProjectRoot, "src");
+    gDir_Project_JS = jk_fs.join(gDir_ProjectRoot, "dist");
 
-    gDir_outputSrc = jk_fs.join(gDir_ProjectSrc, ".jopi-codegen");
-    gDir_outputDst = jk_fs.join(gDir_ProjectDist, ".jopi-codegen");
+    gDir_output_TS = jk_fs.join(gDir_Project_TS, ".jopi-codegen");
+    gDir_output_JS = jk_fs.join(gDir_Project_JS, ".jopi-codegen");
 
-
-    const timestampFile = jk_fs.join(gDir_outputSrc, ".last_run");
-    let lastRun = "";
-
-    try {
-        lastRun = await jk_fs.readTextFromFile(timestampFile);
-    } catch { }
-
-    const currentHash = await computeDirectoryHash(gDir_ProjectSrc);
+    const timestampFile = jk_fs.join(gDir_output_TS, ".last_run");
+    const lastRun = await jk_fs.readTextFromFile(timestampFile);
+    const currentHash = await computeDirectoryHash(gDir_Project_TS);
 
     if (lastRun) {
         if (process.env.JOPI_FORCE_LINKER === "1") {
@@ -1033,54 +1025,52 @@ export async function compile(importMeta: any, config: LinkerConfig, isRefresh =
     collector_begin();
 
     gCodeGenWriter = new CodeGenWriter({
-            project: gDir_ProjectRoot,
-            project_src: gDir_ProjectSrc,
-            project_dst: gDir_ProjectDist,
+        project: gDir_ProjectRoot,
+        project_src: gDir_Project_TS,
+        project_dst: gDir_Project_JS,
 
-            output_src: gDir_outputSrc,
-            output_dist: gDir_outputDst
-        });
+        output_src: gDir_output_TS,
+        output_dist: gDir_output_JS
+    });
 
-        let jopiLinkerScript = await searchLinkerScript();
-        if (jopiLinkerScript) await import(jopiLinkerScript);
+    let jopiLinkerScript = await searchLinkerScript();
+    if (jopiLinkerScript) await import(jopiLinkerScript);
 
-        gServerInstallFileTemplate_TS = config.templateForServer_TS;
-        gServerInstallFileTemplate_JS = config.templateForServer_JS;
-        gBrowserInstallFileTemplate_TS = config.templateForBrowser_TS;
-        gBrowserInstallFileTemplate_JS = config.templateForBrowser_JS;
+    gServerInstallFileTemplate_TS = config.templateForServer_TS;
+    gServerInstallFileTemplate_JS = config.templateForServer_JS;
+    gBrowserInstallFileTemplate_TS = config.templateForBrowser_TS;
+    gBrowserInstallFileTemplate_JS = config.templateForBrowser_JS;
 
-        gTypesHandlers = {};
+    gTypesHandlers = {};
 
-        for (let aType of config.aliasTypes) {
-            gTypesHandlers[aType.typeName] = aType;
-        }
+    for (let aType of config.aliasTypes) {
+        gTypesHandlers[aType.typeName] = aType;
+    }
 
-        gModuleDirProcessors = [];
+    gModuleDirProcessors = [];
 
-        for (let p of config.modulesProcess) {
-            gModuleDirProcessors.push(p);
-        }
+    for (let p of config.modulesProcess) {
+        gModuleDirProcessors.push(p);
+    }
 
-        for (let aType of config.aliasTypes) {
-            aType.initialize(gTypesHandlers);
-        }
+    for (let aType of config.aliasTypes) {
+        aType.initialize(gTypesHandlers);
+    }
 
-        // Avoid deleting the directory if it's a refresh.
-        // Why? Because resource can be requested while the
-        // refresh is occurring.
-        //
-        if (!isRefresh) {
-            // Note: here we don't destroy the dist dir.
-            await jk_fs.rmDir(gDir_outputSrc);
-        }
+    // Avoid deleting the directory if it's a refresh.
+    // Why? Because resource can be requested while the
+    // refresh is occurring.
+    //
+    if (!isRefresh) {
+        // Note: here we don't destroy the dist dir.
+        await jk_fs.rmDir(gDir_output_TS);
+    }
 
-        await processProject();
-
-
+    await processProject();
     await collector_end(gCodeGenWriter);
 
-    await jk_fs.mkDir(gDir_outputSrc);
-    await jk_fs.mkDir(gDir_outputDst);
+    await jk_fs.mkDir(gDir_output_TS);
+    await jk_fs.mkDir(gDir_output_JS);
 
     await jk_fs.writeTextToFile(timestampFile, currentHash);
 
