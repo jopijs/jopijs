@@ -1,5 +1,5 @@
 import {TypeInDirChunk, type TypeInDirChunk_Item} from "./coreAliasTypes.ts";
-import {type ScanDirItemsParams} from "./engine.ts";
+import {type ScanDirItemsParams} from "./linkerEngine.ts";
 
 export class TypeStyles extends TypeInDirChunk {
     async onChunk(chunk: TypeInDirChunk_Item, key: string, dirPath: string) {

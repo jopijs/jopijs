@@ -1,4 +1,4 @@
-export * from "./engine.ts";
+export * from "./linkerEngine.ts";
 export * from "./install.ts";
 export * from "./config.ts";
 

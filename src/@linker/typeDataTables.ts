@@ -2,7 +2,7 @@ import {TypeInDirChunk, type TypeInDirChunk_Item} from "./coreAliasTypes.ts";
 import * as jk_fs from "jopi-toolkit/jk_fs";
 import * as jk_app from "jopi-toolkit/jk_app";
 import {normalizeNeedRoleConditionName} from "./common.ts";
-import {CodeGenWriter, FilePart, InstallFileType} from "./engine.ts";
+import {CodeGenWriter, FilePart, InstallFileType} from "./linkerEngine.ts";
 import type {JopiDataTable} from "jopi-toolkit/jk_data";
 import { calcCryptedUrl } from "jopijs/generated";
 
@@ -109,7 +109,6 @@ export default class TypeDataTables extends TypeInDirChunk {
         const hasServerActions = await jk_fs.isFile(serverActionsSrc);
 
         if (!hasBrowserActions) {
-            const srcCode = 
             await jk_fs.writeTextToFile(browserActionsSrc, `import type { JopiTableBrowserActions } from "jopi-toolkit/jk_data";
 const actions: JopiTableBrowserActions = {};
 export default actions;`);

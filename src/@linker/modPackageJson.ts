@@ -1,4 +1,4 @@
-import {CodeGenWriter, ModuleDirProcessor} from "./engine.ts";
+import {CodeGenWriter, ModuleDirProcessor} from "./linkerEngine.ts";
 import * as jk_fs from "jopi-toolkit/jk_fs";
 import {JopiModuleInfo, updateWorkspaces} from "jopijs/modules";
 

@@ -1,5 +1,5 @@
 import * as jk_fs from "jopi-toolkit/jk_fs";
-import {AliasType, CodeGenWriter, PriorityLevel} from "./engine.ts";
+import {AliasType, CodeGenWriter, PriorityLevel} from "./linkerEngine.ts";
 
 interface TranslationItem {
     group: string;

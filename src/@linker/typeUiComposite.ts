@@ -1,6 +1,6 @@
 import {TypeList} from "./coreAliasTypes.ts";
 import {collector_declareUiComponent} from "./dataCollector.ts";
-import {innerPathToAbsolutePath_src} from "./engine.ts";
+import {innerPathToAbsolutePath_src} from "./linkerEngine.ts";
 
 export default class TypeUiComposite extends TypeList {
     protected onSourceFileAdded(fileInnerPath: string) {

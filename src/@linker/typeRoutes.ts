@@ -6,7 +6,7 @@ import {
     InstallFileType,
     PriorityLevel,
     resolveFile, writeTextToFileIfMismatch
-} from "./engine.ts";
+} from "./linkerEngine.ts";
 import * as jk_fs from "jopi-toolkit/jk_fs";
 import * as jk_app from "jopi-toolkit/jk_app";
 import type { RouteAttributes, RouteBindPageParams, RouteBindVerbParams } from "jopijs/generated";

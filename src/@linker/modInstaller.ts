@@ -4,7 +4,7 @@ import {
     InstallFileType,
     ModuleDirProcessor,
     resolveFile
-} from "./engine.ts";
+} from "./linkerEngine.ts";
 import {JopiModuleInfo} from "../@modules/index.ts";
 
 /**

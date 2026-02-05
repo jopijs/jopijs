@@ -1,5 +1,5 @@
 import {type TypeList_Group} from "./coreAliasTypes.ts";
-import { CodeGenWriter, FilePart, InstallFileType, type RegistryItem } from "./engine.ts";
+import { CodeGenWriter, FilePart, InstallFileType, type RegistryItem } from "./linkerEngine.ts";
 import TypeEvents from "./typeEvents.ts";
 
 /**

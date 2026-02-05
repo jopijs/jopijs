@@ -1,4 +1,4 @@
-import type {LinkerConfig} from "./engine.ts";
+import type {LinkerConfig} from "./linkerEngine.ts";
 import * as jk_app from "jopi-toolkit/jk_app";
 import {TypeInDirChunk} from "./coreAliasTypes.ts";
 import TypeEvents from "./typeEvents.ts";

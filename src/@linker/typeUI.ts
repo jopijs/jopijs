@@ -1,6 +1,6 @@
 import {TypeInDirChunk, type TypeInDirChunk_Item} from "./coreAliasTypes.ts";
 import {collector_declareUiComponent} from "./dataCollector.ts";
-import {CodeGenWriter, innerPathToAbsolutePath_src} from "./engine.ts";
+import {CodeGenWriter, innerPathToAbsolutePath_src} from "./linkerEngine.ts";
 import * as jk_fs from "jopi-toolkit/jk_fs";
 
 interface TypeUi_Item extends TypeInDirChunk_Item {

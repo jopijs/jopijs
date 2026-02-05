@@ -9,7 +9,7 @@ import {
     type RegistryItem,
     AliasType,
     CodeGenWriter, priorityNameToLevel, type ScanDirItemsParams
-} from "./engine.ts";
+} from "./linkerEngine.ts";
 
 //region TypeList
 

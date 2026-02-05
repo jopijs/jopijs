@@ -1,5 +1,5 @@
 import { TypeInDirChunk, type TypeInDirChunk_Item } from "./coreAliasTypes.ts";
-import type { CodeGenWriter } from "./engine.ts";
+import type { CodeGenWriter } from "./linkerEngine.ts";
 import * as jk_fs from "jopi-toolkit/jk_fs";
 
 export class TypeObjectProvider extends TypeInDirChunk {

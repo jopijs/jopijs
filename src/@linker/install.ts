@@ -1,6 +1,6 @@
 import * as jk_fs from "jopi-toolkit/jk_fs";
 import * as jk_events from "jopi-toolkit/jk_events";
-import {getBrowserInstallScript, getServerInstallScript} from "./engine.ts";
+import {getBrowserInstallScript, getServerInstallScript} from "./linkerEngine.ts";
 import {JopiWebSiteBuilder, type CoreWebSite} from "jopijs/core";
 
 export type InstallFunction<T> = (registry: T) => void;

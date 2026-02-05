@@ -1,6 +1,6 @@
 import { TypeInDirChunk, type TypeInDirChunk_Item } from "./coreAliasTypes.ts";
 import * as jk_fs from "jopi-toolkit/jk_fs";
-import { CodeGenWriter, declareLinkerError, useCanonicalFileName } from "./engine.ts";
+import { CodeGenWriter, declareLinkerError, useCanonicalFileName } from "./linkerEngine.ts";
 
 enum MergeType {
     DontMerge = 0,

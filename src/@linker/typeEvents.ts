@@ -1,5 +1,5 @@
 import {type TypeList_Group, TypeList} from "./coreAliasTypes.ts";
-import { CodeGenWriter, FilePart, InstallFileType, type RegistryItem } from "./engine.ts";
+import { CodeGenWriter, FilePart, InstallFileType, type RegistryItem } from "./linkerEngine.ts";
 import * as jk_fs from "jopi-toolkit/jk_fs";
 
 /**
