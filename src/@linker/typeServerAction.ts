@@ -53,14 +53,13 @@ export default D;`,
 
         let outDir_TS = jk_fs.join(writer.dir.output_src, this.getGenOutputDir(serverActionItem));
         let entryPoint = jk_fs.getRelativePath(jk_fs.join(outDir_TS, "index.ts"), serverActionItem.entryPoint);
-        let importPath = writer.toPathForImport(entryPoint, false);
-
-        let src = writer.AI_INSTRUCTIONS + `import D from ${JSON.stringify(importPath)};\nexport default D;`;
+        let importPath_TS = writer.toPathForImport(entryPoint, false);
+        let importPath_JS = writer.toPathForImport(entryPoint, true);
 
         await writer.writeCodeFile({
             fileInnerPath: jk_fs.join(this.getGenOutputDir(serverActionItem), serverActionName, "jBundler_ifServer"),
-            srcFileContent: src,
-            distFileContent: src,
+            srcFileContent: writer.AI_INSTRUCTIONS + `import D from ${JSON.stringify(importPath_TS)};\nexport default D;`,
+            distFileContent: writer.AI_INSTRUCTIONS + `import D from ${JSON.stringify(importPath_JS)};\nexport default D;`,
         });
 
         //endregion
@@ -69,7 +68,7 @@ export default D;`,
         // On browser side, we use a proxy to call the server action.
         // genProxyCallServerAction va générer le proxy.
 
-        src = writer.AI_INSTRUCTIONS + `import {proxyServerAction} from "jopijs/ui";
+        let src = writer.AI_INSTRUCTIONS + `import {proxyServerAction} from "jopijs/ui";
 export default proxyServerAction(${JSON.stringify(serverActionName)}, ${JSON.stringify(serverActionItem.securityUid)});`;
 
         await writer.writeCodeFile({
@@ -84,13 +83,19 @@ export default proxyServerAction(${JSON.stringify(serverActionName)}, ${JSON.str
         // Add to installServer.ts file
 
         entryPoint = jk_fs.getRelativePath(writer.dir.output_src, serverActionItem.entryPoint);
-        importPath = writer.toPathForImport(entryPoint, false);
+        importPath_TS = writer.toPathForImport(entryPoint, false);
+        importPath_JS = writer.toPathForImport(entryPoint, true);
 
         const rolesConditions = serverActionItem.conditionsContext?.["ALL"] || [];
-
         const serverActionNumber = this.serverActionCounter++;
-        writer.genAddToInstallFile(InstallFileType.server, FilePart.imports, `\nimport ServerAction_${serverActionNumber} from ${JSON.stringify(importPath)};`);
-        writer.genAddToInstallFile(InstallFileType.server, FilePart.body, `\n    exposeServerAction(ServerAction_${serverActionNumber}, ${JSON.stringify(serverActionName)}, ${JSON.stringify(serverActionItem.securityUid)}, ${JSON.stringify(rolesConditions)});`);
+
+        writer.genAddToInstallFile(InstallFileType.server, FilePart.imports, {
+            ts: `\nimport ServerAction_${serverActionNumber} from ${JSON.stringify(importPath_TS)};`,
+            js: `\nimport ServerAction_${serverActionNumber} from ${JSON.stringify(importPath_JS)};`
+        });
+        
+        writer.genAddToInstallFile(InstallFileType.server, FilePart.body,
+            `\n    exposeServerAction(ServerAction_${serverActionNumber}, ${JSON.stringify(serverActionName)}, ${JSON.stringify(serverActionItem.securityUid)}, ${JSON.stringify(rolesConditions)});`);
 
         //endregion
     }

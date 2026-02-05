@@ -97,8 +97,8 @@ export function exposeServerAction(_name: string, securityUid: string, serverAct
             req.role_assertUserHasOneOfThisRoles(allowedRoles);
         }
         
+        debugger;
         const reqData = await req.req_getBodyData<any>();
-
         const callParams = reqData.p;
         
         try {

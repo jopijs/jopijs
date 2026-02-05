@@ -2,7 +2,7 @@
  * Return a function which act a replacement for the real function.
  * Will proxy the call to the server.
  */
-export function proxyServerAction(_name: string, securityUid: string) {
+export function proxyServerAction(serverActionName: string, securityUid: string) {
     const url = "/_jopi/ds/" + securityUid;
 
     return async function(...args: any[]) {
@@ -13,17 +13,16 @@ export function proxyServerAction(_name: string, securityUid: string) {
         });
 
         if (!res.ok) {
-            throw new Error("Unknown server error");
+            if (res.status===401) throw new Error(`Access to server action ${serverActionName} is not authorized`);
+            throw new Error(`Unknown server error when executing server action ${serverActionName}`);
         }
 
         const jsonServerResponse = await res.json();
         
         if (jsonServerResponse.error) {
-            throw new Error(jsonServerResponse.errorMessage, {cause: jsonServerResponse.errorStack});
+            throw new Error(`Server action ${serverActionName}: ${jsonServerResponse.errorMessage}`, {cause: jsonServerResponse.errorStack});
         }
 
-        let functionResult = jsonServerResponse.r;
-
-        return functionResult;
+        return jsonServerResponse.r;
     };
 }
