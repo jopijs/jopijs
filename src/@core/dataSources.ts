@@ -3,6 +3,7 @@ import type {CoreWebSite} from "./jopiCoreWebSite.ts";
 import type {JopiRequest} from "./jopiRequest.ts";
 import {sleep} from "jopi-toolkit/jk_timer";
 import type {PageDataProviderData} from "jopijs/ui";
+import { getWebSiteConfig } from "../@coreconfig/index.ts";
 
 interface RegisteredDataSource {
     securityUid: string;
@@ -81,6 +82,46 @@ export function exposeDataSource_PageData(_route: string, securityUid: string, d
         const reqData = await req.req_getBodyData<any>();
         const res = await dataProvider.getRefreshedData!.call(dataProvider, {req, seed: reqData.seed, isFromBrowser: true});
         return req.res_jsonResponse(res);
+    }});
+
+    return "/_jopi/ds/" + securityUid;
+}
+
+//endregion
+
+//region Server Actions
+
+export function exposeServerAction(_name: string, securityUid: string, serverAction: Function, allowedRoles: string[]|undefined): string {
+    toExpose.push({securityUid, onCall: async (req) => {
+        if (allowedRoles && allowedRoles.length) {
+            req.role_assertUserHasOneOfThisRoles(allowedRoles);
+        }
+        
+        const reqData = await req.req_getBodyData<any>();
+
+        const callParams = reqData.p;
+        
+        try {
+            const functionCallRes = await serverAction.call(serverAction, ...callParams);
+            return req.res_jsonResponse({r: functionCallRes});
+        } catch (err) {
+            if (getWebSiteConfig().isProduction) {
+                return req.res_jsonResponse({error: true});
+            } else {
+                if (err instanceof Error) {
+                    return req.res_jsonResponse({
+                        error: true,
+                        errorMessage: err.message,
+                        errorStack: err.stack
+                    });
+                } else {
+                    return req.res_jsonResponse({
+                        error: true,
+                        errorMessage: String(err)
+                    });
+                }
+            }
+        }
     }});
 
     return "/_jopi/ds/" + securityUid;

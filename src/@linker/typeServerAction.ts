@@ -2,6 +2,7 @@ import {TypeInDirChunk, type TypeInDirChunk_Item} from "./coreAliasTypes.ts";
 import * as jk_fs from "jopi-toolkit/jk_fs";
 import {CodeGenWriter, FilePart, InstallFileType} from "./linkerEngine.ts";
 import { calcCryptedUrl } from "jopijs/generated";
+import { normalizeNeedRoleConditionName } from "./common.ts";
 
 interface TypeServerActions_Item extends TypeInDirChunk_Item {
     securityUid: string;
@@ -10,6 +11,11 @@ interface TypeServerActions_Item extends TypeInDirChunk_Item {
 export default class TypeServerActions extends TypeInDirChunk {
     private serverActionCounter = 0;
 
+    protected normalizeConditionName(condName: string, filePath: string, ctx: any | undefined): string | undefined {
+        // Only accept role condition of type "allNeedRole_.cond".
+        return normalizeNeedRoleConditionName(condName, filePath, ctx, ["ALL"]);
+    }
+    
     async onChunk(chunk: TypeInDirChunk_Item, key: string, _dirPath: string): Promise<void> {
         let serverActionItem = chunk as TypeServerActions_Item;
         serverActionItem.securityUid = calcCryptedUrl(key);
@@ -80,9 +86,11 @@ export default proxyServerAction(${JSON.stringify(serverActionName)}, ${JSON.str
         entryPoint = jk_fs.getRelativePath(writer.dir.output_src, serverActionItem.entryPoint);
         importPath = writer.toPathForImport(entryPoint, false);
 
+        const rolesConditions = serverActionItem.conditionsContext?.["ALL"] || [];
+
         const serverActionNumber = this.serverActionCounter++;
         writer.genAddToInstallFile(InstallFileType.server, FilePart.imports, `\nimport ServerAction_${serverActionNumber} from ${JSON.stringify(importPath)};`);
-        writer.genAddToInstallFile(InstallFileType.server, FilePart.body, `\n    exposeServerAction(ServerAction_${serverActionNumber}, ${JSON.stringify(serverActionName)}, ${JSON.stringify(serverActionItem.securityUid)});`);
+        writer.genAddToInstallFile(InstallFileType.server, FilePart.body, `\n    exposeServerAction(ServerAction_${serverActionNumber}, ${JSON.stringify(serverActionName)}, ${JSON.stringify(serverActionItem.securityUid)}, ${JSON.stringify(rolesConditions)});`);
 
         //endregion
     }
