@@ -149,24 +149,27 @@ export function usePageData(useThisSeed?: any): UsePageDataResponse {
 
     useEffect(() => {
         const performRefresh = () => {
-            if (rawPageData && rawPageData.u) {
-                // Prevent duplicate requests if we are already loading processing the same intention.
-                if (gPageDataState!.isLoading) return;
+            if (!rawPageData || !rawPageData.u) return;
+            
+            // No seed, no refresh.
+            if (!gPageDataState!.data!.seed) return;
 
-                // The "then" avoid blocking the current call.
-                //
-                refreshPageData(rawPageData.u, useThisSeed).then(() => {
-                    gPageDataState!.isStaled = false;
+            // Prevent duplicate requests if we are already loading processing the same intention.
+            if (gPageDataState!.isLoading) return;
 
-                    jk_events.sendEvent("jopi.page.dataRefreshed", {
-                        ...gPageDataState!.data,
+            // The "then" avoid blocking the current call.
+            //
+            refreshPageData(rawPageData.u, useThisSeed).then(() => {
+                gPageDataState!.isStaled = false;
 
-                        isLoading: false,
-                        isStaled: false,
-                        isError: gPageDataState!.isError
-                    });
+                jk_events.sendEvent("jopi.page.dataRefreshed", {
+                    ...gPageDataState!.data,
+
+                    isLoading: false,
+                    isStaled: false,
+                    isError: gPageDataState!.isError
                 });
-            }
+            });
         };
 
         if (useThisSeed) {
@@ -243,10 +246,6 @@ async function refreshPageData(url: string, useThisSeed: any): Promise<void> {
     function mergeResponse(newData: PageDataProviderData, oldData?: PageDataProviderData): PageDataProviderData {
         if (!newData) return oldData!;
 
-        // Preserve existing values if they are missing in the new response.
-        // This allows the server to send partial updates (e.g. just the list of items).
-        //
-
         if (!newData.seed) {
             newData.seed = oldData!.seed;
         }
@@ -257,20 +256,17 @@ async function refreshPageData(url: string, useThisSeed: any): Promise<void> {
 
         if (!newData.itemKey) {
             newData.itemKey = oldData!.itemKey;
+
+            if (!newData.itemKey) {
+                newData.itemKey = "_id";
+            }
         }
 
         if (!newData.items) {
             newData.items = oldData!.items;
         } else {
             if (oldData!.items) {
-                // If we have new items and old items, we try to merge them smartly by ID
-                // to preserve object references where possible or just update fields.
-                //
-                if (!newData.itemKey) {
-                    console.log("Page data: no itemKey defined. Cannot merge items.")
-                } else {
-                    newData.items = mergeItems(newData.itemKey, newData.items, oldData!.items)
-                }
+                newData.items = mergeItems(newData.itemKey, newData.items, oldData!.items)
             }
         }
 
