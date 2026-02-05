@@ -5,7 +5,6 @@ import TypeEvents from "./typeEvents.ts";
 import TypeUiComposite from "./typeUiComposite.ts";
 import ModInstaller from "./modInstaller.ts";
 import TypeRoutes from "./typeRoutes.ts";
-import TypeDataTables from "./typeDataTables.ts";
 import ModPackageJson from "./modPackageJson.ts";
 import {TypeTranslation} from "./typeTranslation.ts";
 import {TypeLib} from "./typeLib.ts";
@@ -71,8 +70,6 @@ export function getDefaultLinkerConfig(): LinkerConfig {
             new TypeUiComposite("uiComposites"),
             new TypeEvents("events"),
             new TypeServerEvents("server-events"),
-            new TypeDataTables("dataTables"),
-
             new TypeTranslation("translations")
         ],
 

@@ -1,4 +1,4 @@
-import type {IActionContext, JDataReadParams, JDataTable} from "jopi-toolkit/jk_data";
+
 import type {CoreWebSite} from "./jopiCoreWebSite.ts";
 import type {JopiRequest} from "./jopiRequest.ts";
 import {sleep} from "jopi-toolkit/jk_timer";
@@ -9,52 +9,6 @@ interface RegisteredDataSource {
     securityUid: string;
     onCall: (req: JopiRequest) => Promise<Response>;
 }
-
-//region Data Table
-
-// noinspection JSUnusedGlobalSymbols
-/**
- * Expose a data table to the network.
- * Warning: if mainly called by generated code.
- */
-export function exposeDataSource_Table(_name: string, securityUid: string, dataTable: JDataTable, permissions: Record<string, string[]>) {
-    toExpose.push({
-        securityUid,
-
-        onCall: async (req) => {
-            let reqData = await req.req_getBodyData();
-
-            if (reqData.action) {
-                // Each action must check his roles.
-                // But if we can't read the data, we can't triger actions.
-                //
-                if (permissions.READ) {
-                    req.role_assertUserHasOneOfThisRoles(permissions.READ);
-                }
-
-                const res = await dataTable.executeAction?.(reqData.rows, reqData.action, req as unknown as IActionContext);
-
-                if (res) {
-                    return req.res_jsonResponse(res);
-                } else {
-                    return req.res_jsonResponse({isOk: true});
-                }
-            }
-            else if (reqData.read) {
-                if (permissions.READ) {
-                    req.role_assertUserHasOneOfThisRoles(permissions.READ);
-                }
-
-                let res = await dataTable.read(reqData.read);
-                return req.res_jsonResponse(res);
-            }
-
-            return req.res_returnError400_BadRequest();
-        }
-    });
-}
-
-//endregion
 
 //region Page data
 
