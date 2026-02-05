@@ -1,3 +1,14 @@
+// Is referenced by bunjs config file "bunfig.toml".
+/* [serve.static]
+plugins = [
+    # Allow compiling Tailwind.
+    "bun-plugin-tailwind",
+    
+    
+    # Add jopijs requirements.
+    "jopijs/loader/bunjs_hmrplugin.mjs"
+]*/
+
 import fs from "node:fs/promises";
 import path from "node:path";
 import {installEsBuildPlugins} from "jopijs/loader-tools";

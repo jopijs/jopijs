@@ -5,8 +5,8 @@
 import { spawn } from 'child_process';
 
 const args = [
-    '--import', 'jopijs/loader',
-    '--loader', 'jopijs/loader/loader.mjs',
+    '--import', 'jopijs/loader/nodejs_import.mjs',
+    '--loader', 'jopijs/loader/nodejs_loader.mjs',
     '--no-warnings',
     ...process.argv.slice(2)
 ];

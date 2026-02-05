@@ -110,9 +110,10 @@
       "types": "./src/@loader/index.ts",
       "default": "./dist/@loader/index.js"
     },
-    "./loader/loader.mjs": "./src/@loader/loader.mjs",
-    "./bun-hmr-plugin": "./src/@loader/bunHmrPlugin.mjs",
-    "./bun-loader-plugin": "./src/@loader/bunLoaderPlugin.mjs",
+    "./loader/nodejs_import.mjs": "./src/@loader/nodejs_import.mjs",
+    "./loader/nodejs_loader.mjs": "./src/@loader/nodejs_loader.mjs",
+    "./loader/bunjs_preload": "./src/@loader/bunjs_preload.mjs",
+    "./loader/bunjs_hmrplugin": "./src/@loader/bunjs_hmrplugin.mjs",
     "./loader-tools": {
       "types": "./src/@loader-tools/index.ts",
       "default": "./dist/@loader-tools/index.js"
