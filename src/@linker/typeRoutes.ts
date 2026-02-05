@@ -2,10 +2,9 @@ import {
     AliasType,
     CodeGenWriter,
     FilePart,
-    getWriter,
     InstallFileType,
     PriorityLevel,
-    resolveFile, writeTextToFileIfMismatch
+    resolveFile
 } from "./linkerEngine.ts";
 import * as jk_fs from "jopi-toolkit/jk_fs";
 import * as jk_app from "jopi-toolkit/jk_app";
