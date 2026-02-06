@@ -591,7 +591,20 @@ export class CoreWebSite {
             // User authorization must stay as long as possible (High priority)
             // in case of browser cookies eviction conflict.
             //
-            req.cookie_addCookieToRes("authorization", "jwt " + token, { maxAge: ONE_DAY * 7, priority: "High" });
+            req.cookie_addCookieToRes("authorization", "jwt " + token, {
+                maxAge: ONE_DAY * 7,
+                priority: "High",
+
+                // Restricts the cookie to same-site requests and top-level navigations 
+                // from external sites (mitigates CSRF). 
+                // Note: Browser isolation (SOP) also prevents other domains 
+                // from reading the content of this cookie.
+                sameSite: "Lax",
+
+                // Ensures the cookie is only sent over HTTPS if the website is configured for it.
+                // This is automatically disabled for local development or non-SSL environments.
+                secure: this.isHttps
+            });
         }
     }
 
