@@ -35,23 +35,27 @@ function Render({C, controller, params, searchParams}: {
     params: Record<string, string>, 
     searchParams: Record<string, string>
 }) {
+    // Allows forcing a re-render of the current page
+    //
     const [_, setCount] = React.useState(0);
     controller.onRequireRefresh = () => setCount(old => old + 1);
-    const [Component, setComponent] = React.useState<React.ComponentType<any>>(() => C);
 
+    // The component to render, forming the body.
+    const [Page, setPage] = React.useState<React.ComponentType<any>>(() => C);
+
+    // Listien the event `jopi.router.update-content` wich give-us the new page component.
+    //
     useEffect(() => {
         const listener = (data?: { Component: React.ComponentType<any> | null }) => {
-            alert("update content")
             if (!data || !data.Component) return;
-            //setComponent(data.Component);
-            setComponent(() =><div>Replaced</div>);
+            setPage(data.Component);
         };
 
         jk_events.addListener("jopi.router.update-content", listener);
         return () => { jk_events.removeListener("jopi.router.update-content", listener) };
     }, []);
 
-    return <Component params={params} searchParams={searchParams} />;
+    return <Page params={params} searchParams={searchParams} />;
 }
 
 /**
