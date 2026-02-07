@@ -13,6 +13,7 @@ export * from "./htmlNode.ts";
 export * from "./events.ts";
 export * from "./utils.ts";
 export * from "./serverAction.ts";
+export * from "./pageRouter.tsx";
 
 export const isBrowserSide = isBrowser;
 export const isServerSide = !isBrowser;
