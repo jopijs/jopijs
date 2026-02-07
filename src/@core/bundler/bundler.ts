@@ -10,12 +10,6 @@ import {getWebSiteConfig} from "jopijs/coreconfig";
 import {logBundler} from "../_logs.ts";
 
 export interface CreateBundleParams {
-    // Is enabled when JOPI_DEV or JOPI_DEV_UI
-    // If bun.js: bundler is never called when JOPI_DEV_UI.
-    //            since it uses React HMR mode.
-    //
-    singlePageMode: boolean;
-
     innerUrl: string;
 
     entryPoints: string[];
@@ -57,7 +51,6 @@ export async function createBundle(webSite: CoreWebSite): Promise<void> {
     const config = getBundlerConfig();
 
     gCreateBundleData = {
-        singlePageMode: getWebSiteConfig().isSinglePageMode,
         outputDir, genDir, publicUrl, innerUrl, webSite, requireTailwind,
         config: getBundlerConfig(), entryPoints: [...config.entryPoints],
         virtualUrlMap: getVirtualUrlMap(),
@@ -67,28 +60,6 @@ export async function createBundle(webSite: CoreWebSite): Promise<void> {
     await executeBundler(gCreateBundleData);
 
     configureServer(outputDir);
-}
-
-export async function createBundleForPage(pageKey: string, route: string) {
-    // Allow knowing of this page is already compiled.
-    if (gPageBundlerIsOk[pageKey]) return;
-    gPageBundlerIsOk[pageKey] = true;
-
-    const endLog = logBundler.beginInfo((w) => w("Bundling page for route " + route));
-
-    let fileName = pageKey + ".jsx";
-
-    if (!gCreateBundleData) return;
-
-    let params = {...gCreateBundleData};
-    params.pageRoute = route;
-    params.pageKey = pageKey;
-    params.pageScript = jk_fs.join(params.genDir, fileName);
-
-    await jk_events.sendAsyncEvent("@jopi.bundler.beforeCreateBundleForPage", params);
-    await jk_events.sendAsyncEvent("@jopi.bundler.createBundleForPage", params);
-
-    endLog();
 }
 
 async function executeBundler(params: CreateBundleParams) {
@@ -106,19 +77,15 @@ async function executeBundler(params: CreateBundleParams) {
     // (internally it's an optimized single-page mode).
     // So, we don't need to compile the full bundle.
 
-    if (!gIsSinglePageMode) {
-        const endLog = logBundler.beginInfo("Bundling all pages");
+    const endLog = logBundler.beginInfo("Bundling all pages");
 
-        // Will create the HTML pages.
-        await jk_events.sendAsyncEvent("@jopi.bundler.beforeCreateBundle", params);
-        await jk_events.sendAsyncEvent("@jopi.bundler.createBundle", params);
+    // Will create the HTML pages.
+    await jk_events.sendAsyncEvent("@jopi.bundler.beforeCreateBundle", params);
+    await jk_events.sendAsyncEvent("@jopi.bundler.createBundle", params);
 
-        endLog();
-    }
+    endLog();
 }
 
 const FALLBACK_PACKAGE = "jopijs/bundler";
 let gIsBundlerLoader = false;
-let gIsSinglePageMode = getWebSiteConfig().isSinglePageMode;
 let gCreateBundleData: CreateBundleParams|undefined;
-let gPageBundlerIsOk: Record<string, boolean> = {};

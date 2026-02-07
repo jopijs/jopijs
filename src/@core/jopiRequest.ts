@@ -34,9 +34,7 @@ import {
 
 import { parseCookies } from "./internalTools.ts";
 import * as jk_term from "jopi-toolkit/jk_term";
-import {getWebSiteConfig} from "jopijs/coreconfig";
 import { isNodeJS } from "jopi-toolkit/jk_what";
-import { createBundleForPage } from "./bundler/index.ts";
 import { type BrowserCacheValidationInfos, type ReqReturnFileParams } from "./browserCacheControl.ts";
 import { WebSiteMirrorCache } from "./cacheHtml/webSiteMirrorCache.ts";
 import type { PageDataProviderData } from "jopijs/ui";
@@ -1685,13 +1683,6 @@ export class JopiRequestImpl extends JopiRequest {
         try {
             let bundlePath = "/_bundle/";
 
-            // When dev-mode (JOPI_DEV or JOPI_DEV_UI) then we compile the page one by one.
-            //
-            if (gIsSinglePageMode) {
-                await createBundleForPage(pageKey, this.routeInfos.route);
-                bundlePath += pageKey + "/";
-            }
-
             // What we will include in our HTML.
             const options: PageOptions = {
                 head: [
@@ -1824,4 +1815,3 @@ export enum ContentTypeCategory {
 }
 
 const gEmptyObject = {};
-const gIsSinglePageMode = getWebSiteConfig().isSinglePageMode;

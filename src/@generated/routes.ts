@@ -4,6 +4,7 @@ import * as jk_crypto from "jopi-toolkit/jk_crypto";
 import * as jk_events from "jopi-toolkit/jk_events";
 import { PriorityLevel } from "jopi-toolkit/jk_tools";
 import type { ExtractDirectoryInfosResult } from "../@linker";
+import { getWebSiteConfig } from "jopijs/coreconfig";
 
 export interface RouteAttributes {
     needRoles?: Record<string, string[]>;
@@ -42,7 +43,7 @@ interface ApplyAttributesParams {
 }
 
 export async function routeBindPage(webSite: CoreWebSite, reactComponent: React.FC<any>, params: RouteBindPageParams) {
-    const pageKey = "page_" + jk_crypto.fastHash(params.route);
+    const pageKey = "page_" + jk_crypto.fastHash(params.route + getWebSiteConfig().executionSeed);
     let infos: WebSiteRouteInfos;
 
     // Catch all routes?

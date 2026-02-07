@@ -1,7 +1,6 @@
 import * as jk_app from "jopi-toolkit/jk_app";
 import * as jk_fs from "jopi-toolkit/jk_fs";
 import * as jk_process from "jopi-toolkit/jk_process";
-import * as jk_term from "jopi-toolkit/jk_term";
 import path from "node:path";
 import { isBunJS } from "jopi-toolkit/jk_what";
 
@@ -64,8 +63,12 @@ export interface WebSiteConfig {
     isBrowserRefreshEnabled: boolean;
     hasJopiDevServerFlag: boolean;
     hasJopiDevUiFlag: boolean;
-    isSinglePageMode: boolean;
     hasReactHmrFlag: boolean;
+
+    /**
+     * A random string generared when starting the server.
+     */
+    executionSeed: string;
 }
 
 export function getWebSiteConfig(): WebSiteConfig {
@@ -97,20 +100,6 @@ function calcWebSiteConfig(): WebSiteConfig {
     const hasReactHmrFlag = (process.env.JOPI_DEV_HMR === "1") && isBunJS;
 
     const isBrowserRefreshEnabled = hasJopiDevServerFlag || hasJopiDevUiFlag;
-    
-    /**
-     * Single page mode is when the internal bundle compiles the pages one by one.
-     * It's used for development to have a fast starting time.
-     *
-     * The opposite (when not single-page mode) is to compile all the pages in one go.
-     * This produces an optimized bundle, without duplicates, but can be slow to start.
-     */
-    let isSinglePageMode: boolean;
-
-    // Bun.js has his own bundler.
-    if (hasReactHmrFlag) isSinglePageMode = false;
-    else isSinglePageMode = hasJopiDevServerFlag || hasJopiDevUiFlag;
-
     let bundlerOutputDir = jopiTempDir;
 
     let conf_webResourcesRoot = "_bundle";
@@ -200,8 +189,9 @@ function calcWebSiteConfig(): WebSiteConfig {
         isBrowserRefreshEnabled,
         hasJopiDevServerFlag,
         hasJopiDevUiFlag,
-        isSinglePageMode,
-        hasReactHmrFlag
+        hasReactHmrFlag,
+
+        executionSeed: "myseed" //Date.now().toString(36) + Math.random().toString(36).substring(2, 7)
     }
 }
 

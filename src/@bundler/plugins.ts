@@ -144,30 +144,12 @@ export function jopiDetectRebuild(params: EsBuildParams): Plugin {
                 //
                 if (!isEnabled) return;
 
-                if (params.singlePageMode) {
-                    logServer_refresh.info("Refreshing page " + params.pageRoute);
-                }
-
                 // Rebuild Tailwind.
                 // - Single page mode: rebuild only the local tailwind.
                 // - Global mode: never occurs.
                 //
                 if (params.requireTailwind) {
                     await tailwindTransformGlobalCss(params);
-                }
-
-                if (params.singlePageMode) {
-                    // This event will execute Jopi Linker.
-                    await jk_events.sendAsyncEvent("@jopi.bundler.watch.beforeRebuild");
-                }
-            });
-
-            build.onEnd(async () => {
-                if (!isEnabled) return;
-
-                if (params.singlePageMode) {
-                    // This event will execute trigger the SSE event that refreshes the browser.
-                    await jk_events.sendAsyncEvent("@jopi.bundler.watch.afterRebuild");
                 }
             });
         }

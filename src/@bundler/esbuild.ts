@@ -77,31 +77,10 @@ export async function esBuildBundle(params: EsBuildParams) {
         metafile: true
     };
 
-    // Note: each page is compiled one time.
-    // Once compiled, the watch mode will refresh it.
-    //
-    if (params.singlePageMode) {
-        buildOptions.publicPath += params.pageKey! + '/';
-        buildOptions.entryPoints = [params.pageScript!];
-        buildOptions.outdir = jk_fs.join(buildOptions.outdir!, params.pageKey!);
-        buildOptions.plugins?.push(jopiDetectRebuild(params));
-    }
-
     await tailwindTransformGlobalCss(params);
 
     const context = await esbuild.context(buildOptions);
     let result: BuildResult = await context.rebuild();
-
-    if (params.singlePageMode) {
-        try {
-            // Will allows the page to be automatically updated.
-            await context.watch({
-                delay: n_what.isNodeJS ? 100 : 0
-            });
-        } catch {
-            process.exit(1);
-        }
-    }
 
     // >>> Resolve virtual urls
 

@@ -23,10 +23,6 @@ export async function tailwindTransformGlobalCss(params: CreateBundleParams): Pr
 
     // >>> Tailwind transform
 
-    if (params.singlePageMode) {
-        genDir = jk_fs.join(genDir, params.pageKey!);
-    }
-
     const outFilePath = path.resolve(genDir, "global.css");
     await jk_fs.unlink(outFilePath);
 

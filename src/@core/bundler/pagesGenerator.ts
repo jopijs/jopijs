@@ -28,7 +28,7 @@ jk_events.addListener("@jopi.route.newPage", async (p: RouteInfos) => {
     p.filePath = jk_fs.resolve(p.filePath);
     gPageSourceFileToRoute[p.filePath] = p;
 
-    let pageKey = "page_" + jk_crypto.fastHash(p.route);
+    let pageKey = "page_" + jk_crypto.fastHash(p.route + getWebSiteConfig().executionSeed);
     gPageKeyToRoute[pageKey] = p;
     gPageKeyToSourceFile[pageKey] = p.filePath;
 });
@@ -59,7 +59,6 @@ async function rebuildPages(p: CreateBundleParams) {
         txt = txt.replace("__INSTALL__", convertPath(installScript));
         txt = txt.replace("__ROUTE__", JSON.stringify({ route: routeInfos.route, catchAll: routeInfos.attributes.catchAllSlug }));
         txt = txt.replace("__OPTIONS__", JSON.stringify({ removeTrailingSlashes: p.webSite.mustRemoveTrailingSlashes }));
-
         txt = txt.replace("__PAGE_EXTRA_PARAMS__", JSON.stringify(p.pageExtraParams));
 
         if (getWebSiteConfig().hasReactHmrFlag) {
@@ -78,24 +77,13 @@ async function rebuildPages(p: CreateBundleParams) {
             // The uncompiled version of tailwind.
             txt = txt.replace("__EXTRA_IMPORTS__", 'import "./global-hmr.css";');
         } else {
-            if (getWebSiteConfig().isSinglePageMode) {
-                txt = txt.replace("__EXTRA_IMPORTS__", `import "./${pageKey}/global.css";`);
-            } else {
-                txt = txt.replace("__EXTRA_IMPORTS__", 'import "./global.css";');
-            }
+            txt = txt.replace("__EXTRA_IMPORTS__", 'import "./global.css";');
         }
 
         let scriptFilePath = jk_fs.join(p.genDir, pageKey + ".jsx");
         await jk_fs.writeTextToFile(scriptFilePath, txt);
 
-        txt = HTML_TEMPLATE;
-
-        if (gIsSinglePageMode) {
-            txt = txt.replace("__SCRIPT_PATH__", "./" + pageKey + '/' + pageKey + ".jsx");
-        } else {
-            txt = txt.replace("__SCRIPT_PATH__", "./" + pageKey + ".jsx");
-        }
-
+        txt = HTML_TEMPLATE.replace("__SCRIPT_PATH__", "./" + pageKey + ".jsx");
         let htmlFilePath = jk_fs.join(p.genDir, pageKey + ".html");
         await jk_fs.writeTextToFile(htmlFilePath, txt);
 
@@ -109,24 +97,21 @@ async function rebuildPages(p: CreateBundleParams) {
         await jk_fs.writeTextToFile(jk_fs.join(p.genDir, "global-hmr.css"), globalCss);
     }
 
-    if (p.singlePageMode) {
-        let routeInfos = gPageKeyToRoute[p.pageKey!]
-        let sourceFilePath = gPageKeyToSourceFile[p.pageKey!];
-        await buildPage(sourceFilePath, routeInfos, p.pageKey!);
-    } else {
-        for (let sourceFilePath in gPageSourceFileToRoute) {
-            const routeInfos = gPageSourceFileToRoute[sourceFilePath];
-            const pageKey = "page_" + jk_crypto.fastHash(routeInfos.route);
+    for (let sourceFilePath in gPageSourceFileToRoute) {
+        const routeInfos = gPageSourceFileToRoute[sourceFilePath];
 
-            let outFilePath = await buildPage(sourceFilePath, routeInfos, pageKey);
-            p.entryPoints.push(outFilePath);
-        }
+        // Use a seed to invalidate the browser cache when the configuration changes.
+        const pageKey = "page_" + jk_crypto.fastHash(routeInfos.route + getWebSiteConfig().executionSeed);
 
-        // Is not required anymore.
-        gPageSourceFileToRoute = {};
-        gPageKeyToRoute = {};
-        gPageKeyToSourceFile = {};
+        let outFilePath = await buildPage(sourceFilePath, routeInfos, pageKey);
+        p.entryPoints.push(outFilePath);
     }
+
+    // Is not required anymore.
+    gPageSourceFileToRoute = {};
+    gPageKeyToRoute = {};
+    gPageKeyToSourceFile = {};
+    
 }
 
 const HTML_TEMPLATE = `<!doctype html>
@@ -195,5 +180,3 @@ let gPageKeyToSourceFile: Record<string, string> = {};
  * Allow knowing the name of the .js and .css file for a page.
  */
 const gRouteToPageKey: Record<string, string> = {};
-
-const gIsSinglePageMode = getWebSiteConfig().isSinglePageMode;
