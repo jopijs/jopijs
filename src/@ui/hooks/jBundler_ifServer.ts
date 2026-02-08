@@ -9,10 +9,6 @@ import {
     type ServerRequestInstance, type UsePageDataResponse
 } from "./common.ts";
 
-export function useParams(): any {
-    return useServerRequest().req_urlParts;
-}
-
 /**
  * Is the same as React.useEffect, but is executed even on the server side.
  *

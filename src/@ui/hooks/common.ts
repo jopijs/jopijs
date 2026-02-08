@@ -120,7 +120,15 @@ export interface UsePageDataResponse extends PageDataProviderData {
  * Is a subset of JopiRequest, with only browser-side compatible items.
  */
 export interface ServerRequestInstance {
+    /**
+     * The dynamic parts of the URL path derived from the route definition.
+     * Example:
+     * - Route: `/products/[category]/[id]`
+     * - URL: `/products/electronics/123`
+     * - Result: `{ category: "electronics", id: "123" }`
+     */
     req_urlParts?: Record<string, any>;
+    
     req_urlInfos: URL;
     req_headers: Headers;
 

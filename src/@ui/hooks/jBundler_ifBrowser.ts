@@ -9,35 +9,6 @@ import {
     type UsePageDataResponse
 } from "./common.ts";
 
-export function useParams(): any {
-    if (gPageParams === undefined) {
-        const pathname = new URL(window.location.href).pathname;
-        const routeInfos = ((window as any)["__JOPI_ROUTE__"]) as { route: string, catchAll?: string };
-        
-        // If no route infos are present (e.g. error page or static page without hydration),
-        // we return an empty object.
-        //
-        if (!routeInfos) return gPageParams = {};
-
-        const route = routeInfos.route;
-        const pRoute = route.split("/");
-        const pPathname = pathname.split("/");
-        gPageParams = {};
-
-        // Extract parameters from the URL based on the route definition.
-        //
-        for (let i = 0; i < pRoute.length; i++) {
-            let p = pRoute[i];
-            if (p[0] === ":") gPageParams[p.substring(1)] = pPathname[i];
-            else if (p[0] === "*") gPageParams[routeInfos.catchAll!] = pPathname.slice(i).join("/");
-        }
-    }
-
-    return gPageParams;
-}
-
-let gPageParams: any | undefined;
-
 /**
  * useStaticEffect is the same as React.useEffect, but is executed even on the server side.
  *

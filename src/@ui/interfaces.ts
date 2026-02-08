@@ -1,4 +1,4 @@
 export interface JopiPageProps {
-    params: any;
-    searchParams: any;
+    params: Record<string, string>;
+    searchParams: Record<string, string>;
 }
