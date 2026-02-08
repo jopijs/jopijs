@@ -81,6 +81,11 @@ export class JopiRequest {
         this._req_urlParts_done = false;
     }
 
+    get isSsrRendering(): boolean {
+        // Will be override by JopiRequestImpl
+        return false;
+    }
+
     //region Custom data
 
     /**
@@ -590,8 +595,6 @@ export class JopiRequest {
     }
 
     //endregion
-
-    //region Fetch / Proxy
 
     //region Fetch / Proxy
 
@@ -1660,6 +1663,14 @@ export class JopiRequestImpl extends JopiRequest {
         return res;
     }
 
+    private _isSsrRendering = false;
+
+    /**
+     * Returns true is the Request is executing a server-side rendering.
+     */
+    override get isSsrRendering(): boolean {
+        return this._isSsrRendering;
+    }
 
     /**
      * Renders a full HTML page response from a React component, including all necessary scripts and styles.
@@ -1671,6 +1682,7 @@ export class JopiRequestImpl extends JopiRequest {
     async react_fromPage(pageKey: string, C: React.FC<any>): Promise<Response> {
         try {
             let bundlePath = "/_bundle/";
+            this._isSsrRendering = true;
 
             // What we will include in our HTML.
             const options: PageOptions = {
@@ -1736,9 +1748,8 @@ else document.documentElement.classList.remove("dark");
                     let serverAction = e.serverAction;
                 
                     try {
-                        console.log("react_fromPage - usePageData called")
                         // Calcultate the call result.
-                        let result = await serverAction(e.callParams);
+                        let result = await serverAction.call(this, e.callParams);
 
                         // Store the result in the controller.
                         controller.pageDataResult = result;
@@ -1746,6 +1757,7 @@ else document.documentElement.classList.remove("dark");
                     } catch (e2: any) {
                         controller.isPageDataResultSet = true;
                         controller.hasPageDataError = true;
+                        console.error(e2);
                     }
 
                     // Re-render the page with the call result.
