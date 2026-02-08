@@ -229,7 +229,7 @@ export class PageController<T = any> implements JopiUiApplication_Host {
     isPageDataResultSet: boolean = false;
     hasPageDataError: boolean = false;
 
-    usePageData<T, V>(serverAction: (t?: T) => Promise<V>, t?: T): {
+    usePageData<T, V>(serverAction: (t: T) => Promise<V>, t: T): {
         data: V|undefined,
         isLoading: boolean,
         isError: boolean,

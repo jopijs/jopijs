@@ -74,9 +74,9 @@ export default D;`,
                 jk_fs.join(writer.dir.output_src, fileInnerPath + ".ts")
             );
 
-            const proxy_TS = `import S from ${JSON.stringify(relPathForImport_TS)};
+            const proxy_TS = `import MyFunction from ${JSON.stringify(relPathForImport_TS)};
 import {createUsePageData} from "jopijs/ui";
-export default createUsePageData(S);`
+export default createUsePageData(MyFunction);`
             
             await writeTextToFileIfMismatch(fileToWrite_TS, proxy_TS);
 
@@ -87,9 +87,9 @@ export default createUsePageData(S);`
                 jk_fs.join(writer.dir.output_src, fileInnerPath + ".js")
             );
 
-            const proxy_JS = `import S from ${JSON.stringify(relPathForImport_JS)};
+            const proxy_JS = `import MyFunction from ${JSON.stringify(relPathForImport_JS)};
 import {createUsePageData} from "jopijs/ui";            
-export default createUsePageData(S);`
+export default createUsePageData(MyFunction);`
 
             await writeTextToFileIfMismatch(fileToWrite_JS, proxy_JS);
         }
