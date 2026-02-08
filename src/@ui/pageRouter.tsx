@@ -113,7 +113,7 @@ export function createAppRoot(C: React.ComponentType<any>) {
     // Here we are in the case of the page directly loaded by the browser.
     // So we can use this static information to calculate the page parameters.
     //
-    const routeInfos = (window as any)["__JOPI_ROUTE__"] as RouteInfos;
+    const staticRouteInfos = (window as any)["__JOPI_ROUTE__"] as RouteInfos;
     
     let searchParams: Record<string, string>;
     const urlObject = new URL(window.location.href).searchParams;
@@ -126,12 +126,12 @@ export function createAppRoot(C: React.ComponentType<any>) {
         urlObject.forEach((v,k) => (searchParams as any)[k] = v);
     }
     
-    const pageParams = calcParams(routeInfos);
+    const pageParams = calcParams(staticRouteInfos);
     const controller = new PageController_ExposePrivate();
 
     const initialRouteInfos = {
         Component: null,
-        path: routeInfos.route,
+        path: staticRouteInfos.route,
         pageProps: { params: pageParams, searchParams: searchParams }
     };
     
@@ -155,7 +155,7 @@ export function createAppRoot(C: React.ComponentType<any>) {
             <PageContext.Provider value={controller}>
                 <RouterImpl controller={controller}>
                     <AllowPageRefresh controller={controller}>
-                        <C params={routeInfos} searchParams={searchParams} />
+                        <C params={initialRouteInfos.pageProps.params} searchParams={initialRouteInfos.pageProps.searchParams} />
                     </AllowPageRefresh>
                 </RouterImpl>
             </PageContext.Provider>
