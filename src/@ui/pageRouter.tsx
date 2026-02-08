@@ -1,15 +1,14 @@
-import React, { useEffect } from "react";
+import React from "react";
 import { PageContext, PageController_ExposePrivate } from "./pageController.ts";
 import { useParams } from "./hooks/index.ts";
-import * as jk_events from "jopi-toolkit/jk_events";
 
-export type JRouterComponent = React.ComponentType<{ children?: React.ReactNode }>;
+export type JRouterComponent = React.ComponentType<{ children?: React.ReactNode, controller: PageController_ExposePrivate }>;
 
 /**
  * The default router implementation.
  * It simply returns the children as-is.
  */
-export function DefaultRouter({children}: {children?: React.ReactNode}) {
+const DefaultRouter: JRouterComponent = ({children}) => {
     return children;
 }
 
@@ -27,35 +26,17 @@ export function setRouterImplementation(impl: JRouterComponent) {
 let RouterImpl: JRouterComponent = DefaultRouter;
 
 /**
- * Render the component C (corresponding to the `page.tsx` file).
+ * Set the controller's onRequireRefresh callback.
+ * This allows forcing a re-render of the current page.
+ * This feature is mainly used by the login/logout hooks.
  */
-function Render({C, controller, params, searchParams}: { 
-    C: React.ComponentType<any>, 
+function AllowPageRefresh({controller, children}: { 
     controller: PageController_ExposePrivate, 
-    params: Record<string, string>, 
-    searchParams: Record<string, string>
+    children: React.ReactNode
 }) {
-    // Allows forcing a re-render of the current page
-    //
     const [_, setCount] = React.useState(0);
     controller.onRequireRefresh = () => setCount(old => old + 1);
-
-    // The component to render, forming the body.
-    const [Page, setPage] = React.useState<React.ComponentType<any>>(() => C);
-
-    // Listien the event `jopi.router.update-content` wich give-us the new page component.
-    //
-    useEffect(() => {
-        const listener = (data?: { Component: React.ComponentType<any> | null }) => {
-            if (!data || !data.Component) return;
-            setPage(data.Component);
-        };
-
-        jk_events.addListener("jopi.router.update-content", listener);
-        return () => { jk_events.removeListener("jopi.router.update-content", listener) };
-    }, []);
-
-    return <Page params={params} searchParams={searchParams} />;
+    return children;
 }
 
 /**
@@ -90,13 +71,10 @@ export function createAppRoot(C: React.ComponentType<any>) {
     return (
         <React.StrictMode>
             <PageContext.Provider value={controller}>
-                <RouterImpl>
-                    <Render 
-                        C={C} 
-                        controller={controller} 
-                        params={params} 
-                        searchParams={searchParams}
-                    />
+                <RouterImpl controller={controller}>
+                    <AllowPageRefresh controller={controller}>
+                        <C params={params} searchParams={searchParams} />
+                    </AllowPageRefresh>
                 </RouterImpl>
             </PageContext.Provider>
         </React.StrictMode>
