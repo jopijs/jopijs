@@ -37,7 +37,6 @@ import * as jk_term from "jopi-toolkit/jk_term";
 import { isNodeJS } from "jopi-toolkit/jk_what";
 import { type BrowserCacheValidationInfos, type ReqReturnFileParams } from "./browserCacheControl.ts";
 import { WebSiteMirrorCache } from "./cacheHtml/webSiteMirrorCache.ts";
-import type { PageDataProviderData } from "jopijs/ui";
 import { getDefaultHtmlCache } from "./cacheHtml/index.ts";
 import type { WebSiteRouteInfos } from "./routes.ts";
 
@@ -1248,16 +1247,6 @@ export class JopiRequest {
         return ReactServer.renderToStaticMarkup(element);
     }
 
-    /**
-     * Retrieves the data pre-fetched for the page (if any).
-     * This data is typically injected during the build/render process.
-     */
-    react_getPageData(): PageDataProviderData | undefined {
-        return this._pageData;
-    }
-
-    protected _pageData: PageDataProviderData | undefined;
-
     //endregion
 
     //region JQuery
@@ -1708,19 +1697,6 @@ else document.documentElement.classList.remove("dark");
                 ],
                 bodyEnd: [{tag: "script", key: "jopi.mainScript", type: "module", src: bundlePath + pageKey + ".js"}]
             };
-
-            const pageDataParams = this.routeInfos.pageDataParams;
-
-            if (pageDataParams) {
-                this._pageData = await pageDataParams.provider.getDataForCache.call(pageDataParams.provider, { req: this });
-
-                const html = "window['JOPI_PAGE_DATA'] = " + JSON.stringify({
-                    d: this._pageData,
-                    u: pageDataParams.url
-                });
-
-                options.bodyEnd!.push({tag: "script", key: "jopi.pageData", content: html, type: "text/javascript"});
-            }
 
             // Allow faking the environment of the page.
             const controller = new PageController_ExposePrivate<unknown>(

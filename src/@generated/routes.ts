@@ -6,6 +6,10 @@ import { PriorityLevel } from "jopi-toolkit/jk_tools";
 import type { ExtractDirectoryInfosResult } from "../@linker";
 import { getWebSiteConfig } from "jopijs/coreconfig";
 
+/**
+ * Used by the linker to store route attributes.
+ * Is send to the generator as-is.
+ */
 export interface RouteAttributes {
     needRoles?: Record<string, string[]>;
     disableCache?: boolean;

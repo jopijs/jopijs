@@ -99,23 +99,6 @@ export interface ReactStaticEvent {
     reactListener<T>(listener: (data?: T) => void): void;
 }
 
-export interface PageDataProviderData {
-    seed?: any;
-    global?: any;
-    items?: any[];
-
-    // Allows knowing which property must be used as id
-    // to merge old / new items.
-    //
-    itemKey?: string;
-}
-
-export interface UsePageDataResponse extends PageDataProviderData {
-    isLoading: boolean;
-    isStaled: boolean;
-    isError: boolean;
-}
-
 /**
  * Is a subset of JopiRequest, with only browser-side compatible items.
  */
@@ -136,8 +119,6 @@ export interface ServerRequestInstance {
     role_getUserRoles(): string[];
     role_userHasOneOfThisRoles(requiredRoles: string[]): boolean;
     role_userHasRole(requiredRole: string): boolean;
-
-    react_getPageData(): PageDataProviderData | undefined;
 
     htmlCache_ignoreCacheWrite(): void;
     htmlCache_ignoreDefaultBehaviors(): void;

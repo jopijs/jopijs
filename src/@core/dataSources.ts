@@ -1,47 +1,12 @@
-
 import type {CoreWebSite} from "./jopiCoreWebSite.ts";
 import type {JopiRequest} from "./jopiRequest.ts";
 import {sleep} from "jopi-toolkit/jk_timer";
-import type {PageDataProviderData} from "jopijs/ui";
 import { getWebSiteConfig } from "../@coreconfig/index.ts";
 
 interface RegisteredDataSource {
     securityUid: string;
     onCall: (req: JopiRequest) => Promise<Response>;
 }
-
-//region Page data
-
-export interface JopiPageDataProvider {
-    getDataForCache(params: GetDataForCacheParams): Promise<PageDataProviderData>;
-    getRefreshedData?(params: GetRefreshedDataParams): Promise<PageDataProviderData>;
-}
-
-export interface GetDataForCacheParams {
-    req: JopiRequest;
-}
-
-export interface GetRefreshedDataParams {
-    req: JopiRequest;
-    seed: any;
-    isFromBrowser?: boolean;
-}
-
-export function exposeDataSource_PageData(_route: string, securityUid: string, dataProvider: JopiPageDataProvider, allowedRoles: string[]|undefined): string {
-    toExpose.push({securityUid, onCall: async (req) => {
-        if (allowedRoles && allowedRoles.length) {
-            req.role_assertUserHasOneOfThisRoles(allowedRoles);
-        }
-        
-        const reqData = await req.req_getBodyData<any>();
-        const res = await dataProvider.getRefreshedData!.call(dataProvider, {req, seed: reqData.seed, isFromBrowser: true});
-        return req.res_jsonResponse(res);
-    }});
-
-    return "/_jopi/ds/" + securityUid;
-}
-
-//endregion
 
 //region Server Actions
 

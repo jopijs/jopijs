@@ -4,7 +4,6 @@ import { type ValueWithPriority } from "jopi-toolkit/jk_tools";
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'HEAD' | 'OPTIONS';
 import { JopiRequest } from "./jopiRequest.ts";
 import type { JopiMiddleware, JopiPostMiddleware, JopiWebSocket } from "./jopiCoreWebSite.ts";
-import type { JopiPageDataProvider } from "./dataSources.ts";
 import type { SearchParamFilterFunction } from "./searchParamFilter.ts";
 import type { WebSocketConnectionInfos } from "./jopiServer.ts";
 
@@ -101,15 +100,6 @@ export interface WebSiteRouteInfos {
      * Example: for the route /user/[...path] then the slug is "path".
      */
     catchAllSlug?: string;
-
-    /**
-     * Data provider for the page.
-     */
-    pageDataParams?: {
-        provider: JopiPageDataProvider;
-        roles?: string[];
-        url?: string;
-    };
 
     /**
      * Define a filter to use to sanitize the search params of the url.
