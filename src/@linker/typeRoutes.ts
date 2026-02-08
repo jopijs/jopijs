@@ -555,7 +555,8 @@ export function error401() {
                 itemPath: dir,
                 entryPoint: dirAttributes.pageData,
                 priority: dirAttributes.priority,
-                securityUid: calcCryptedUrl("pageData!" + newRoute)
+                securityUid: calcCryptedUrl("pageData!" + newRoute),
+                isPageData: true
             });
         }
 

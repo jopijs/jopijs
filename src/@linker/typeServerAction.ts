@@ -1,11 +1,13 @@
 import {TypeInDirChunk, type TypeInDirChunk_Item} from "./coreAliasTypes.ts";
 import * as jk_fs from "jopi-toolkit/jk_fs";
-import {CodeGenWriter, FilePart, InstallFileType} from "./linkerEngine.ts";
+import {CodeGenWriter, FilePart, InstallFileType, writeTextToFileIfMismatch} from "./linkerEngine.ts";
 import { calcCryptedUrl } from "jopijs/generated";
 import { normalizeNeedRoleConditionName } from "./common.ts";
+import * as jk_app from "jopi-toolkit/jk_app";
 
 interface TypeServerActions_Item extends TypeInDirChunk_Item {
     securityUid: string;
+    isPageData?: boolean;
 }
 
 export default class TypeServerActions extends TypeInDirChunk {
@@ -26,18 +28,27 @@ export default class TypeServerActions extends TypeInDirChunk {
         writer.genAddToInstallFile(InstallFileType.server, FilePart.imports, `import {exposeServerAction} from "jopijs/generated";`);
     }
 
+    getGenOutputDir(item: TypeServerActions_Item) {
+        // For pageData, the output directory is the page route.
+        if (item.isPageData) return "pageDatas";
+        return this.typeName;
+    }
+    
     async generateCodeForItem(writer: CodeGenWriter, key: string, serverActionItem: TypeServerActions_Item): Promise<void> {
         //region Switch server / browser side
         // Allows a server and a browser version.
 
-        let serverActionName = key.substring(key.indexOf("!") + 1);
+        // For pageData, the server action name is the securityUid.
+        let serverActionName = serverActionItem.isPageData ? serverActionItem.securityUid : key.substring(key.indexOf("!") + 1);
         
+        const fileInnerPath = jk_fs.join(this.getGenOutputDir(serverActionItem), serverActionName, "index");
+
         // The main file allows automatically switching betweek server/browser vesion.
         // It uses a bundler feature where the word jBundler_ifServer is replaced by jBundler_ifBrowser
         // when compiling for the browser.
         //
         await writer.writeCodeFile({
-            fileInnerPath: jk_fs.join(this.getGenOutputDir(serverActionItem), serverActionName, "index"),
+            fileInnerPath,
 
             srcFileContent: writer.AI_INSTRUCTIONS + `import D from "./jBundler_ifServer.ts";
 export default D;`,
@@ -45,6 +56,39 @@ export default D;`,
             distFileContent: writer.AI_INSTRUCTIONS + `import D from "./jBundler_ifServer.js";
 export default D;`,
         });
+
+        //endregion
+
+        //region PageData
+        
+        // Generate the file 'pageData.gen.ts' in the same directory as the page route.
+
+        if (serverActionItem.isPageData) {
+            const fileToWrite_TS = jk_fs.join(serverActionItem.itemPath, "pageData.gen.ts");
+            const fileToWrite_JS = jk_app.getCompiledFilePathFor(fileToWrite_TS, true);
+            
+            // > Typescript version
+
+            const relPathForImport_TS = jk_fs.getRelativePath(
+                serverActionItem.itemPath,
+                jk_fs.join(writer.dir.output_src, fileInnerPath + ".ts")
+            );
+
+            const proxy_TS = `import S from ${JSON.stringify(relPathForImport_TS)};\nexport default S;`
+            
+            await writeTextToFileIfMismatch(fileToWrite_TS, proxy_TS);
+
+            // > Javascript version
+
+            const relPathForImport_JS = jk_fs.getRelativePath(
+                serverActionItem.itemPath,
+                jk_fs.join(writer.dir.output_src, fileInnerPath + ".js")
+            );
+
+            const proxy_JS = `import S from ${JSON.stringify(relPathForImport_JS)};\nexport default S;`
+            
+            await writeTextToFileIfMismatch(fileToWrite_JS, proxy_JS);
+        }
 
         //endregion
 
