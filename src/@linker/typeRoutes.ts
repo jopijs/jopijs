@@ -8,7 +8,7 @@ import {
 } from "./linkerEngine.ts";
 import * as jk_fs from "jopi-toolkit/jk_fs";
 import * as jk_app from "jopi-toolkit/jk_app";
-import type { RouteAttributes, RouteBindPageParams, RouteBindVerbParams } from "jopijs/generated";
+import { calcCryptedUrl, type RouteAttributes, type RouteBindPageParams, type RouteBindVerbParams } from "jopijs/generated";
 import { normalizeNeedRoleConditionName } from "./common.ts";
 import type { HttpMethod } from "jopijs/core";
 import { collector_declareUiComponent } from "./dataCollector.ts";
@@ -16,6 +16,7 @@ import { collector_declareUiComponent } from "./dataCollector.ts";
 export default class TypeRoutes extends AliasType {
     private sourceCode_header_TS = `import {routeBindPage, routeBindVerb} from "jopijs/generated";`;
     private sourceCode_header_JS = `import {routeBindPage, routeBindVerb} from "jopijs/generated";`;
+
     private sourceCode_body_TS = "";
     private sourceCode_body_JS = "";
 
@@ -56,10 +57,9 @@ export default class TypeRoutes extends AliasType {
     private async genCode_DeclareServerRoutes(writer: CodeGenWriter) {
         // region Generate the code calling all the routes.
 
-        // It's lines of type : setPageDataProvider(...);
-        //      await routeBindPage(...)
-        // or   
-        //      await routeBindVerb(...)
+        // It's lines of type :
+        // await routeBindPage(...)
+        // or await routeBindVerb(...)
 
         const bindPage = (writer: CodeGenWriter, route: string, filePath: string, attributes: RouteAttributes) => {
             let routeId = "r" + (this.routeCount++);
@@ -184,57 +184,6 @@ export default class TypeRoutes extends AliasType {
                 const toAdd = `\n    await routeConfig${count}(new JopiRouteConfig(webSite, ${JSON.stringify(route)}${sRoles}));`;
                 this.sourceCode_body_TS += toAdd;
                 this.sourceCode_body_JS += toAdd;
-
-                count++;
-            }
-        }
-
-        //endregion
-
-        //region Declare all page data provider
-
-        // It's lines of type : setPageDataProvider(...);
-
-        const routeWithPageData = Object.keys(this.routeAttributes).filter(route => this.routeAttributes[route].pageData);
-
-        if (routeWithPageData.length > 0) {
-            this.sourceCode_header_TS += `\nimport {setPageDataProvider} from "jopijs/generated";`;
-            this.sourceCode_header_JS += `\nimport {setPageDataProvider} from "jopijs/generated";`;
-
-            let count = 1;
-
-            for (let route of routeWithPageData) {
-                let routeAttributes = this.routeAttributes[route];
-
-                //region Merge page roles + all roles.
-
-                let roles: string[] = [];
-
-                let pageRoles = routeAttributes.needRoles?.["PAGE"];
-                if (pageRoles) pageRoles.forEach(r => { if (!roles.includes(r)) roles.push(r) });
-
-                let allRoles = routeAttributes.needRoles?.["ALL"];
-                if (allRoles) allRoles.forEach(r => { if (!roles.includes(r)) roles.push(r) });
-
-                //endregion
-
-                let srcFilePath = jk_fs.getRelativePath(this.cwdDir, routeAttributes.pageData!);
-                const tmpRelPath = writer.makePathRelativeToOutput(routeAttributes.pageData!);
-
-                // TS
-                let relPathTS = tmpRelPath;
-                relPathTS = writer.toPathForImport(relPathTS, false);
-                
-                // JS
-                let relPathJS = tmpRelPath;
-                relPathJS = writer.toPathForImport(relPathJS, true);
-
-                this.sourceCode_header_TS += `\nimport pageData${count} from "${relPathTS}";`;
-                this.sourceCode_header_JS += `\nimport pageData${count} from "${relPathJS}";`;
-                
-                let line = `\n    setPageDataProvider(webSite, ${JSON.stringify(route)}, ${roles.length ? JSON.stringify(roles) : "[]"}, pageData${count}, ${JSON.stringify(srcFilePath)});`;
-                this.sourceCode_body_TS += line;
-                this.sourceCode_body_JS += line;
 
                 count++;
             }
@@ -597,6 +546,19 @@ export function error401() {
     registerRouteAttributes(dir: string, newRoute: string, dirAttributes: RouteAttributes) {
         let current = this.routeAttributes[newRoute];
 
+        if (dirAttributes.pageData) {
+            // Declare the page data as a server action.
+            // His entry-point is inside the route directory, ad pageData.ts file.
+            //
+            this.registry_addItem("serverActions!" + newRoute.substring(1), {
+                type: this.registry_getType("serverActions")!,
+                itemPath: dir,
+                entryPoint: dirAttributes.pageData,
+                priority: dirAttributes.priority,
+                securityUid: calcCryptedUrl("pageData!" + newRoute)
+            });
+        }
+
         if (!current) {
             this.routeAttributes[newRoute] = dirAttributes;
             return;
@@ -618,10 +580,6 @@ export function error401() {
                 current.disableCache = dirAttributes.disableCache;
             }
 
-            if (dirAttributes.pageData) {
-                current.pageData = dirAttributes.pageData;
-            }
-
             if (dirAttributes.configFile) {
                 current.configFile = dirAttributes.configFile;
             }
@@ -634,10 +592,6 @@ export function error401() {
 
             if (!current.disableCache) {
                 current.disableCache = dirAttributes.disableCache;
-            }
-
-            if (!current.pageData) {
-                current.pageData = dirAttributes.pageData;
             }
 
             if (!current.configFile) {

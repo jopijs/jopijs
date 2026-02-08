@@ -51,12 +51,11 @@ export function exposeServerAction(_name: string, securityUid: string, serverAct
             req.role_assertUserHasOneOfThisRoles(allowedRoles);
         }
         
-        debugger;
         const reqData = await req.req_getBodyData<any>();
         const callParams = reqData.p;
         
         try {
-            const functionCallRes = await serverAction.call(serverAction, ...callParams);
+            const functionCallRes = await serverAction.call(req, ...callParams);
             return req.res_jsonResponse({r: functionCallRes});
         } catch (err) {
             if (getWebSiteConfig().isProduction) {

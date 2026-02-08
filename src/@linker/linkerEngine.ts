@@ -785,6 +785,10 @@ export abstract class AliasType {
 
     //region Registry
 
+    registry_getType(typeName: string): AliasType | undefined {
+        return gTypesHandlers[typeName];
+    }
+    
     registry_addItem<T extends RegistryItem>(itemId: string, item: T) {
         // If already exists, then keep the one with greater priority.
         //
