@@ -501,7 +501,6 @@ export function error401() {
 
                     let isAccepted = true;
 
-                    // TOOD: stocker les attributs dans un registre path -> attribute.
 
                     switch (name) {
                         case "page":
@@ -547,6 +546,8 @@ export function error401() {
         let current = this.routeAttributes[newRoute];
 
         if (dirAttributes.pageData) {
+            const conditionsContext = dirAttributes.needRoles;
+
             // Declare the page data as a server action.
             // His entry-point is inside the route directory, ad pageData.ts file.
             //
@@ -556,7 +557,8 @@ export function error401() {
                 entryPoint: dirAttributes.pageData,
                 priority: dirAttributes.priority,
                 securityUid: calcCryptedUrl("pageData!" + newRoute),
-                isPageData: true
+                isPageData: true,
+                conditionsContext
             });
         }
 

@@ -134,7 +134,12 @@ export default proxyServerAction(${JSON.stringify(serverActionName)}, ${JSON.str
         importPath_TS = writer.toPathForImport(entryPoint, false);
         importPath_JS = writer.toPathForImport(entryPoint, true);
 
-        const rolesConditions = serverActionItem.conditionsContext?.["ALL"] || [];
+        let rolesConditions = serverActionItem.conditionsContext?.["ALL"] || [];
+        
+        if (serverActionItem.conditionsContext?.["PAGE"]) {
+            rolesConditions = [...rolesConditions, ...serverActionItem.conditionsContext?.["PAGE"]];
+        }
+
         const serverActionNumber = this.serverActionCounter++;
 
         writer.genAddToInstallFile(InstallFileType.server, FilePart.imports, {
