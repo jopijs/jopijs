@@ -3,7 +3,7 @@
 import type { CoreServer, ServerSocketAddress } from "./jopiServer.ts";
 import { ServerFetch } from "./serverFetch.ts";
 import React, { type ReactNode } from "react";
-import {PageController_ExposePrivate, type PageOptions} from "jopijs/ui";
+import {PageController_ExposePrivate, UsePageDataException, type PageOptions} from "jopijs/ui";
 import * as ReactServer from "react-dom/server";
 import * as cheerio from "cheerio";
 import type { SearchParamFilterFunction } from "./searchParamFilter.ts";
@@ -1719,11 +1719,47 @@ else document.documentElement.classList.remove("dark");
                 jsonSearchParams = searchParams.toJSON();
             }
 
-            const html = ReactServer.renderToStaticMarkup(
-                React.createElement(Page, {
-                    controller: controller,
-                    children: React.createElement(C, { params: params, searchParams: jsonSearchParams })
-                }));
+            let html: string;
+
+            try {
+                // If the page will useUsePageData, it will throw an special exception.
+                // Why? Because usePageData is async, doing that we need a special pre-processing.
+                //
+                html = ReactServer.renderToStaticMarkup(
+                    React.createElement(Page, {
+                        controller: controller,
+                        children: React.createElement(C, { params: params, searchParams: jsonSearchParams })
+                    }));
+            } catch (e: any) {
+                // Is throw if usePageData is called.
+                if (e instanceof UsePageDataException) {
+                    let serverAction = e.serverAction;
+                
+                    try {
+                        console.log("react_fromPage - usePageData called")
+                        // Calcultate the call result.
+                        let result = await serverAction(e.callParams);
+
+                        // Store the result in the controller.
+                        controller.pageDataResult = result;
+                        controller.isPageDataResultSet = true;
+                    } catch (e2: any) {
+                        controller.isPageDataResultSet = true;
+                        controller.hasPageDataError = true;
+                    }
+
+                    // Re-render the page with the call result.
+                    // Since isPageDataResultSet, it will not throw UsePageDataException again.
+                    //
+                    html = ReactServer.renderToStaticMarkup(
+                        React.createElement(Page, {
+                            controller: controller,
+                            children: React.createElement(C, { params: params, searchParams: jsonSearchParams })
+                        }));
+                } else {
+                    throw e;
+                }
+            }
 
             return new Response(html, { status: 200, headers: { "content-type": "text/html;charset=utf-8" } });
         }

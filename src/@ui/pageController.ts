@@ -1,6 +1,6 @@
 // noinspection JSUnusedGlobalSymbols
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { type ServerRequestInstance } from "./hooks/index.ts";
 import { decodeUserInfosFromCookie, isUserInfoCookieUpdated, type UiUserInfos } from "./user.ts";
 import { deleteCookie } from "./cookies/index.ts";
@@ -19,6 +19,13 @@ export interface PageOptions {
     htmlProps?: Record<string, any>;
     bodyProps?: Record<string, any>;
     headProps?: Record<string, any>;
+}
+
+export class UsePageDataException extends Error {
+    constructor(public readonly serverAction: (t: any) => Promise<any>, public readonly callParams: any) {
+        super("UsePageDataException");
+        this.name = "UsePageDataException";
+    }
 }
 
 /**
@@ -217,6 +224,52 @@ export class PageController<T = any> implements JopiUiApplication_Host {
     onRequireRefresh() {
         // Will be dynamically replaced.
     }
+
+    pageDataResult: any;
+    isPageDataResultSet: boolean = false;
+    hasPageDataError: boolean = false;
+
+    usePageData<T, V>(serverAction: (t?: T) => Promise<V>, t?: T): {
+        data: V|undefined,
+        isLoading: boolean,
+        isError: boolean,
+    } {
+        if (isServerSide) {
+            // Already computed? Return the result.
+            if (this.isPageDataResultSet) {
+                return {
+                    data: this.pageDataResult,
+                    isLoading: false,
+                    isError: this.hasPageDataError,
+                };
+            }
+
+            // Will be caught by the page renderer
+            // in order to execute the server action and re-render.
+            //
+            throw new UsePageDataException(serverAction, t);
+        } else {
+            const [isLoading, setIsLoading] = useState(true);
+            const [isError, setIsError] = useState(false);
+            const [value, setValue] = useState<V | undefined>(undefined);
+        
+            useEffect(() => {
+                 serverAction(t).then((v) => {
+                    setValue(v);
+                    setIsLoading(false);
+                 }).catch((e) => {
+                    setIsError(true);
+                    setIsLoading(false);
+                 });
+            }, []);
+
+            return {
+                data: value,
+                isLoading,
+                isError,
+            }
+        }
+    }
 }
 
 export class PageController_ExposePrivate<T = any> extends PageController<T> {
@@ -242,3 +295,4 @@ export type PageHook = (controller: PageController_ExposePrivate<unknown>) => vo
 // On browser-side: the instance is through generated code (see .jopijs/site/page_???.jsx)
 //
 export const PageContext = React.createContext<PageController<unknown> | undefined>(undefined);
+

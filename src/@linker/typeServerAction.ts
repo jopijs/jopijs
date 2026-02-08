@@ -64,7 +64,7 @@ export default D;`,
         // Generate the file 'pageData.gen.ts' in the same directory as the page route.
 
         if (serverActionItem.isPageData) {
-            const fileToWrite_TS = jk_fs.join(serverActionItem.itemPath, "pageData.gen.ts");
+            const fileToWrite_TS = jk_fs.join(serverActionItem.itemPath, "usePageData.gen.ts");
             const fileToWrite_JS = jk_app.getCompiledFilePathFor(fileToWrite_TS, true);
             
             // > Typescript version
@@ -74,7 +74,9 @@ export default D;`,
                 jk_fs.join(writer.dir.output_src, fileInnerPath + ".ts")
             );
 
-            const proxy_TS = `import S from ${JSON.stringify(relPathForImport_TS)};\nexport default S;`
+            const proxy_TS = `import S from ${JSON.stringify(relPathForImport_TS)};
+import {createUsePageData} from "jopijs/ui";
+export default createUsePageData(S);`
             
             await writeTextToFileIfMismatch(fileToWrite_TS, proxy_TS);
 
@@ -85,8 +87,10 @@ export default D;`,
                 jk_fs.join(writer.dir.output_src, fileInnerPath + ".js")
             );
 
-            const proxy_JS = `import S from ${JSON.stringify(relPathForImport_JS)};\nexport default S;`
-            
+            const proxy_JS = `import S from ${JSON.stringify(relPathForImport_JS)};
+import {createUsePageData} from "jopijs/ui";            
+export default createUsePageData(S);`
+
             await writeTextToFileIfMismatch(fileToWrite_JS, proxy_JS);
         }
 

@@ -14,6 +14,7 @@ export * from "./events.ts";
 export * from "./utils.ts";
 export * from "./serverAction.ts";
 export * from "./pageRouter.tsx";
+export * from "./pageDataV2.tsx";
 
 export const isBrowserSide = isBrowser;
 export const isServerSide = !isBrowser;
