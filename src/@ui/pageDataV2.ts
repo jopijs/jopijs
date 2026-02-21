@@ -1,4 +1,4 @@
-import { _usePage } from "./hooks";
+import { _usePage } from "./hooks/index.ts";
 
 /**
  * Create the usePageData hook for a page.
